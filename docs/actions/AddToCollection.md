@@ -10,7 +10,7 @@ Appends one text value or one record reference to a collection declared by a Cre
 | Ordinal | `"action": 201` |
 | Category | Data |
 | Terminating | `false` |
-| Group / edges | no |
+| Group / edges | No |
 | Availability | GA |
 
 ## What it does
@@ -24,9 +24,9 @@ The step finds the first free index of the target collection (`…[0]`, `…[1]`
 | `collectionSelector` | string | yes | `""` | Exactly one placeholder naming the Create Collection output, for example `{{OrderList_Orders}}`. It must be wrapped in `{{ }}` and must not contain a dotted path. It is read unresolved. |
 | `value` | string | yes | `""` | **Value collection:** SmartText (SmartFields, SmartFormulas, SmartControls), resolved before it is appended. **Reference collection:** exactly one `{{name}}` that resolves to a Reference output of the same table. |
 | `derivedType` | string | yes | `""` | `"value"` or `"reference"`. This must match the collection's type. At run time only this key decides how the item is stored. A missing or empty value means text. |
-| `derivedTableNo` | integer | no | `0` | Table number of the collection (0 for Value). Informational. |
+| `derivedTableNo` | integer | no | `0` | Table number of the collection (0 for Value). Not used at run time. |
 
-The editor works out `derivedType` and `derivedTableNo` from the selected collection and saves them. **When you write JSON by hand, you must set them yourself.**
+The editor works out `derivedType` and `derivedTableNo` from the selected collection when the dialog is saved (if it can't resolve the selector, it writes `""` and `0`). **When you write JSON by hand, you must set them yourself.**
 
 ## Outputs
 
@@ -36,15 +36,12 @@ None. The items become part of the Create Collection step's output (`<slug>_<col
 
 | stage | severity | rule | message |
 |---|---|---|---|
-| editor | error | `collectionSelector` resolves to an upstream output | – |
-| editor | error | `value` is non-empty for Value collections | Please fill in the highlighted fields. |
-| editor | error | Reference collection: `value` is a single `{{name}}` that resolves to a Reference output with the same `tableNo` | – |
-| editor | warning | `derivedType` is `"value"` or `"reference"` and matches the collection | – |
+| editor | error | `collectionSelector` or `value` is empty (required fields in the configuration dialog, for both collection types) | Please fill in the highlighted fields. |
 | runtime | error | `collectionSelector` is empty | Collection selector is required. |
 | runtime | error | `collectionSelector` is not a `{{name}}` placeholder | The Collection selector '%1' must use the SmartField placeholder notation, e.g. '{{name}}'. |
 | runtime | error | `collectionSelector` contains `.` | The Collection selector '%1' must point to a top-level output – dotted paths cannot be collections. |
 
-The editor checks are not re-run at publish. Only the generic dangling-reference warning applies there.
+Nothing checks that `collectionSelector` names a real collection, that `derivedType` matches it, or that a Reference item has the collection's table. At publish only the generic dangling-reference warning applies.
 
 ## Runtime errors
 
@@ -67,7 +64,7 @@ The following step adds the current loop record to a Reference collection of Sal
   "terminating": false,
   "configuration": {
     "collectionSelector": "{{OrderList_Orders}}",
-    "value": "{{EachOrder_item}}",
+    "value": "{{EachOrder_currentItem}}",
     "derivedType": "reference",
     "derivedTableNo": 36
   },
@@ -79,6 +76,6 @@ For a Value collection, use something like `"value": "{{EachOrder_currentItem.no
 
 ## Gotchas
 
-- `{{EachOrder_item}}` in the example is illustrative. Use the real Reference output name of your loop or Find Records step.
+- `EachOrder` in the example stands for a For Each step over Sales Headers whose `currentItem` is a Reference output with `tableNo` 36. Use the real slug and output of your loop or Find Records step.
 - If `derivedType` is missing, an item added to a Reference collection is stored as text and later reference access fails.
 - Steps that sit inside a loop body lose their runtime values when the body is left. Collection items survive as long as the Create Collection step's level is still active.

@@ -36,7 +36,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "text",
-      "description": "Request headers as a flat object { \"<Header-Name>\": \"<value>\" }. Values are SmartText. Names are truncated to 50 characters, values to 4096. The key 'Content-Type' (exact spelling) is applied to the request content; all others go on the request."
+      "description": "Request headers as a flat object { \"<Header-Name>\": \"<value>\" }. Values are SmartText. Names are truncated to 50 characters, values to 4096. The key 'Content-Type' (exact spelling) is applied to the request content; all others go on the request. A non-object value is ignored (no step headers are sent)."
     },
     {
       "key": "body",
@@ -45,8 +45,8 @@
       "default": "",
       "enum": null,
       "maxLength": null,
-      "smart": "text",
-      "description": "Request body (SmartText; the editor shows it only for POST/PUT/PATCH but it is sent for any method if present). If the raw body is exactly one {{field}} placeholder (no format suffix) that resolves to binary data (BLOB/Media field or binary output), the bytes are sent unchanged. With a credential, the reserved tokens {{credential.username}} and {{credential.password}} are replaced (XML-escaped) at send time."
+      "smart": "code",
+      "description": "Request body (SmartText; the editor shows it only for POST/PUT/PATCH but it is sent for any method if present). If the raw body is exactly one {{slug_output.field}} placeholder (no format suffix, one level into a record reference) and that field is a BLOB, Media or MediaSet field, the bytes are sent unchanged. With a credential, the reserved tokens {{credential.username}} and {{credential.password}} are replaced (XML-escaped) at send time."
     },
     {
       "key": "credentialCode",
@@ -56,7 +56,7 @@
       "enum": null,
       "maxLength": 20,
       "smart": "none",
-      "description": "Code of an AutoFlow Credential record in the target company (environment-specific; secrets are never stored in the flow). Empty = no credential, authenticate via headers. An unknown code is silently ignored at run time (request is sent without the credential)."
+      "description": "Code of an AutoFlow Credential record in the target company (environment-specific; secrets are never stored in the flow). Empty = no credential, authenticate via headers. Longer values are cut to 20 characters; matching is not case-sensitive. An unknown code is silently ignored at run time (request is sent without the credential and {{credential.*}} body tokens stay literal)."
     }
   ],
   "outputs": [
@@ -77,7 +77,7 @@
       "id": "HttpRequest.method-enum",
       "severity": "warning",
       "stage": "editor",
-      "check": "configuration.method should be one of GET, POST, PUT, PATCH, DELETE (upper case). Other text is sent as-is at run time but is shown as GET in the editor and overwritten with GET on the next save.",
+      "check": "configuration.method should be one of GET, POST, PUT, PATCH, DELETE (upper case). Any other text is sent as-is at run time; the editor upper-cases a known method and shows anything else (e.g. HEAD) as GET, overwriting it with GET on the next save.",
       "message": "",
       "machine": { "type": "enum", "key": "method", "values": ["GET", "POST", "PUT", "PATCH", "DELETE"] }
     },
@@ -85,23 +85,23 @@
       "id": "HttpRequest.method-required",
       "severity": "warning",
       "stage": "editor",
-      "check": "configuration.method should be present; the editor always writes it. Behaviour with a missing/empty method is platform-defined.",
+      "check": "configuration.method should be present; the editor always writes it. The run time sends the text as-is, so an empty method is passed to the platform unchanged.",
       "message": "",
       "machine": { "type": "required", "key": "method" }
     },
     {
       "id": "HttpRequest.headers-type",
-      "severity": "error",
-      "stage": "editor",
-      "check": "configuration.headers must be a JSON object of name → string value (not an array of rows).",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "configuration.headers should be a JSON object of name → value. Anything else (e.g. an array of rows) is silently ignored at run time, so no step headers are sent.",
       "message": "",
       "machine": { "type": "type", "key": "headers", "valueType": "object" }
     },
     {
       "id": "HttpRequest.credentialCode-maxLength",
-      "severity": "error",
-      "stage": "editor",
-      "check": "credentialCode is at most 20 characters (a credential code).",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "credentialCode is read as at most 20 characters; a longer value is truncated and then usually matches no credential (the request is sent without it).",
       "message": "",
       "machine": { "type": "maxLength", "key": "credentialCode", "max": 20 }
     },
@@ -142,11 +142,13 @@
     }
   ],
   "notes": [
-    "responseStatus is the numeric status as text (e.g. \"200\"); responseHeaders is a JSON object text with the first value of each response header; responseBody is the body as text. If the response Content-Type is binary (PDF, image, octet-stream, ...), responseBody holds the raw bytes (usable as a whole {{slug_responseBody}} in a BLOB/Media field) and the log shows a placeholder.",
+    "responseStatus is the numeric status as text (e.g. \"200\"); responseHeaders is a JSON object text with the first value of each response header (content headers such as Content-Type and Content-Length are not included); responseBody is always the body read as text, also for binary Content-Types.",
     "The step does not fail on 4xx/5xx; branch on {{slug_responseStatus}} downstream.",
     "Header precedence with a credential: credential default headers < step headers < authentication headers. Authentication headers are removed from the execution log; API-key-in-query secrets are added after the URL is logged.",
     "Credentials, their base URLs, default headers and secrets live per company in Business Central, not in the flow JSON. Only the credential's code travels with the flow, so the same code must exist (with the right auth setup) in every target company/environment.",
     "The editor's 'Send test request' button sends a real request; it is not part of the configuration (no key is stored).",
-    "The step validity check of this step always passes; no publish-time step check exists. Only the generic dangling-reference warning applies."
+    "No publish-time step check exists; only the generic dangling-reference warning applies. The editor's URL allow-list status line is advisory and does not block saving.",
+    "The resolved configuration (url, headers, body) is written to the execution log at debug level; only credential secrets are kept out of it.",
+    "Next release (not in 27.0.39): responses with a binary Content-Type will be kept as raw bytes in responseBody, so a bare {{slug_responseBody}} can be written to a BLOB or Media field."
   ]
 }

@@ -45,22 +45,14 @@
       "stage": "publish",
       "check": "configuration.duration must be a positive integer (> 0) or contain a SmartField token ('{{' followed later by '}}')",
       "message": "Sleep step '%1' duration '%2' is not a positive integer or SmartField token.",
-      "machine": { "type": "regex", "key": "duration", "pattern": "\\s*0*[1-9][0-9]*\\s*|.*\\{\\{.*\\}\\}.*" }
+      "machine": { "type": "regex", "key": "duration", "pattern": "0*[1-9][0-9]*|.*\\{\\{.*\\}\\}.*" }
     },
     {
       "id": "Sleep.duration-editor",
       "severity": "error",
       "stage": "editor",
-      "check": "Same as the publish checks: duration non-empty and either a SmartField token or an integer > 0",
-      "message": ""
-    },
-    {
-      "id": "Sleep.unit-enum",
-      "severity": "info",
-      "stage": "runtime",
-      "check": "configuration.unit should be one of 0,1,2,3 (anything else silently becomes Seconds)",
-      "message": "",
-      "machine": { "type": "enum", "key": "unit", "values": [0, 1, 2, 3] }
+      "check": "configuration.duration must be non-empty (required field in the configuration dialog). The editor does not check that it is a number.",
+      "message": "Please fill in the highlighted fields."
     },
     {
       "id": "Sleep.duration-runtime",
@@ -73,7 +65,7 @@
       "id": "Sleep.no-defer-in-sync-frame",
       "severity": "error",
       "stage": "runtime",
-      "check": "A deferring sleep (unit other than Milliseconds, or >= 10000 ms) is not allowed when the flow runs synchronously (webhook synchronous phase, SubFlow body, interactive document/page triggers)",
+      "check": "A deferring sleep (unit other than Milliseconds, or >= 10000 ms) is not allowed when the flow runs synchronously (for example the webhook synchronous phase, a SubFlow body, interactive document or page triggers, PDF hooks)",
       "message": "Step %1 (%2) requested a deferred resume, but the flow is running synchronously. Use Sleep or other time-based deferral steps only outside of synchronous frames (Webhook sync phase or SubFlow body)."
     }
   ],
@@ -81,7 +73,8 @@
     "Strategy: unit Milliseconds with a duration below 10000 blocks the worker in-process (System sleep). Any other unit, or 10000 ms and more, defers: the run is parked with status Sleeping, and a single-run job queue entry resumes it at now + duration. On resume, the step completes immediately and the flow continues.",
     "Deferral means a background job-queue resume. It cannot happen inside a synchronous frame. In those, only short millisecond sleeps (< 10 s) work.",
     "The publish warnings use the step id (not the description) as %1.",
-    "Leading zeros and surrounding spaces are accepted by the integer parse. Decimal values (e.g. '1.5') are not accepted.",
+    "Leading zeros are accepted by the integer parse. Decimal values (e.g. '1.5') are not accepted.",
+    "unit must be a JSON integer. A number outside 0-3 silently becomes Seconds, but a non-numeric value such as \"Minutes\" cannot be converted and fails the step (and the editor) with a platform error.",
     "No outputs."
   ]
 }

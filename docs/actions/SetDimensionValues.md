@@ -21,16 +21,16 @@ The step resolves `reference`, checks that its table equals `tableNo` and loads 
 - A row with an empty value **removes** that dimension.
 - Dimensions that are not listed are **kept**.
 
-The new Dimension Set ID is written to the record. The *Global/Shortcut Dimension 1/2 Code* fields are synced directly, without validation. The record is saved with `Modify(triggers)`, and the step emits `rec` and `dimensionSetId`.
+The new Dimension Set ID is written to the record. The *Global/Shortcut Dimension 1/2 Code* fields are synced directly, without validation. The record is saved with `Modify(triggers)` (`OnModify` runs when `triggers` is `true`), and the step emits `rec` and `dimensionSetId`.
 
 ## Configuration
 
 | key | type | required | default | description |
 |---|---|---|---|---|
 | `reference` | string | yes | `""` | One SmartField placeholder resolving to the record, e.g. `"{{trigger_Rec}}"`. The table must have a field named *Dimension Set ID*. |
-| `tableNo` | integer | yes | `0` | Table of the referenced record. It must match at runtime. |
+| `tableNo` | integer | yes | `0` | Table of the referenced record. The editor derives it from the reference. It must match at runtime. |
 | `triggers` | boolean | no | `true` | `true` = `Modify(true)`, `false` = `Modify(false)`. |
-| `dimensions` | array | no | `[]` | Rows `{ "dimensionCode": "<code>", "value": "<value code or SmartText>" }`. The code is trimmed and upper-cased, and rows with an empty code are skipped. The value is resolved and trimmed, and an empty value removes the dimension. The editor also writes `lineNo`, which the step ignores. |
+| `dimensions` | array | no | `[]` | Rows `{ "dimensionCode": "<code>", "value": "<value code or SmartText>" }`. The code is trimmed and upper-cased, and rows with an empty code are skipped. The value is resolved and trimmed, and an empty value removes the dimension. If a code is listed twice, the last row wins. The editor also writes `lineNo` (10000, 20000, …), which the step ignores. |
 
 ## Outputs
 
@@ -43,16 +43,17 @@ The new Dimension Set ID is written to the record. The *Global/Shortcut Dimensio
 
 | stage | severity | rule | message |
 |---|---|---|---|
-| editor | error | `tableNo` missing/0, or `reference` is not a `{{…}}` placeholder | – (step shown as not configured) |
+| editor | error | `reference` is empty (required field in the config canvas) | `Please fill in the highlighted fields.` |
 
-There are no publish-time checks specific to this step. A Confirm dialog after this step gets a publish warning, because this step writes to the database.
+There are no publish-time checks for this step. A missing `tableNo` or a `reference` that isn't a single `{{…}}` placeholder is only caught at runtime (see below). A Confirm dialog placed after this step gets a publish warning, because this step writes to the database.
 
 ## Runtime errors
 
 | condition | message |
 |---|---|
 | `tableNo` 0/missing | `Table No. is required for a Set Dimension Values step.` |
-| Reference does not resolve | `Reference "%1" cannot be resolved to a record.` |
+| `reference` is not a single `{{…}}` placeholder, or does not resolve | `Reference "%1" cannot be resolved to a record.` |
+| Referenced record no longer exists | Business Central's standard "record does not exist" error |
 | Resolved table ≠ `tableNo` | `Reference resolves to table %1 but the step is configured for table %2.` |
 | Table has no *Dimension Set ID* field | `Table "%1" has no "Dimension Set ID" field, so dimensions cannot be set on it.` |
 | Unknown dimension | `Dimension "%1" does not exist.` |
@@ -92,4 +93,4 @@ There are no publish-time checks specific to this step. A Confirm dialog after t
 
 - An empty `value` **removes** the dimension. Leave a dimension out completely to keep it.
 - On document headers, the step changes only the header's dimension set. Lines are not updated.
-- Use exact dimension value codes, in upper case.
+- `value` must be an existing, non-blocked, Standard value code of that dimension after resolution. A dimension name or value name doesn't work.

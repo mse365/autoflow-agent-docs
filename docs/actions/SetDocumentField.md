@@ -11,7 +11,7 @@ A terminating response step for interactive document flows. It writes field valu
 | Category | Trigger Responses |
 | Terminating | `true` |
 | Group / edges | No |
-| Availability | GA. Only offered in flows started by *When a document is modified / released / posted / reopened (interactive)* |
+| Availability | GA. Only offered in flows started by *When a record is created or modified / When a document is released / posted / reopened (interactive)* |
 
 ## What it does
 
@@ -19,7 +19,7 @@ The step does not write to the database itself. It resolves the configured `valu
 
 `skipStandard` changes the behaviour in *released* and *reopened* flows only: Business Central does **not** release or reopen the document, and AutoFlow saves it with these values instead (e.g. Status = Pending Approval for a custom approval). In that case warehouse requests are not released or reopened either. To prevent the document action altogether, end the flow with an Error step instead.
 
-The default description written by the editor is "Set Field Values".
+The picker and the editor's default description show "Set Field Values".
 
 ## Configuration
 
@@ -37,10 +37,10 @@ None.
 
 | stage | severity | rule | message |
 |---|---|---|---|
-| editor | error | `values` is empty | `Add at least one field to set on the record.` |
+| runtime | warning | `values` is empty: nothing is written | (no message) |
 | publish | warning | the step has a successor (terminating steps must end their path) | `Step "%1" is a terminating step but has a successor – terminating steps must end the path.` |
 
-Unlike Insert, Modify and Rename Record, this step does not check `inputFormat` when it is saved.
+The step's own check for an empty `values` list (`Add at least one field to set on the record.`) is not run in 27.0.39, and the editor does not require a row. Always set at least one field.
 
 ## Runtime errors
 
@@ -81,6 +81,6 @@ These errors surface in the user's session when the trigger applies the values, 
 ## Gotchas
 
 - Always the **last** step of its path (`"terminating": true`). Use it at the end of each branch that should change the document.
-- In flows with any other trigger, the step has no effect.
+- The picker offers it only in the four interactive document flows. Don't use it in other flows.
 - The editor fills `tableNo` from the trigger output only for the supported document tables (18, 23, 27, 36, 37, 38, 39, 167, 1001, 1003, 5050, 8052, 8062). The runtime ignores `tableNo`.
 - Use `validate: false` for fields such as *Status*, whose validation would block a direct change.

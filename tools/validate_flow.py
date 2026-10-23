@@ -259,16 +259,27 @@ def check_steps(doc, specs, r, strict_outputs):
             if not isinstance(slug, str) or not SLUG_RE.match(slug):
                 r.add("error", "step.slug", where,
                       f"Slug {slug!r} is invalid: letter first, then letters/digits/'-', max 20 chars, no underscore.")
-            elif slug.lower() == "trigger":
+            elif slug == "trigger":
                 r.add("error", "step.slug-reserved", where, "Slug 'trigger' is reserved for the trigger step.")
+            elif slug.lower() == "trigger":
+                r.add("lint", "step.slug-reserved", where, f"Slug '{slug}' differs from the trigger's slug only in case; pick a distinct slug.")
         if isinstance(slug, str) and slug:
-            if slug.lower() in slugs and stype == "action":
-                r.add("error", "step.slug-unique", where, f"Slug '{slug}' is already used by another step (slugs are unique, case-insensitive).")
+            if slug in slugs.values() and stype == "action":
+                r.add("error", "step.slug-unique", where, f"Slug '{slug}' is already used by another step. Slugs must be unique.")
+            elif slug.lower() in slugs and stype == "action":
+                r.add("lint", "step.slug-unique-ci", where,
+                      f"Slug '{slug}' differs from '{slugs[slug.lower()]}' only in case. "
+                      "The editor treats that as a collision; pick a distinct slug.")
             slugs[slug.lower()] = slug
             names = set()
             for o in step.get("outputs") or [] if isinstance(step.get("outputs"), list) else []:
                 if isinstance(o, dict) and isinstance(o.get("name"), str):
-                    names.add(o["name"])
+                    if stype == "trigger":
+                        # trigger outputs are registered as <slug>_<name>, cut at 30 characters,
+                        # so only the truncated name resolves
+                        names.add(o["name"][:max(0, 30 - len(slug) - 1)])
+                    else:
+                        names.add(o["name"])
             slug_outputs[slug] = names
 
         if not isinstance(step.get("configuration"), dict):
@@ -311,7 +322,7 @@ def check_steps(doc, specs, r, strict_outputs):
                     r.add("warning", "publish.dangling-reference", where,
                           f'Step "{step.get("description", "")}" references unknown slug "{ref_slug}".')
                 elif strict_outputs:
-                    out_name = re.split(r"[.\[|:]", rest, maxsplit=1)[0]
+                    out_name = re.split(r"[.\[|:;]", rest, maxsplit=1)[0]  # ;<format> suffix
                     known = slug_outputs[ref_slug]
                     if known and out_name not in known | {"iteration"}:  # engine adds 'iteration' to every action
                         r.add("lint", "reference.unknown-output", where,

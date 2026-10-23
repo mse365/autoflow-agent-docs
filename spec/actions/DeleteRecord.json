@@ -35,8 +35,8 @@
       "id": "DeleteRecord.reference-required",
       "severity": "error",
       "stage": "editor",
-      "check": "configuration.reference must be present and non-empty.",
-      "message": "",
+      "check": "configuration.reference must be present and non-empty. The editor's Reference field is required.",
+      "message": "Please fill in the highlighted fields.",
       "machine": {
         "type": "required",
         "key": "reference"
@@ -45,9 +45,9 @@
     {
       "id": "DeleteRecord.reference-placeholder",
       "severity": "error",
-      "stage": "editor",
-      "check": "configuration.reference must be a single SmartField placeholder: after trimming it starts with '{{', ends with '}}' and has a non-empty name inside.",
-      "message": "",
+      "stage": "runtime",
+      "check": "configuration.reference must be a single SmartField placeholder: after trimming it starts with '{{', ends with '}}' and has a non-empty name inside. Anything else cannot be resolved, and the step fails.",
+      "message": "Reference \"%1\" cannot be resolved to a record.",
       "machine": {
         "type": "regex",
         "key": "reference",

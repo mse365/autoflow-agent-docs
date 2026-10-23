@@ -29,8 +29,8 @@ Because the flow runs outside a table event, a **Confirm dialog** can ask the us
 |---|---|---|---|---|
 | `tableNo` | integer | yes | `0` | `36` (Sales Header) or `38` (Purchase Header). |
 | `guiOnly` | boolean | no | `true` | Run only in interactive sessions. |
-| `timeoutSec` | integer | no | `30` | Maximum run time. |
-| `filters` | array | no | `[]` | `[{ "fieldNo": int, "filter": "text" }]`. These are filters on the header, applied literally, max. 250 characters. |
+| `timeoutSec` | integer | no | `30` | Seconds the flow may run, checked between steps. When it has passed, the remaining steps are skipped and the release goes ahead. `0` or less means no limit. |
+| `filters` | array | no | `[]` | `[{ "fieldNo": int, "filter": "text" }]`. These are filters on the header, applied literally, max. 250 characters. A filter that Business Central can't parse means the flow never runs. |
 
 ## Outputs
 
@@ -46,13 +46,15 @@ Reference it as `{{trigger_Rec}}`.
 |---|---|---|---|
 | publish | error (hard stop) | `tableNo` set | Pick the document table the flow should watch. |
 | publish | error (hard stop) | `tableNo` supported | Table %1 is not one of the supported releasable document tables. |
-| editor | error | live status for an unsupported table | Table %1 is not supported by this trigger, so the flow would never run. |
+| editor | error | no table picked | Please fill in the highlighted fields. |
+| editor | info | status line (does not block saving) | Table %1 does not exist in this environment. / Table %1 is not supported by this trigger, so the flow would never run. |
 
 ## Runtime errors
 
 | condition | effect |
 |---|---|
 | any error in the flow | The release is prevented and the user sees the flow's message. |
+| a Sleep step runs | The flow fails with "Step %1 (%2) requested a deferred resume, but the flow is running synchronously. …" and the release is prevented. |
 
 ## Example
 

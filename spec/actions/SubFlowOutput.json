@@ -16,7 +16,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "text",
-      "description": "The values returned to the calling Run SubFlow step: array of {\"name\": string, \"type\": \"Value\"|\"Reference\", \"tableNo\": integer, \"value\": string}. name = output name seen by the caller (truncated to 30 chars there); type defaults to Value; tableNo is only meaningful for Reference (the editor derives it from the selected reference and writes 0 for Value rows); value = SmartText for Value rows, a wrapped reference selector {{name}} for Reference rows. An empty array returns no outputs."
+      "description": "The values returned to the calling Run SubFlow step: array of {\"name\": string, \"type\": \"Value\"|\"Reference\", \"tableNo\": integer, \"value\": string}. name = output name seen by the caller (truncated to 30 chars there), keep it non-empty and unique; type \"Value\" or \"Reference\" (exact case, anything else counts as Value); tableNo is only used for Reference rows (the editor derives it from the selected reference and writes 0 for Value rows); value = SmartText for Value rows, a wrapped reference selector {{name}} for Reference rows. An empty array returns no outputs."
     }
   ],
   "outputs": [
@@ -24,16 +24,16 @@
       "name": "<outputs[].name>",
       "type": "value",
       "tableNo": null,
-      "when": "one entry per outputs[] row; 'reference' with that row's tableNo when type = Reference. Shown for information only – the step terminates the SubFlow, the values surface on the caller's Run SubFlow step."
+      "when": "one entry per outputs[] row with a name; 'reference' with that row's tableNo when type = \"Reference\". Informational only – the step ends the SubFlow; the values surface on the caller's Run SubFlow step."
     }
   ],
   "rules": [
     {
       "id": "SubFlowOutput.outputs-type",
       "severity": "error",
-      "stage": "editor",
-      "check": "configuration.outputs, if present, is an array of objects.",
-      "message": "(no message – the step is reported as invalid)",
+      "stage": "runtime",
+      "check": "configuration.outputs, if present, is an array of objects; anything else is ignored and the SubFlow returns nothing.",
+      "message": "(no message – nothing is returned)",
       "machine": {
         "type": "type",
         "key": "outputs",
@@ -41,18 +41,11 @@
       }
     },
     {
-      "id": "SubFlowOutput.name-required",
-      "severity": "error",
-      "stage": "editor",
-      "check": "Every outputs[] entry has a non-empty name.",
-      "message": "(no message – the step is reported as invalid)"
-    },
-    {
       "id": "SubFlowOutput.name-unique",
       "severity": "error",
-      "stage": "editor",
-      "check": "outputs[].name values are unique (case-sensitive).",
-      "message": "(no message – the step is reported as invalid)"
+      "stage": "runtime",
+      "check": "outputs[].name values must be unique (case-sensitive); a duplicate fails the step when the return object is built.",
+      "message": "(platform JSON error about a duplicate key)"
     },
     {
       "id": "SubFlowOutput.type-enum",
@@ -72,14 +65,14 @@
       "id": "SubFlowOutput.only-in-subflows",
       "severity": "info",
       "stage": "editor",
-      "check": "Only offered in the step picker of flows whose trigger is 'When invoked as a SubFlow' (trigger 5564404).",
+      "check": "Only offered in the step picker of flows whose trigger is 'When invoked as a SubFlow' (trigger 5564404). Not checked anywhere else.",
       "message": "(no message – the step is hidden in other flows)"
     }
   ],
   "notes": [
     "Contract with the caller: the calling Run SubFlow step's outputs[] are generated from THIS step's configuration.outputs (name/type/tableNo) of the SubFlow version it pins. If a SubFlow contains several Return SubFlow Output steps (e.g. in different branches), only the first one found (document order, depth-first into edges) defines the caller's declared outputs – keep all of them identical.",
-    "Runtime: SmartFields in each value are resolved, the step builds a JSON object {name: value} (all values as strings), stops the SubFlow immediately and hands the object to the caller, which adds one value output per key.",
+    "Runtime: SmartFields in each value are resolved, the step builds a JSON object {name: value} (all values as strings), stops the SubFlow immediately and hands the object to the caller, which adds one value output per key. A duplicate name fails the step.",
     "A SubFlow that ends without reaching this step returns no outputs (not an error).",
-    "Reference-typed returns: the value is a selector such as {{FindCustomer_Rec}}; Reference selectors are not substituted with scalar text by the engine, so what the caller receives is not established by the source. Prefer returning scalar values (No., SystemId) and re-finding the record in the caller."
+    "Reference-typed returns: a selector that points at a record (e.g. {{FindCustomer_Rec}}) is not replaced with text, so the caller receives the selector text itself as a plain value. Return scalar values (No., SystemId) and find the record again in the caller."
   ]
 }

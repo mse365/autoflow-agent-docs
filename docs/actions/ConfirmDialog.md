@@ -21,7 +21,7 @@ The step resolves `message` and gets a Yes/No answer, then writes `"true"` or `"
 - **Job queue (background) run with `waitMinutes` > 0**: the question is parked and checked every 2 seconds until the deadline. A user who follows the run, or anyone who opens the execution, is asked, and the first answer wins. The job queue session stays busy while it waits. If nobody answers in time, `noGuiAnswer` applies.
 - **Any other session without a user interface** (e.g. a web service call): `noGuiAnswer` applies immediately.
 
-The answer, and who gave it, is written to the execution log. Business Central cannot open a dialog after the flow has written to the database, or inside the record change that started the flow. Place the step before any writing step.
+Without a user interface, the answer (and, for a waited question, who gave it) is written to the execution log. Business Central cannot open a dialog after the flow has written to the database, or inside the record change that started the flow. Place the step before any writing step.
 
 ## Configuration
 
@@ -30,7 +30,7 @@ The answer, and who gave it, is written to the execution log. Business Central c
 | `message` | string | yes | – | The question. Supports SmartFields `{{..}}`, SmartFormulas `[[..]]` and SmartControls `{#..#}`. The copy used for background answering is cut at 2048 characters. |
 | `defaultYes` | boolean | no | `false` | Preselects Yes in the dialog. Legacy behaviour: if `noGuiAnswer` is absent, `defaultYes` also acts as the no-UI answer (true = Yes, false = No). |
 | `noGuiAnswer` | integer | no | `0` | When nobody can answer: `0` = raise an error, `1` = answer Yes, `2` = answer No. Always write it explicitly. |
-| `waitMinutes` | integer | no | `5` | Job queue runs only: minutes to wait for an answer. `0` = do not wait. Range 0–15. |
+| `waitMinutes` | integer | no | `5` | Job queue runs only: minutes to wait for an answer. `0` = do not wait. Range 0–15; values outside are clamped at runtime. |
 
 The branch labels are stored as `edges[0].description` (Yes) and `edges[1].description` (No), not in `configuration`.
 
@@ -53,12 +53,13 @@ Keep the order `true` then `false`.
 
 | stage | severity | rule | message |
 |---|---|---|---|
-| editor | error | `message` is empty | `Enter the question to ask the user.` |
-| editor | error | `waitMinutes` outside 0–15 | `The waiting time must be between 0 and %1 minutes.` (%1 = 15) |
+| editor | error | `message` is empty (the dialog refuses to save) | `Please fill in the highlighted fields.` |
 | publish | warning | The trigger runs inside the record change (Document modified 5564529, Global insert 5564402, Global modify 5564450, Global delete 5564451) | `The confirm dialog '%1' runs inside the record change that started the flow. Business Central does not open dialogs there, so when a user triggers the flow it fails at this step. It only works when the flow runs in the background, where the answer under 'Without a user interface' applies.` |
 | publish | warning | A writing step (insert/modify/delete/rename record, set document field values, add item tracking, set dimension values, draw number from number series) appears earlier in document order | `The confirm dialog '%1' may run after a step that writes ('%2'). Business Central cannot open a dialog once a flow has written, so the flow would fail there. Move the confirm dialog ahead of the writing steps.` |
 
 `%1` and `%2` are step **ids**. The "writes before" check walks the JSON in document order: each step, then the steps nested in its edges, depth-first. It can therefore flag a writing step on a branch that would not actually run before the dialog.
+
+The step also has checks for an empty question (`Enter the question to ask the user.`) and for `waitMinutes` outside 0–15 (`The waiting time must be between 0 and %1 minutes.`), but 27.0.39 runs neither. Out-of-range waiting times are clamped at runtime.
 
 ## Runtime errors
 

@@ -15,7 +15,7 @@ Sends an HTML email through Business Central's standard email module, with optio
 
 ## What it does
 
-Resolves recipients, subject, body and attachment fields, applies the AutoFlow test-mode redirect if it is active, checks every address, checks the sending account, builds the attachments, then sends with `Email.Send` from the configured account. The message GUID is returned as `sentEmailId`. The send runs in the flow's session. A failure from the email connector stops the step with the platform's error.
+Resolves recipients, subject, body and attachment fields, applies the AutoFlow test-mode redirect if it is active, checks every address, checks the sending account, builds the attachments, then sends with `Email.Send` from the configured account. The message GUID is returned as `sentEmailId`. The send runs in the flow's session. If the email connector fails to send, the step does **not** fail: Business Central keeps the message in the Email Outbox with the error, and `sentEmailId` is still returned.
 
 ## Configuration
 
@@ -52,7 +52,7 @@ Reference it as `{{<slug>_sentEmailId}}`.
 
 | stage | severity | rule | message |
 |---|---|---|---|
-| editor | error | `to` and `subject` are required fields | (field marked required) |
+| editor | error | `to` and `subject` are required fields | Please fill in the highlighted fields. |
 | editor | error | Inline row without filename or content | Inline attachment is missing a filename or content. |
 | editor | error | Reference row with empty selector | Attachment reference selector is empty. |
 | editor | error | Selector not in `{{name}}` notation | Attachment reference selector '%1' must use the SmartField placeholder notation, e.g. '{{name}}'. |
@@ -60,7 +60,7 @@ Reference it as `{{<slug>_sentEmailId}}`.
 | editor | error | Selector is a value, not a reference | Attachment reference selector "%1" must point at a record reference (or array of references). |
 | editor | error | Selector points to a table other than AutoFlow Document | Attachment reference selector "%1" must point at a record from the AutoFlow Document table; got table %2. |
 
-The attachment checks run when the dialog is saved and appear live in the dialog's status line. There is **no publish-time check** for this step, so a hand-written definition is only checked at run time.
+The attachment checks run when the dialog is saved (an error dialog, the step is not saved). The selector checks also appear live in the dialog's status line. There is **no publish-time check** for this step, so a hand-written definition is only checked at run time. Rows that are not objects, and an `attachments` value that is not an array, are silently ignored.
 
 ## Runtime errors
 
@@ -72,7 +72,7 @@ The attachment checks run when the dialog is saved and appear live in the dialog
 | referenced document deleted | Document record %1 referenced by selector "%2" no longer exists. |
 | reference selector wrong type, table, notation or index | the corresponding editor message above |
 | inline content not base64 | Inline attachment content is not valid base64-encoded data. |
-| email connector fails | the platform's error |
+| email connector fails | no step error; the message stays in the Email Outbox with the connector's error |
 
 ## Example
 
@@ -110,6 +110,6 @@ The account values above are placeholders. Use the ID and connector of a real ac
 
 - `accountId` and `accountConnector` differ in every environment. After importing a flow, pick the account again or the step fails with "The configured email account is no longer registered or active."
 - Reference attachments must point to **AutoFlow Document** records, such as Create PDF's `Document` output or Azure Blob: Get file's output. A reference to any other table (e.g. a Sales Invoice record) is rejected.
-- Inline content is decoded to text before it is written, so binary files may not arrive byte-exact. Use a Reference row for PDFs and images.
+- Inline content is decoded to text before it is written, so binary files are not byte-exact. Use Inline only for text files; use a Reference row for PDFs and images.
 - When AutoFlow test mode is active with test recipients, every email goes only to those test addresses, and CC/BCC are dropped.
 - Subject and body are not checked at run time. An empty subject is sent as-is.

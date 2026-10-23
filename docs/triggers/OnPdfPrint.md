@@ -15,14 +15,14 @@ Runs synchronously whenever Business Central produces a PDF for one of the confi
 
 ## What it does
 
-Hooks Business Central's "document ready" report event for every intent: Print, Preview, Save, Download and Schedule. Only `application/pdf` documents of reports listed in `reports` start the flow. If another extension has already supplied the document, the flow does not run. The flow runs **inside the user's report request** until it reaches Return PDF, ends, fails or hits `timeoutSec`. Its step state is committed once at the end. Nothing continues in the background afterwards. Without a Return PDF, or after a failure or a timeout, Business Central uses the original PDF.
+Hooks Business Central's "document ready" report event for every intent: Print, Preview, Save, Download and Schedule. Only `application/pdf` documents of reports listed in `reports` start the flow. If another extension has already supplied the document, the flow does not run. The flow runs **inside the user's report request** until it reaches Return PDF, ends, fails or exceeds `timeoutSec` (checked between steps). Its step state is committed once at the end. Nothing continues in the background afterwards. Without a Return PDF, or after a failure or a timeout, Business Central uses the original PDF. A failure rolls back the flow's database changes.
 
 ## Configuration
 
 | key | type | required | default | description |
 |---|---|---|---|---|
-| `reports` | array | yes | `[]` | `[{ "reportId": 1306 }, ...]`. At least one entry, each report once. |
-| `timeoutSec` | integer | no | `30` | Maximum run time before the original PDF is used. Must be ≥ 1. |
+| `reports` | array | yes | `[]` | `[{ "reportId": 1306 }, ...]`. At least one entry (checked at publish). List each report once. |
+| `timeoutSec` | integer | no | `30` | Maximum run time before the original PDF is used, checked between steps. `0` or less means no limit, so keep it ≥ 1. |
 
 The config canvas also shows a "Source Table" column, but this trigger does not store it.
 
@@ -45,16 +45,15 @@ Reference them as `{{trigger_ReportId}}`, `{{trigger_DocumentStream}}` and so on
 |---|---|---|---|
 | publish | error | at least one report line | The "When a PDF is printed" trigger requires at least one report line. |
 | publish | error | no other published flow uses this trigger | Only one published flow can use the "When a PDF is printed" trigger. It is already used by flow '%1'. |
-| editor | error | at least one line | Configure at least one report line. |
-| editor | error | `timeoutSec` ≥ 1 | The timeout must be at least 1 second. |
-| editor | error | report exists | Report %1 does not exist. |
-| editor | error | report listed once | Report %1 is configured on more than one line. |
+
+Nothing else is checked. A line for a report that does not exist never matches, and a `timeoutSec` of 0 or less removes the time limit.
 
 ## Runtime errors
 
 | condition | effect / message |
 |---|---|
 | flow fails | The execution is marked Error with the log "PDF Print flow failed before any body step could complete: %1". The user gets the original PDF and the print does not fail. |
+| a Sleep step runs | Step %1 (%2) requested a deferred resume, but the flow is running synchronously. Use Sleep or other time-based deferral steps only outside of synchronous frames (Webhook sync phase or SubFlow body). |
 
 ## Example
 

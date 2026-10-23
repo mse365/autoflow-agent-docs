@@ -31,7 +31,7 @@ The rows belong to the top-level execution, also when the step runs inside a Sub
 
 | key | type | required | default | description |
 |---|---|---|---|---|
-| `credentialCode` | string (≤ 20) | yes | `""` | Code of the AutoFlow Credential (see above). No SmartFields. |
+| `credentialCode` | string (≤ 20) | yes | `""` | Code of the AutoFlow Credential (see above). Longer values are cut to 20 characters; matching is not case-sensitive. |
 | `storageAccount` | string | yes | `""` | Storage account name: 3–24 characters, `a-z0-9`. Supports SmartText. |
 | `container` | string | yes | `""` | Container name: 3–63 characters, `a-z0-9` and single `-`, starting and ending with a letter or digit. `$root` and `$web` are also allowed. Supports SmartText. |
 | `path` | string | no | `""` | Path prefix, e.g. `invoices/2026/`. Empty lists the whole container. The value is trimmed, `\` becomes `/`, and a leading `/` is removed. Supports SmartText. |
@@ -46,7 +46,7 @@ The rows belong to the top-level execution, also when the step runs inside a Sub
 | name | type | tableNo | notes |
 |---|---|---|---|
 | `count` | value | – | Number of files returned, as text. |
-| `results` | reference | 5564412 | Azure Blob Entry rows. `results` points at the first row, and `results[0]`, `results[1]`, … address the individual rows. |
+| `results` | reference | 5564412 | Azure Blob Entry rows. `results` points at the first row, and `results[0]`, `results[1]`, … address the individual rows. Not written at all when no file is found. |
 
 To use them downstream:
 
@@ -58,15 +58,17 @@ To use them downstream:
 
 | stage | severity | rule | message |
 |---|---|---|---|
-| editor | error | `credentialCode` empty | Select a credential for the Azure Blob Storage connection. |
-| editor + runtime | error | Credential does not exist | Credential %1 does not exist. |
-| editor + runtime | error | Credential type is not OAuth 2.0 client credentials or Azure Storage SAS token | Credential %1 uses the authentication type "%2". Azure Blob Storage steps accept "%3" (an Entra app) or "%4". |
-| editor | error | OAuth credential scope does not contain `storage.azure.com` | Credential %1 requests the scope "%2". Azure Blob Storage needs a token for the scope https://storage.azure.com/.default. |
-| editor (literal values) + runtime (resolved value) | error | Invalid storage account | The storage account name "%1" is not valid. It must be 3 to 24 characters long and contain only lowercase letters and digits. |
-| editor (literal values) + runtime (resolved value) | error | Invalid container | The container name "%1" is not valid. It must be 3 to 63 characters long and contain only lowercase letters, digits and single hyphens, starting and ending with a letter or digit. |
-| editor status line + runtime | error | Endpoint is not covered by the credential's base URLs | The URL "%1" is not allowed by credential "%2". Allowed prefixes: %3. |
+| editor | error | `credentialCode`, `storageAccount` and `container` are required fields | Please fill in the highlighted fields. |
+| editor status line | warning | Credential does not exist, has an unsupported type, or (OAuth) requests a scope without `storage.azure.com`; endpoint not covered by the credential's base URLs (literal values only). Advisory: shown with a ⚠ prefix, does not block saving. | See the messages below. |
+| runtime | error | `credentialCode` empty | Select a credential for the Azure Blob Storage connection. |
+| runtime | error | Credential does not exist | Credential %1 does not exist. |
+| runtime | error | Credential type is not OAuth 2.0 client credentials or Azure Storage SAS token | Credential %1 uses the authentication type "%2". Azure Blob Storage steps accept "%3" (an Entra app) or "%4". |
+| editor status line only | warning | OAuth credential scope does not contain `storage.azure.com` | Credential %1 requests the scope "%2". Azure Blob Storage needs a token for the scope https://storage.azure.com/.default. |
+| runtime | error | Invalid storage account (resolved value) | The storage account name "%1" is not valid. It must be 3 to 24 characters long and contain only lowercase letters and digits. |
+| runtime | error | Invalid container (resolved value) | The container name "%1" is not valid. It must be 3 to 63 characters long and contain only lowercase letters, digits and single hyphens, starting and ending with a letter or digit. |
+| runtime | error | Endpoint is not covered by the credential's base URLs | The URL "%1" is not allowed by credential "%2". Allowed prefixes: %3. |
 
-Values that contain `{{` are only checked at run time, after the SmartFields are resolved. No publish-time check exists for this step.
+The editor does not check the account or container format; a typo only shows up when the step runs. No publish-time check exists for this step.
 
 ## Runtime errors
 

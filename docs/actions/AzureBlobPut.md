@@ -18,7 +18,7 @@ Uploads a document, binary data or text to a path in Azure Blob Storage, with op
 The step resolves `content` and writes it as a block blob to `path`, with `contentType` and the optional index tags, in a single request. The data source depends on the **raw** `content` value:
 
 - **Exactly one SmartField that names an AutoFlow Document** (e.g. the `Document` output of a PDF step): that document's bytes are uploaded, and its stored content type is used.
-- **Exactly one SmartField that names another binary source** (a BLOB or Media field, a binary step output): those bytes are uploaded byte for byte.
+- **Exactly one SmartField that names a BLOB, Media or MediaSet field** one level into a record reference (e.g. `{{trigger_Rec.picture}}`): those bytes are uploaded byte for byte.
 - **Anything else**: the value is resolved as SmartText and uploaded as UTF-8 text.
 
 When `overwrite` is off, the step first checks whether a blob with exactly this path exists, and fails if so.
@@ -54,18 +54,19 @@ Reference the outputs downstream, e.g. `{{UploadInvoice_url}}`.
 
 | stage | severity | rule | message |
 |---|---|---|---|
-| editor | error | `credentialCode` empty | Select a credential for the Azure Blob Storage connection. |
-| editor + runtime | error | Credential missing or of a wrong type, OAuth scope is not Azure Storage, invalid account or container | See [Azure Blob: List files](AzureBlobList.md#validation) |
-| editor + runtime | error | `path` empty | Enter the path of the file, for example invoices/2026/INV-1001.pdf. |
-| editor + runtime | error | `path` ends with `/` | The path "%1" ends with a slash, so it names a folder. Enter the path of a file. |
-| editor + runtime | error | More than 10 tags | A file can have at most 10 index tags; %1 are configured. |
-| editor + runtime | error | Duplicate tag name | The index tag "%1" is configured more than once. |
-| editor + runtime | error | Tag name is not 1–128 characters | The index tag name "%1" is not valid. It must be 1 to 128 characters long. |
-| editor (literal) / runtime (resolved) | error | Tag value is longer than 256 characters | The value of index tag "%1" is too long. Tag values can have at most 256 characters. |
-| editor (literal) / runtime (resolved) | error | Tag name or value contains a character other than ASCII letters, digits, space and `+ - . / : = _` | The index tag "%1" contains the character "%2". Tag names and values may only contain letters, digits, spaces and the characters + - . / : = _ |
-| editor status line + runtime | error | Endpoint is not covered by the credential's base URLs | The URL "%1" is not allowed by credential "%2". Allowed prefixes: %3. |
+| editor | error | `credentialCode`, `storageAccount`, `container`, `path` and `content` are required fields | Please fill in the highlighted fields. |
+| editor status line | warning | Credential problems and the base-URL allow-list, as for List files. Advisory only. | See [Azure Blob: List files](AzureBlobList.md#validation) |
+| runtime | error | Credential empty, missing or of a wrong type; invalid storage account or container (resolved values) | See [Azure Blob: List files](AzureBlobList.md#validation) |
+| runtime | error | `path` empty after resolving and normalizing | Enter the path of the file, for example invoices/2026/INV-1001.pdf. |
+| runtime | error | `path` ends with `/` | The path "%1" ends with a slash, so it names a folder. Enter the path of a file. |
+| runtime | error | More than 10 tags | A file can have at most 10 index tags; %1 are configured. |
+| runtime | error | Duplicate tag name (the editor's tag column also refuses duplicates) | The index tag "%1" is configured more than once. |
+| runtime | error | Tag name is not 1–128 characters | The index tag name "%1" is not valid. It must be 1 to 128 characters long. |
+| runtime | error | Resolved tag value is longer than 256 characters | The value of index tag "%1" is too long. Tag values can have at most 256 characters. |
+| runtime | error | Tag name or resolved value contains a character other than ASCII letters, digits, space and `+ - . / : = _` | The index tag "%1" contains the character "%2". Tag names and values may only contain letters, digits, spaces and the characters + - . / : = _ |
+| runtime | error | Endpoint is not covered by the credential's base URLs | The URL "%1" is not allowed by credential "%2". Allowed prefixes: %3. |
 
-No publish-time check exists for this step.
+The editor does not check paths or tags; all of these fail only when the step runs. No publish-time check exists for this step.
 
 ## Runtime errors
 

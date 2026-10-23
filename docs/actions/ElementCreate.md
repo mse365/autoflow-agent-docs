@@ -10,7 +10,7 @@ Declares a single-slot variable that holds one text value or one record referenc
 | Ordinal | `"action": 202` |
 | Category | Data |
 | Terminating | `false` |
-| Group / edges | no |
+| Group / edges | No |
 | Availability | GA |
 
 ## What it does
@@ -22,7 +22,7 @@ The step creates a named slot and publishes it as an output, so that later steps
 | key | type | required | default | description |
 |---|---|---|---|---|
 | `elementName` | string (max 30) | yes | `""` | Name of the element and of the step's output. Plain text. The name is truncated to 30 characters at run time, so keep it to 30 characters or fewer. |
-| `elementType` | integer | yes | `0` | `0` = Value, `1` = Reference. A missing or unknown value is treated as `0`. |
+| `elementType` | integer | no | `0` | `0` = Value, `1` = Reference. A missing or unknown value is treated as `0`. |
 | `tableNo` | integer | if `elementType` = 1 | `0` | Table that the reference points to. The editor writes `0` for Value elements. |
 | `initialValue` | string | no | `""` | **Value:** SmartText (SmartFields, SmartFormulas, SmartControls), resolved at run time. **Reference:** a single `{{name}}` that resolves to an upstream Reference output of the same table, or empty. |
 
@@ -40,11 +40,10 @@ To reference the element, use `{{<slug>_<elementName>}}`, for example `{{Total_A
 | stage | severity | rule | message |
 |---|---|---|---|
 | editor | error | `elementName` non-empty | Please fill in the highlighted fields. |
-| editor | error | `elementType` is 0 or 1 | – |
 | editor | error | `tableNo` non-zero when `elementType` = 1 | Please fill in the highlighted fields. |
-| runtime | warning | `elementName` longer than 30 characters is truncated, so the declared output does not match | – |
+| runtime | – | `elementName` longer than 30 characters is silently truncated (not an error), so the declared output does not match | – |
 
-Publishing does not re-run the editor checks.
+The editor checks are required-field checks in the configuration dialog. Publishing does not re-run them.
 
 ## Runtime errors
 

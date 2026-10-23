@@ -36,7 +36,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "Run while a new record is being inserted. No before-image: xRec_ outputs are empty and watch fields do not gate the insert (filters still apply)."
+      "description": "Run while a new record is being inserted. There is no before-image: xRec_ outputs carry the field's blank value, and watch fields do not gate the insert (filters still apply)."
     },
     {
       "key": "triggerOnModify",
@@ -56,7 +56,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "Maximum run time of the flow. The editor replaces values <= 0 with 30."
+      "description": "Seconds the flow may run. Checked between steps: once it has passed, the remaining steps are skipped and the save goes ahead without the flow's answer. 0 or a negative value means no limit; the editor writes 30 instead."
     },
     {
       "key": "filters",
@@ -66,7 +66,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "Field filters on the record being saved (after-image): [{ \"fieldNo\": <integer>, \"filter\": \"<BC filter expression>\" }]. Applied literally (max 250 chars, no placeholders)."
+      "description": "Field filters on the record being saved (after-image): [{ \"fieldNo\": <integer>, \"filter\": \"<BC filter expression>\" }]. Applied literally with SetFilter (max 250 characters, no placeholders). A filter that Business Central cannot parse means the flow does not run. Two rows for the same field: the last one wins."
     },
     {
       "key": "watchFields",
@@ -76,7 +76,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "[{ \"fieldNo\": <integer>, \"name\": \"<identifier>\" }]. On a modify the flow fires only if at least one watched field differs between before- and after-image (no watch fields = every matching modify). Each entry produces outputs xRec_<name> and Rec_<name>. name defaults to the PascalCase caption; it should be a valid identifier (letter or '_' first, then letters/digits/'_', max 30)."
+      "description": "[{ \"fieldNo\": <integer>, \"name\": \"<identifier>\" }]. On a modify the flow fires only if at least one watched field differs between before- and after-image (no watch fields = every matching modify). Each entry produces outputs xRec_<name> and Rec_<name>. Duplicate fieldNo rows are ignored. The editor fills an empty name from the field caption in PascalCase and cuts it to 30 characters. Use a valid identifier (letter or '_' first, then letters, digits or '_') that is unique within the trigger."
     }
   ],
   "outputs": [
@@ -90,13 +90,13 @@
       "name": "xRec_<watchFields[].name>",
       "type": "value",
       "tableNo": null,
-      "when": "one per watch field; value before the change (empty on insert), locale-invariant text; name truncated to 30"
+      "when": "one per watch field; value before the change (on insert: the field's blank value), locale-invariant text (Format(value, 0, 9)); output name cut at 30 characters"
     },
     {
       "name": "Rec_<watchFields[].name>",
       "type": "value",
       "tableNo": null,
-      "when": "one per watch field; value after the change, locale-invariant text; name truncated to 30"
+      "when": "one per watch field; value after the change, locale-invariant text (Format(value, 0, 9)); output name cut at 30 characters"
     }
   ],
   "rules": [
@@ -116,7 +116,7 @@
       "id": "OnDocumentModify.table-supported",
       "severity": "error",
       "stage": "publish",
-      "check": "configuration.tableNo must be a supported table (built-in list or registered by an extension). Hard stop at publish; also shown live in the canvas status line ('Table %1 is not supported by this trigger, so the flow would never run.').",
+      "check": "configuration.tableNo must be a supported table (built-in list or registered by an extension). Hard stop at publish.",
       "message": "Table %1 is not one of the supported tables."
     },
     {
@@ -127,11 +127,25 @@
       "message": "Choose when the flow runs: on insert, on modify, or both."
     },
     {
-      "id": "OnDocumentModify.guiOnly-type",
+      "id": "OnDocumentModify.table-required-editor",
       "severity": "error",
       "stage": "editor",
-      "check": "guiOnly must be a boolean.",
-      "message": "(no message; invalid values fall back to the default)",
+      "check": "The configuration dialog refuses to save while no table is picked.",
+      "message": "Please fill in the highlighted fields."
+    },
+    {
+      "id": "OnDocumentModify.table-status",
+      "severity": "info",
+      "stage": "editor",
+      "check": "Live status line in the configuration dialog (does not block saving): shown when the table does not exist or is not supported.",
+      "message": "Table %1 does not exist in this environment. | Table %1 is not supported by this trigger, so the flow would never run."
+    },
+    {
+      "id": "OnDocumentModify.guiOnly-type",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "guiOnly should be a JSON boolean.",
+      "message": "(no message; a value that is not a boolean is ignored and the default applies)",
       "machine": {
         "type": "type",
         "key": "guiOnly",
@@ -140,10 +154,10 @@
     },
     {
       "id": "OnDocumentModify.triggerOnInsert-type",
-      "severity": "error",
-      "stage": "editor",
-      "check": "triggerOnInsert must be a boolean.",
-      "message": "(no message)",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "triggerOnInsert should be a JSON boolean.",
+      "message": "(no message; a value that is not a boolean is ignored and the default applies)",
       "machine": {
         "type": "type",
         "key": "triggerOnInsert",
@@ -152,10 +166,10 @@
     },
     {
       "id": "OnDocumentModify.triggerOnModify-type",
-      "severity": "error",
-      "stage": "editor",
-      "check": "triggerOnModify must be a boolean.",
-      "message": "(no message)",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "triggerOnModify should be a JSON boolean.",
+      "message": "(no message; a value that is not a boolean is ignored and the default applies)",
       "machine": {
         "type": "type",
         "key": "triggerOnModify",
@@ -163,23 +177,11 @@
       }
     },
     {
-      "id": "OnDocumentModify.timeout-positive",
-      "severity": "warning",
-      "stage": "editor",
-      "check": "timeoutSec should be > 0 (the editor writes 30 for values <= 0).",
-      "message": "(no message)",
-      "machine": {
-        "type": "range",
-        "key": "timeoutSec",
-        "min": 1
-      }
-    },
-    {
       "id": "OnDocumentModify.watch-name-identifier",
-      "severity": "warning",
+      "severity": "info",
       "stage": "editor",
-      "check": "watchFields[].name should be a valid identifier (^[A-Za-z_][A-Za-z0-9_]{0,29}$) and unique, so that xRec_<name>/Rec_<name> are valid references. Not enforced by the trigger's publish check.",
-      "message": "(no message)"
+      "check": "watchFields[].name should be a valid identifier (^[A-Za-z_][A-Za-z0-9_]{0,29}$) and unique, so that xRec_<name> / Rec_<name> are valid, distinct references. Neither the editor nor publish checks it; the editor only fills an empty name from the field caption.",
+      "message": "(not checked)"
     },
     {
       "id": "OnDocumentModify.flow-error-blocks-save",
@@ -187,16 +189,24 @@
       "stage": "runtime",
       "check": "Any error in the flow (e.g. an Error step) propagates to the user and rolls back the insert/modify together with the flow's own work and execution log.",
       "message": "(the flow's own error message)"
+    },
+    {
+      "id": "OnDocumentModify.no-deferred-steps",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The flow runs inline in the user's save, so a step that defers the run (Sleep) fails, and the save is rolled back.",
+      "message": "Step %1 (%2) requested a deferred resume, but the flow is running synchronously. Use Sleep or other time-based deferral steps only outside of synchronous frames (Webhook sync phase or SubFlow body)."
     }
   ],
   "notes": [
-    "Synchronous and atomic: the flow runs in the user's session from the table's before-insert / before-modify event, inside the user's transaction, without any commit. An error prevents the save and rolls everything back (including the execution entry); a Set document field values step writes field values back onto the record before it is saved.",
-    "Only writes that run table triggers fire the flow (a programmatic Modify(false)/Insert(false) does not).",
+    "Synchronous and atomic: the flow runs in the user's session from the table's before-insert / before-modify event, inside the user's transaction, without any commit. An error prevents the save and rolls everything back, including the execution entry. A Set document field values step writes field values onto the record before it is saved.",
+    "Only writes that run table triggers fire the flow (a programmatic Modify(false) / Insert(false) does not). With guiOnly (default) sessions without a user interface are skipped.",
     "Re-entrancy guard: a write that the running flow itself causes on a watched table does not start the flow again.",
     "Watch fields compare the live before-image (xRec) with the after-image using locale-invariant text; this is different from the snapshot used by 'When a record is modified'.",
+    "timeoutSec is checked between steps. When it has passed, the remaining steps are skipped and the save continues without a Set document field values answer.",
+    "Confirm dialog: Business Central opens no dialog inside the record change, so a Confirm dialog step fails when a user triggers the flow. Publishing warns about it (see the Confirm dialog page). Use a release, post or page trigger to ask the user.",
+    "The picker shows 'When a record is created or modified (interactive)'; the enum caption is 'When a document is modified (interactive)'.",
     "No recurring Job Queue entry; the registration is keyed by tableNo.",
-    "Use a trigger that runs in the background, such as a record trigger, a schedule or a manual start.'). A Confirm dialog step gets a publish warning ('The confirm dialog '%1' runs inside the record change that started the flow. Business Central does not open dialogs there, so when a user triggers the flow it fails at this step. It only works when the flow runs in the background, where the answer under 'Without a user interface' applies.').",
-    "Picker filter: Set document field values is offered (shared with the other interactive document triggers). Respond to Webhook, Return SubFlow Output, Return PDF, Set report file name and Prevent page close are hidden.",
-    "Whether timeoutSec is enforced in this inline mode is not verifiable from the trigger code alone; keep these flows short regardless."
+    "Picker filter: Set document field values is offered (shared with the other interactive document triggers). Respond to Webhook, Return SubFlow Output, Return PDF, Set report file name and Prevent page close are hidden."
   ]
 }

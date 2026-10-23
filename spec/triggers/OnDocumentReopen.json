@@ -36,7 +36,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "Maximum run time. The editor replaces values <= 0 with 30."
+      "description": "Seconds the flow may run. Checked between steps: once it has passed, the remaining steps are skipped and the reopen goes ahead without the flow's answer. 0 or a negative value means no limit; the editor writes 30 instead."
     },
     {
       "key": "filters",
@@ -46,7 +46,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "Field filters on the document header: [{ \"fieldNo\": <integer>, \"filter\": \"<BC filter expression>\" }]. Applied literally (max 250 chars, no placeholders)."
+      "description": "Field filters on the document header: [{ \"fieldNo\": <integer>, \"filter\": \"<BC filter expression>\" }]. Applied literally with SetFilter (max 250 characters, no placeholders). A filter that Business Central cannot parse means the flow does not run. Two rows for the same field: the last one wins."
     }
   ],
   "outputs": [
@@ -74,31 +74,33 @@
       "id": "OnDocumentReopen.table-supported",
       "severity": "error",
       "stage": "publish",
-      "check": "configuration.tableNo must be a supported reopenable document table. Hard stop at publish; also shown live in the canvas status line.",
+      "check": "configuration.tableNo must be a supported reopenable document table (Sales Header 36, Purchase Header 38, or one registered by an extension). Hard stop at publish.",
       "message": "Table %1 is not one of the supported reopenable document tables."
     },
     {
-      "id": "OnDocumentReopen.guiOnly-type",
+      "id": "OnDocumentReopen.table-required-editor",
       "severity": "error",
       "stage": "editor",
-      "check": "guiOnly must be a boolean.",
-      "message": "(no message)",
+      "check": "The configuration dialog refuses to save while no table is picked.",
+      "message": "Please fill in the highlighted fields."
+    },
+    {
+      "id": "OnDocumentReopen.table-status",
+      "severity": "info",
+      "stage": "editor",
+      "check": "Live status line in the configuration dialog (does not block saving): shown when the table does not exist or is not supported.",
+      "message": "Table %1 does not exist in this environment. | Table %1 is not supported by this trigger, so the flow would never run."
+    },
+    {
+      "id": "OnDocumentReopen.guiOnly-type",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "guiOnly should be a JSON boolean.",
+      "message": "(no message; a value that is not a boolean is ignored and the default true applies)",
       "machine": {
         "type": "type",
         "key": "guiOnly",
         "valueType": "boolean"
-      }
-    },
-    {
-      "id": "OnDocumentReopen.timeout-positive",
-      "severity": "warning",
-      "stage": "editor",
-      "check": "timeoutSec should be > 0 (the editor writes 30 for values <= 0).",
-      "message": "(no message)",
-      "machine": {
-        "type": "range",
-        "key": "timeoutSec",
-        "min": 1
       }
     },
     {
@@ -107,11 +109,19 @@
       "stage": "runtime",
       "check": "Any error in the flow (e.g. an Error step) prevents the reopen and shows the flow's message.",
       "message": "(the flow's own error message)"
+    },
+    {
+      "id": "OnDocumentReopen.no-deferred-steps",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The flow runs inline, so a step that defers the run (Sleep) fails and the reopen is prevented.",
+      "message": "Step %1 (%2) requested a deferred resume, but the flow is running synchronously. Use Sleep or other time-based deferral steps only outside of synchronous frames (Webhook sync phase or SubFlow body)."
     }
   ],
   "notes": [
-    "Fires on the MANUAL reopen of a Sales or Purchase document, including documents with status Pending Approval. Previews never fire it.",
+    "Fires on the MANUAL reopen of a Sales or Purchase document, including documents with status Pending Approval.",
     "Synchronous and atomic: runs inline in the user's transaction, without commits. An error prevents the reopen. A Set document field values step adjusts the header; with 'Skip standard processing' the header is saved with the flow's values and Business Central's own reopen (Status := Open) is skipped.",
+    "timeoutSec is checked between steps. When it has passed, the remaining steps are skipped and the reopen continues without a Set document field values answer.",
     "Pending Approval: Business Central normally refuses to reopen such a document. When a reopen flow ran for it, that block is lifted - unless Business Central's own approval workflow still has open approval entries for the document.",
     "Business Central version dependency: for Purchase documents on BC24-BC27 the flow runs one event later (after Business Central's Pending Approval check), so on those versions a Pending Approval purchase document cannot be reopened through the flow. Sales documents are not affected.",
     "A Confirm dialog step can ask the user; the reopen waits for the answer.",

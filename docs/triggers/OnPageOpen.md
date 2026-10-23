@@ -22,8 +22,8 @@ Hooks the open event of the configured page. In a session with a UI, and when th
 | key | type | required | default | description |
 |---|---|---|---|---|
 | `pageNo` | integer | yes | `0` | Sales Quote `41`, Sales Order `42`, Sales Invoice `43`, Sales Credit Memo `44`, Sales Return Order `6630`, Blanket Sales Order `507`, Purchase Quote `49`, Purchase Order `50`, Purchase Invoice `51`, Purchase Credit Memo `52`, Purchase Return Order `6640`, Blanket Purchase Order `509`, Customer Card `21`, Vendor Card `26`, Contact Card `5050`, Item Card `30`. |
-| `timeoutSec` | integer | no | `10` | Maximum run time. The page waits for it. |
-| `filters` | array | no | `[]` | `[{ "fieldNo": int, "filter": "text" }]`. These are filters on the page's record (its source table), applied literally, max. 250 characters. |
+| `timeoutSec` | integer | no | `10` | Maximum run time. The page waits for it. Checked between steps: when it has passed, the remaining steps are skipped and the page opens. `0` or less means 10. |
+| `filters` | array | no | `[]` | `[{ "fieldNo": int, "filter": "text" }]`. These are filters on the page's record (its source table), applied literally, max. 250 characters. A filter that Business Central can't parse means the flow never runs. |
 
 The table is not configured. It is always the page's source table.
 
@@ -42,12 +42,17 @@ Reference them as `{{trigger_Rec}}` and `{{trigger_PageNo}}`.
 |---|---|---|---|
 | publish | error (hard stop) | `pageNo` set | Pick the page the flow should watch. |
 | publish | error (hard stop) | `pageNo` supported | Page %1 is not supported by this trigger, so the flow would never run. |
+| editor | error | no page picked | Please fill in the highlighted fields. |
+| editor | info | status line (does not block saving) | Page %1 does not exist in this environment. / Page %1 is not supported by this trigger, so the flow would never run. |
+
+`%1` in the publish message is the page number and caption, for example `5 (Currencies)`. Trigger errors are reported as `This flow's trigger cannot be published:` followed by the list.
 
 ## Runtime errors
 
 | condition | effect |
 |---|---|
 | any error in the flow | The page does not open and the user sees the flow's message. |
+| a Sleep step runs | The flow fails with "Step %1 (%2) requested a deferred resume, but the flow is running synchronously. …", so the page does not open. |
 
 ## Example
 
@@ -63,7 +68,7 @@ Reference them as `{{trigger_Rec}}` and `{{trigger_PageNo}}`.
     "pageNo": 21,
     "timeoutSec": 10,
     "filters": [
-      { "fieldNo": 39, "filter": "<>' '" }
+      { "fieldNo": 39, "filter": "Ship|Invoice|All" }
     ]
   },
   "outputs": [

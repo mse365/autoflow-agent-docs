@@ -95,10 +95,10 @@
   "rules": [
     {
       "id": "SetDocumentField.values-required",
-      "severity": "error",
-      "stage": "editor",
-      "check": "configuration.values must contain at least one entry.",
-      "message": "Add at least one field to set on the record.",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "configuration.values should contain at least one row. With no rows nothing is written (in release/reopen flows with skipStandard the document is still saved and the release/reopen skipped). The step's own check ('Add at least one field to set on the record.') is not run in 27.0.39, and the editor does not require a row.",
+      "message": "(no message)",
       "machine": {
         "type": "required",
         "key": "values"
@@ -179,11 +179,11 @@
     }
   ],
   "notes": [
-    "Only meaningful in flows started by an interactive document trigger: When a document is modified / released / posted / reopened (interactive). The step picker offers it only there; in any other flow it has no effect.",
+    "Only meaningful in flows started by an interactive document trigger: When a record is created or modified / When a document is released / posted / reopened (interactive). The step picker offers it only there; do not use it in other flows.",
     "The record is NOT written by this step: it resolves the values and hands them back to the waiting trigger, which applies them (with Validate or direct assignment per row) to the live record before Business Central's own save/release/reopen/post continues.",
-    "This step has no input-format check at save time (unlike Insert/Modify/Rename); invalid input formats only fail when the trigger applies the values.",
     "To prevent the document action instead, end the flow with an Error step.",
     "terminating must be true in the step JSON.",
-    "Writing step: a Confirm dialog placed after this step (in document order) produces a publish warning, because Business Central cannot open a dialog once the flow has written to the database."
+    "Writing step: a Confirm dialog placed after this step (in document order) produces a publish warning, because Business Central cannot open a dialog once the flow has written to the database.",
+    "The picker and the editor's default description show 'Set Field Values'; the enum caption is 'Set document field values'."
   ]
 }

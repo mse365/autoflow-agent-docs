@@ -125,38 +125,38 @@
       "id": "SendNotification.message-required",
       "severity": "error",
       "stage": "editor",
-      "check": "configuration.Message must be non-empty",
-      "message": "Enter the message to show as a notification.",
+      "check": "configuration.Message is a required field in the editor. Not checked at publish; at run time an empty Message shows nothing (no error).",
+      "message": "Please fill in the highlighted fields.",
       "machine": { "type": "required", "key": "Message" }
     },
     {
       "id": "SendNotification.display-enum",
-      "severity": "error",
-      "stage": "editor",
-      "check": "display is 0 (Notification) or 1 (Dialog message)",
-      "message": "(option field in the dialog; no message text)",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "display should be 0 (Notification) or 1 (Dialog message). Any other number shows a notification without actions; the editor offers only these two options.",
+      "message": "",
       "machine": { "type": "enum", "key": "display", "values": [0, 1] }
     },
     {
       "id": "SendNotification.actions-type",
-      "severity": "error",
-      "stage": "editor",
-      "check": "actions, if present, must be an array",
-      "message": "(no message text)",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "actions, if present, should be an array; any other value is ignored (no actions, no publish warning).",
+      "message": "",
       "machine": { "type": "type", "key": "actions", "valueType": "array" }
     },
     {
       "id": "SendNotification.max-actions",
       "severity": "warning",
       "stage": "publish",
-      "check": "When display = 0: at most 3 rows in actions (also an editor error/status line). At run time only the first 3 valid rows are used.",
+      "check": "When display = 0: at most 3 rows in actions (the editor cannot add more; editor status line, publish warning 'Send notification '<stepId>': <message>'). At run time only the first 3 rows that have a label, a type and a target are offered.",
       "message": "A notification can carry at most %1 actions. Remove the others."
     },
     {
       "id": "SendNotification.action-label",
       "severity": "warning",
       "stage": "publish",
-      "check": "When display = 0: every action row needs a non-empty label (also an editor error). Publish wraps each row problem as \"Send notification '<stepId>': Action <n>: <problem>\".",
+      "check": "When display = 0: every action row needs a non-empty label (editor status line and publish warning). Row problems are prefixed 'Action <n>: '; publish adds 'Send notification '<stepId>': ' in front.",
       "message": "Enter a label."
     },
     {
@@ -245,8 +245,8 @@
     }
   ],
   "notes": [
-    "Publish-time warnings are only raised when display = 0 (Notification). Each is prefixed: \"Send notification '<stepId>': Action <n>: <problem>\". Warnings ask for confirmation interactively; a headless publish (API) fails while any warning exists.",
-    "The same action rules are shown in the editor (status line and validation) — listed once here with stage publish.",
+    "Publish-time warnings are only raised when display = 0 (Notification). Each is prefixed \"Send notification '<stepId>': \", and row problems additionally \"Action <n>: \". Warnings ask for confirmation interactively; a headless publish (API) fails while any warning exists.",
+    "The same action rules show in the editor as the first problem on the status line (advisory, does not block saving) – listed once here with stage publish.",
     "No run-time errors: a row that cannot be resolved (unknown flow/page, unresolvable or missing record, record of the wrong table, filter that cannot be applied, filters longer than 2000 characters as a view) is left out and logged as 'Notification action \"%1\" left out: %2'; the notification still goes out.",
     "Sessions without a user interface: a Job Queue run stores the message for the user who started the run and is following it in the wait dialog (shown once the run has finished; logged as 'No user interface – the message is shown to the user following the run once it has finished.'). Any other session without UI skips it ('No user interface – notification skipped.'). Actions are not offered in those cases.",
     "The step is offered for every trigger (no trigger restriction).",

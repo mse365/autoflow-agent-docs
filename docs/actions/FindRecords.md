@@ -34,9 +34,9 @@ The step opens table `tableNo`, applies the sort key (`keyFields` and `ascending
 | key | type | description |
 |---|---|---|
 | `fieldNo` | integer | Field **number**. Rows with `0` are skipped. If several rows target the same field, the last one wins. |
-| `filter` | string | Business Central filter syntax, as in the filter pane: `10000..20000`, `<>0`, `A*\|B*`, `@*gmbh*`, `''` (empty), `<>''`. `{{SmartFields}}` are resolved against the **flow context** before filtering. The result is truncated to 250 characters. On a RecordId field, a filter that is exactly one reference SmartField (e.g. `{{trigger_Rec}}`) filters on that record. |
+| `filter` | string | Business Central filter syntax, as in the filter pane: `10000..20000`, `<>0`, `A*\|B*`, `@*gmbh*`, `''` (empty), `<>''`. `{{SmartFields}}` are resolved against the **flow context** before filtering. The text is cut to 250 characters. On a RecordId field, a filter that is exactly one reference SmartField (e.g. `{{trigger_Rec}}`) filters on that record. |
 
-The editor also writes `lineNo` on each row. The step ignores it.
+The editor saves each row as `{fieldNo, filter}` only, one row per field. A `lineNo` key is ignored.
 
 ### `smartFilter` grammar
 
@@ -50,14 +50,14 @@ The editor also writes `lineNo` on each row. The step ignores it.
 
 | name | type | tableNo | notes |
 |---|---|---|---|
-| `count` | value | – | Number of returned records, as text. Always set (`"0"` when nothing matched). |
+| `count` | value | – | Number of returned records, as text in the regional format (`1,000` and up carry a thousands separator). Always set (`"0"` when nothing matched). |
 | `results` | reference | = `configuration.tableNo` | Reference array. Use `{{<slug>_results}}` (= first record), `{{<slug>_results[0]}}`, `{{<slug>_results[1]}}`, … It is the usual source of a For Each loop. Only set when at least one record matched. |
 
 ## Validation
 
 | stage | severity | rule | message |
 |---|---|---|---|
-| editor | error | `tableNo` missing or `0` | – (step shown as not configured) |
+| editor | error | `tableNo` missing or `0` (the Table field is required) | `Please fill in the highlighted fields.` |
 
 There are no publish-time checks specific to this step. As for every step, `{{x_y}}` placeholders whose part before the first underscore is not a known slug produce a publish warning, and that includes SmartFilter field names that contain `_`.
 
@@ -90,7 +90,7 @@ There are no publish-time checks specific to this step. As for every step, `{{x_
     "smartFilter": "({{Your Reference}} != '') & ({{Location Code}} ^= WH)",
     "limit": 10,
     "errorOnEmpty": false,
-    "keyFields": "Document Type,Sell-to Customer No.,No.",
+    "keyFields": "Document Type,Sell-to Customer No.",
     "ascending": false
   },
   "outputs": [

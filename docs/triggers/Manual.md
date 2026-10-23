@@ -35,17 +35,17 @@ None of these keys supports SmartText. They are literal values.
 |---|---|---|---|
 | `Rec` | reference | `tableNo` | Only when `tableNo` ≠ 0. The record the run was started for. |
 
-Reference it as `{{trigger_Rec}}` (the trigger slug defaults to `trigger`). Fields of the record are read the same way as for any other reference output; the core SmartField docs describe the syntax.
+Reference it as `{{trigger_Rec}}`. Fields of the record are read like any other reference output, see [references-and-smart-fields.md](../references-and-smart-fields.md).
 
 ## Validation
 
 | stage | severity | rule | message |
 |---|---|---|---|
-| publish | error (hard stop) | `tableNo`, if set, must be an existing table | The table %1 the flow runs on does not exist. |
+| publish | error (hard stop) | `tableNo`, if set, must be an existing table (not checked in the editor) | The table %1 the flow runs on does not exist. |
 | publish | error (hard stop) | each page in `pages` must carry the Start Flow action | The page %1 cannot show the "Start Flow" action. |
 | publish | error (hard stop) | for a record-based flow, each page must show `tableNo` records | The page %1 shows records of the table %2, but the flow runs on the table %3. |
 | publish | error | the flow header needs a Code (not part of the JSON) | Enter a Code on the flow card before publishing this flow. Manual flows are started from other flows and from extensions by their Code. |
-| editor | error | the same page rules, shown live in the config status line | (same texts) |
+| editor | error | the two page rules, shown live in the config status line | (same texts) |
 
 Trigger errors are reported as `This flow's trigger cannot be published:` followed by the list.
 

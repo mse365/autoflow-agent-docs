@@ -13,7 +13,7 @@
       { "value": "false", "description": "No" }
     ],
     "dynamic": false,
-    "rules": "Exactly two edges, in this order: edges[0] value \"true\" (taken when the condition evaluates to true) and edges[1] value \"false\". The edge 'description' is the branch label shown on the canvas (the editor's 'True label' / 'False label' fields write to edges[0].description / edges[1].description, not to configuration). The editor addresses the labels by position (index 0 = true, 1 = false), so keep that order. An edge with an empty 'steps' array is legal: the flow simply continues after the Decision step."
+    "rules": "Exactly two edges, in this order: edges[0] value \"true\" and edges[1] value \"false\". The engine routes on the 'result' output: it runs the steps of the edge whose 'value' equals it. If that edge is missing or has an empty 'steps' array, the flow continues after the Decision step (no error). The edge 'description' is the branch label: the editor's 'True label' / 'False label' fields read and write edges[0].description / edges[1].description by position (not configuration), so keep that order."
   },
   "configuration": [
     {
@@ -30,20 +30,12 @@
   "outputs": [
     { "name": "result", "type": "value", "tableNo": null, "when": "always" }
   ],
-  "rules": [
-    {
-      "id": "Decision.edges-true-false",
-      "severity": "info",
-      "stage": "runtime",
-      "check": "step.edges must contain exactly one edge with value \"true\" and one with value \"false\" (index 0 = true, index 1 = false). A missing edge is not an error at runtime: the flow just continues after the Decision step, which silently skips the branch.",
-      "message": ""
-    }
-  ],
+  "rules": [],
   "notes": [
-    "No editor or publish validation exists for this step: the editor's configuration check always passes, and nothing checks the condition syntax. A malformed condition evaluates to false at runtime (no error).",
+    "No editor or publish checks exist for this step, and nothing checks the condition syntax. A malformed or empty condition evaluates to false at runtime (no error).",
     "The condition is evaluated on the RESOLVED text (placeholders already replaced by values). If a resolved value itself contains operator characters (= < > ~ & | ! ( ) ^ $), the evaluation can be wrong. Prefer comparing values that cannot contain those characters.",
     "Operator detection is by fixed priority, not by position: ^= $= >= <= != ~ = > < & |. The first operator in that list that appears anywhere in a single comparison is used, and the text is split at its first occurrence.",
-    "Numeric comparison is used when BOTH operands parse as decimals; otherwise the operands are compared as text (case-sensitive, ordinal). Quotes are NOT stripped from operands except the special empty literal '' - write text literals bare: {{trigger_Rec.status}} = Released.",
+    "Numeric comparison is used when BOTH operands parse as decimals; otherwise the operands are compared as text (case-sensitive). Quotes are NOT stripped from operands except the special empty literal '' - write text literals bare: {{trigger_Rec.status}} = Released.",
     "Leading and trailing spaces around operands are trimmed.",
     "A combination without parentheses around its operands (e.g. 'a = 1 & b = 2') does not work: it is parsed as a single comparison. Always write '(a = 1) & (b = 2)'. Three or more terms must be nested: '((A) & (B)) & (C)'.",
     "A leading '!' on a non-boolean operand (e.g. '!abc') evaluates to true - always negate a parenthesised expression: '!(<expr>)'.",

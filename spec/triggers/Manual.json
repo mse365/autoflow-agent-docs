@@ -56,21 +56,21 @@
       "id": "Manual.table-exists",
       "severity": "error",
       "stage": "publish",
-      "check": "If configuration.tableNo is non-zero, the table must exist in the environment. Hard stop at publish (trigger validation); also reported by the editor.",
+      "check": "If configuration.tableNo is non-zero, the table must exist in the environment. Hard stop at publish (trigger validation). The editor's status line does not check it.",
       "message": "The table %1 the flow runs on does not exist."
     },
     {
       "id": "Manual.page-supported",
       "severity": "error",
       "stage": "publish",
-      "check": "Every page in configuration.pages must be one of the pages that carry the \"Start Flow\" action. Hard stop at publish; also shown live in the config canvas status line.",
+      "check": "Every page in configuration.pages must be one of the pages that carry the \"Start Flow\" action. Hard stop at publish; the config canvas status line shows it live and the page picker only offers these pages.",
       "message": "The page %1 cannot show the \"Start Flow\" action."
     },
     {
       "id": "Manual.page-table-match",
       "severity": "error",
       "stage": "publish",
-      "check": "For a record-based flow (tableNo <> 0), every assigned page must show records of that table. Standalone flows (tableNo = 0) fit every supported page.",
+      "check": "For a record-based flow (tableNo <> 0), every assigned page must show records of that table. Standalone flows (tableNo = 0) fit every supported page. Hard stop at publish; also shown live in the config canvas status line.",
       "message": "The page %1 shows records of the table %2, but the flow runs on the table %3."
     },
     {
@@ -81,22 +81,10 @@
       "message": "Enter a Code on the flow card before publishing this flow. Manual flows are started from other flows and from extensions by their Code."
     },
     {
-      "id": "Manual.tableNo-type",
-      "severity": "error",
-      "stage": "editor",
-      "check": "configuration.tableNo, if present, should be an integer.",
-      "message": "(no message; non-numeric values are read as 0)",
-      "machine": {
-        "type": "type",
-        "key": "tableNo",
-        "valueType": "integer"
-      }
-    },
-    {
       "id": "Manual.openExecution-enum",
       "severity": "info",
-      "stage": "editor",
-      "check": "configuration.openExecution should be 0, 1 or 2; any other value silently behaves like 0 (Never).",
+      "stage": "runtime",
+      "check": "configuration.openExecution should be 0, 1 or 2. Not checked; any other value behaves like 0 (Never).",
       "message": "(no message)",
       "machine": {
         "type": "enum",
@@ -106,18 +94,6 @@
           1,
           2
         ]
-      }
-    },
-    {
-      "id": "Manual.pages-type",
-      "severity": "error",
-      "stage": "editor",
-      "check": "configuration.pages, if present, must be an array of integers.",
-      "message": "(no message; a non-array is ignored)",
-      "machine": {
-        "type": "type",
-        "key": "pages",
-        "valueType": "array"
       }
     },
     {
@@ -172,6 +148,6 @@
     "Page assignments take effect on publish. A page shows the action only while an active (published, Manual-trigger) flow is assigned to it and the flow's table fits the page.",
     "The Step Selector offers each published Manual flow as its own tile (via the Start flow step); the generic Start flow action itself is hidden from the picker.",
     "Picker filters that depend on the trigger: Respond to Webhook, Return SubFlow Output, Return PDF, Set report file name, Set document field values and Prevent page close are hidden in a Manual flow (they only apply to their own triggers).",
-    "The trigger step slug defaults to 'trigger', so the record is referenced as {{trigger_Rec}}. The config canvas lets the user rename the slug; references then use the new slug."
+    "The trigger step slug is always 'trigger', so the record is referenced as {{trigger_Rec}}."
   ]
 }

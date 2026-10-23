@@ -42,24 +42,23 @@ Reference it downstream as `{{<slug>_ExecutionNo}}`.
 
 ## Validation
 
+The step has no publish check of its own. The editor's status line shows two problems, without blocking saving:
+
 | stage | severity | rule | message |
 |---|---|---|---|
-| editor | error | `flowCode` empty | Choose the flow to start. |
-| editor | error | The target runs on a table and `record` is empty | The flow %1 runs on a record. Select the record to start it for. |
-| editor (status line) | error | The target is missing or is not a published manual flow | The flow %1 is not an active manual flow on this system. Publish it, then reopen this step. |
-| editor (status line) | error | `record` points at another table | The flow runs on records of table %1, but the selected reference points at table %2. |
+| editor (status line) | warning | The target is missing or is not a published manual flow | The flow %1 is not an active manual flow on this system. Publish it, then reopen this step. |
+| editor (status line) | warning | `record` points at another table than the target's | The flow runs on records of table %1, but the selected reference points at table %2. |
 
-No publish-time check exists for this step.
+An empty `flowCode`, or an empty `record` for a target that runs on a table, is only caught at run time (see below).
 
 ## Runtime errors
 
 | condition | message |
 |---|---|
-| Unknown Code | There is no flow with the code %1 to start. |
-| The record cannot be resolved | The record "%1" to start the flow for cannot be resolved. |
+| `flowCode` empty or unknown | There is no flow with the code %1 to start. |
+| The target runs on a table and `record` is empty or doesn't resolve to a record | The record "%1" to start the flow for cannot be resolved. |
 | The target is not published | The flow %1 is not active. Publish it before starting it. |
 | The target is not a manual flow | The flow %1 cannot be started this way, because it is not started by the trigger "When manually started". |
-| The target needs a record | The flow %1 runs on a record of the table %2. Pass a record to start it. |
 | The record is from the wrong table | The flow %1 runs on records of the table %2, not of the table %3. |
 
 ## Example
@@ -88,5 +87,7 @@ No publish-time check exists for this step.
 ## Gotchas
 
 - Cross-environment: nothing is re-mapped on import. A flow with the same Code must be published as a manual flow in the target company before this step runs.
+- The target needs a **Code**. In 27.0.39 a manual flow can be published without one, and then it can't be started by this step; set the Code on the flow card. (Next release, not in 27.0.39: every flow needs a Code.)
 - The target must not be a SubFlow. To call a SubFlow and get results back, use [Run SubFlow](RunSubFlow.md).
-- Whether the job starts on its own depends on the AutoFlow Setup option for manually started flows.
+- Whether the job starts on its own depends on the AutoFlow Setup option **Manually start flows**: when it is on, the job is created **On Hold**.
+- The step only reads `record` when the target runs on a table; for a standalone target it is ignored.

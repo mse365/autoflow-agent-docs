@@ -21,7 +21,7 @@
     {
       "key": "collectionType",
       "type": "integer",
-      "required": true,
+      "required": false,
       "default": 0,
       "enum": [0, 1],
       "maxLength": null,
@@ -48,41 +48,17 @@
       "id": "CreateCollection.collectionName-required",
       "severity": "error",
       "stage": "editor",
-      "check": "configuration.collectionName must be non-empty (required field in the config canvas; the step's validity check also fails without it). Without a name no output is generated.",
+      "check": "configuration.collectionName must be non-empty (required field in the configuration dialog). Without a name no output is generated.",
       "message": "Please fill in the highlighted fields.",
       "machine": { "type": "required", "key": "collectionName" }
-    },
-    {
-      "id": "CreateCollection.collectionType-enum",
-      "severity": "error",
-      "stage": "editor",
-      "check": "configuration.collectionType must be 0 (Value) or 1 (Reference).",
-      "message": "",
-      "machine": { "type": "enum", "key": "collectionType", "values": [0, 1] }
-    },
-    {
-      "id": "CreateCollection.collectionType-type",
-      "severity": "error",
-      "stage": "editor",
-      "check": "configuration.collectionType must be a JSON integer.",
-      "message": "",
-      "machine": { "type": "type", "key": "collectionType", "valueType": "integer" }
     },
     {
       "id": "CreateCollection.tableNo-required-for-reference",
       "severity": "error",
       "stage": "editor",
-      "check": "configuration.tableNo must be a non-zero table number when collectionType = 1 (Reference).",
+      "check": "configuration.tableNo must be a non-zero table number when collectionType = 1 (Reference); the table field is required in the configuration dialog when Reference is chosen.",
       "message": "Please fill in the highlighted fields.",
       "machine": { "type": "requiredIf", "key": "tableNo", "ifKey": "collectionType", "equals": 1 }
-    },
-    {
-      "id": "CreateCollection.tableNo-range",
-      "severity": "error",
-      "stage": "editor",
-      "check": "tableNo, when given, must be a non-negative integer that is an existing table in the target environment (the table picker only offers existing tables).",
-      "message": "",
-      "machine": { "type": "range", "key": "tableNo", "min": 0 }
     }
   ],
   "notes": [

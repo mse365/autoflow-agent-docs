@@ -26,7 +26,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "Maximum run time; values <= 0 are treated as 10."
+      "description": "Seconds the flow may run (default 10). Checked between steps: once it has passed, the remaining steps are skipped and the page closes. Values <= 0 are treated as 10."
     },
     {
       "key": "filters",
@@ -36,7 +36,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "Field filters on the page's record: [{ \"fieldNo\": <integer>, \"filter\": \"<BC filter expression>\" }]. Field numbers refer to the page's source table. Applied literally (max 250 chars, no placeholders)."
+      "description": "Field filters on the page's record: [{ \"fieldNo\": <integer>, \"filter\": \"<BC filter expression>\" }]. Field numbers refer to the page's source table. Applied literally with SetFilter (max 250 characters, no placeholders). A filter that Business Central cannot parse means the flow does not run."
     }
   ],
   "outputs": [
@@ -70,24 +70,41 @@
       "id": "OnPageClose.page-supported",
       "severity": "error",
       "stage": "publish",
-      "check": "configuration.pageNo must be a supported page. Hard stop at publish; same text in the live canvas status line.",
+      "check": "configuration.pageNo must be a supported page (built-in list or registered by an extension). Hard stop at publish; %1 is written as '<no> (<caption>)', e.g. '5 (Currencies)'.",
       "message": "Page %1 is not supported by this trigger, so the flow would never run."
+    },
+    {
+      "id": "OnPageClose.page-required-editor",
+      "severity": "error",
+      "stage": "editor",
+      "check": "The configuration dialog refuses to save while no page is picked.",
+      "message": "Please fill in the highlighted fields."
+    },
+    {
+      "id": "OnPageClose.page-status",
+      "severity": "info",
+      "stage": "editor",
+      "check": "Live status line in the configuration dialog (does not block saving): shown when the page does not exist or is not supported.",
+      "message": "Page %1 does not exist in this environment. | Page %1 is not supported by this trigger, so the flow would never run."
     },
     {
       "id": "OnPageClose.timeout-positive",
       "severity": "info",
-      "stage": "editor",
-      "check": "timeoutSec should be > 0 (otherwise 10 is used).",
-      "message": "(no message)",
-      "machine": {
-        "type": "range",
-        "key": "timeoutSec",
-        "min": 1
-      }
+      "stage": "runtime",
+      "check": "timeoutSec <= 0 (or not an integer) is treated as 10.",
+      "message": "(no message)"
+    },
+    {
+      "id": "OnPageClose.no-deferred-steps",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The flow runs synchronously, so a step that defers the run (Sleep) fails like any other flow error.",
+      "message": "Step %1 (%2) requested a deferred resume, but the flow is running synchronously. Use Sleep or other time-based deferral steps only outside of synchronous frames (Webhook sync phase or SubFlow body)."
     }
   ],
   "notes": [
     "Synchronous: runs in the user's session from the page's query-close event, before the page actually closes. The run commits its own execution entries, so a prevented close is still visible in the execution list.",
+    "timeoutSec is checked between steps; when it has passed the remaining steps are skipped.",
     "To keep the page open, end the flow with a Prevent page close step (only offered for this trigger). Its message is shown either as a dialog or as a notification in the page's bar. The trigger only ever sets 'allow close' to false; it never overrules another extension that already keeps the page open.",
     "Fires only in sessions with a UI and only for records that exist in the database: after a record is deleted, Business Central force-closes the card and the flow does not run; unsaved new records do not fire it either.",
     "Registrations are keyed by page number.",

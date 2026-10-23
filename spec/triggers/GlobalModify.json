@@ -58,8 +58,8 @@
       "id": "GlobalModify.tableNo-required",
       "severity": "error",
       "stage": "editor",
-      "check": "configuration.tableNo must be present and > 0 (editor ValidateConfiguration returns false otherwise). Not checked at publish: a flow without a table publishes and never fires.",
-      "message": "(no message)",
+      "check": "configuration.tableNo must be set: the config canvas marks Table as required and does not save without it. Not checked at publish: a flow with tableNo 0 or a table that does not exist publishes and never fires.",
+      "message": "Please fill in the highlighted fields.",
       "machine": {
         "type": "required",
         "key": "tableNo"
@@ -69,36 +69,12 @@
       "id": "GlobalModify.tableNo-positive",
       "severity": "error",
       "stage": "editor",
-      "check": "configuration.tableNo must be an integer > 0.",
-      "message": "(no message)",
+      "check": "configuration.tableNo must be > 0; 0 shows as an empty required Table field in the config canvas.",
+      "message": "Please fill in the highlighted fields.",
       "machine": {
         "type": "range",
         "key": "tableNo",
         "min": 1
-      }
-    },
-    {
-      "id": "GlobalModify.filters-type",
-      "severity": "error",
-      "stage": "editor",
-      "check": "configuration.filters, if present, must be an array.",
-      "message": "(no message)",
-      "machine": {
-        "type": "type",
-        "key": "filters",
-        "valueType": "array"
-      }
-    },
-    {
-      "id": "GlobalModify.watchFields-type",
-      "severity": "error",
-      "stage": "editor",
-      "check": "configuration.watchFields, if present, must be an array.",
-      "message": "(no message)",
-      "machine": {
-        "type": "type",
-        "key": "watchFields",
-        "valueType": "array"
       }
     },
     {
@@ -110,13 +86,14 @@
     }
   ],
   "notes": [
-    "Fires on every modify of the table in any session, as long as the modify reaches Business Central's global database events.",
+    "Fires on every modify of the table in any session (UI, API, background, posting), through Business Central's global database modify event. Renames do not fire it.",
     "Execution is asynchronous: the modify creates a pending execution inside the modifying transaction; a recurring Job Queue entry (every 5 minutes, created on publish) queues one Job Queue run per pending execution. Runs commit after every step.",
     "Watch-field change detection compares against a snapshot table, not against xRec: values are formatted locale-invariantly and compared by SHA-256 hash. The snapshot is filled for all existing records when a version with watch fields is published, refreshed on every insert/modify of the table and removed on delete. The snapshot is shared per table and field across all GlobalModify flows on that table.",
-    "If no snapshot row exists for a record/field (e.g. inserted while no watch-field flow was published), oldValue is '' and any non-empty current value counts as a change.",
+    "If no snapshot row exists for a record/field (e.g. inserted while no watch-field flow was published), every watched field counts as changed, even an empty one, and oldValue is ''.",
     "ChangedFields oldValue/newValue are XML-formatted (locale-invariant) text, truncated to 2048 characters each.",
     "Step-level rule imposed by this trigger: a Confirm dialog step gets the publish warning that it runs inside the record change that started the flow.",
     "Picker filters: Respond to Webhook, Return SubFlow Output, Return PDF, Set report file name, Set document field values and Prevent page close are hidden.",
-    "A flow that modifies the same table again (e.g. a Modify Record step) triggers itself again when the write runs triggers; use filters or watch fields to avoid loops."
+    "A flow that modifies the same table again (e.g. a Modify Record step) triggers itself again, because the global modify event fires for every modify; use filters or watch fields to avoid loops.",
+    "Every watchFields[].fieldNo must exist in the table. An unknown field number makes publishing fail (when the table has records) and makes every insert and modify of that table fail with a Business Central error while the flow is published."
   ]
 }

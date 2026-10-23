@@ -26,7 +26,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "record",
-      "description": "Only for targets whose Manual trigger runs on a table: a wrapped Reference SmartField (e.g. {{trigger_Rec}}) pointing at a record of exactly that table. Must be empty for standalone targets (the editor clears it)."
+      "description": "Only for targets whose Manual trigger runs on a table: a wrapped Reference SmartField (e.g. {{trigger_Rec}}) pointing at a record of exactly that table. Ignored for standalone targets (the editor clears it)."
     },
     {
       "key": "customIconUrl",
@@ -51,9 +51,9 @@
     {
       "id": "StartManualFlow.flow-required",
       "severity": "error",
-      "stage": "editor",
-      "check": "configuration.flowCode must be non-empty.",
-      "message": "Choose the flow to start.",
+      "stage": "runtime",
+      "check": "configuration.flowCode must be non-empty and name a flow in this company.",
+      "message": "There is no flow with the code %1 to start.",
       "machine": {
         "type": "required",
         "key": "flowCode"
@@ -62,9 +62,9 @@
     {
       "id": "StartManualFlow.flowcode-format",
       "severity": "error",
-      "stage": "editor",
-      "check": "flowCode should be a valid flow Code ([NAMESPACE.]CODE, A-Z 0-9 _ -, at most one '.'; max 60 chars).",
-      "message": "Code must be empty or match <NAMESPACE.>CODE – letters A–Z, digits, \"_\" and \"-\" only, with at most one \".\" separator and no empty halves.",
+      "stage": "runtime",
+      "check": "flowCode must be a valid flow Code ([NAMESPACE.]CODE, A-Z 0-9 _ -, at most one '.'; max 60 chars); any other value can never match a flow.",
+      "message": "There is no flow with the code %1 to start.",
       "machine": {
         "type": "regex",
         "key": "flowCode",
@@ -72,38 +72,36 @@
       }
     },
     {
-      "id": "StartManualFlow.record-required",
+      "id": "StartManualFlow.flowcode-length",
       "severity": "error",
-      "stage": "editor",
-      "check": "When the target flow runs on a table, record must be set.",
-      "message": "The flow %1 runs on a record. Select the record to start it for."
+      "stage": "runtime",
+      "check": "flowCode is at most 60 characters (longer values are truncated and won't match).",
+      "message": "There is no flow with the code %1 to start.",
+      "machine": {
+        "type": "maxLength",
+        "key": "flowCode",
+        "max": 60
+      }
     },
     {
       "id": "StartManualFlow.target-active",
-      "severity": "error",
+      "severity": "warning",
       "stage": "editor",
-      "check": "Live status line: the target must exist and be a published manual flow.",
+      "check": "Status line of the step dialog (does not block saving): the target must exist and be a published manual flow.",
       "message": "The flow %1 is not an active manual flow on this system. Publish it, then reopen this step."
     },
     {
       "id": "StartManualFlow.record-table",
-      "severity": "error",
+      "severity": "warning",
       "stage": "editor",
-      "check": "Live status line: the record selector must point at the target's table.",
+      "check": "Status line of the step dialog (does not block saving): the record selector must point at the target's table.",
       "message": "The flow runs on records of table %1, but the selected reference points at table %2."
-    },
-    {
-      "id": "StartManualFlow.runtime-not-found",
-      "severity": "error",
-      "stage": "runtime",
-      "check": "No flow with this Code exists.",
-      "message": "There is no flow with the code %1 to start."
     },
     {
       "id": "StartManualFlow.runtime-record-unresolved",
       "severity": "error",
       "stage": "runtime",
-      "check": "Target runs on a table and the record selector cannot be resolved to a record reference.",
+      "check": "Target runs on a table and record is empty or can't be resolved to a record reference.",
       "message": "The record \"%1\" to start the flow for cannot be resolved."
     },
     {
@@ -121,13 +119,6 @@
       "message": "The flow %1 cannot be started this way, because it is not started by the trigger \"When manually started\"."
     },
     {
-      "id": "StartManualFlow.runtime-needs-record",
-      "severity": "error",
-      "stage": "runtime",
-      "check": "Target runs on a table but no record was passed.",
-      "message": "The flow %1 runs on a record of the table %2. Pass a record to start it."
-    },
-    {
       "id": "StartManualFlow.runtime-wrong-table",
       "severity": "error",
       "stage": "runtime",
@@ -138,9 +129,9 @@
   "notes": [
     "Fire-and-forget: creates a new execution of the target flow plus a Job Queue entry and continues immediately; it does not wait and receives nothing back. ExecutionNo is the started execution's entry number.",
     "The started execution and its job are written in the caller's transaction. In normal background flows the engine commits after each step, so the start is committed right after this step; in interactive trigger flows, SubFlow bodies and 'Run atomically' flows it is only committed when the caller's run commits (and is rolled back with it).",
-    "Whether the queued job starts automatically depends on the AutoFlow Setup option for manually starting flows (job created as Ready unless that option is set).",
+    "Whether the queued job starts automatically depends on the AutoFlow Setup option 'Manually start flows': off = job created Ready and enqueued; on = job created On Hold.",
     "The step is hidden from the generic step picker; every published manual flow that has a Code (except the flow being edited and SubFlows) is offered as its own tile, which creates this step.",
     "Cross-environment: the target is resolved by Code at run time; no re-mapping happens on import. Make sure a flow with the same Code is published in the target company.",
-    "For a standalone target the record key is ignored at run time; a non-empty value is cleared by the editor."
+    "For a standalone target the record key is ignored at run time; the editor clears it."
   ]
 }

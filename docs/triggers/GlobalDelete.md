@@ -37,14 +37,14 @@ Reference them as `{{trigger_<name>}}`.
 
 | stage | severity | rule | message |
 |---|---|---|---|
-| editor | error | `tableNo` present and > 0 | (no message) |
+| editor | error | `tableNo` set and > 0 (the config canvas marks Table as required) | Please fill in the highlighted fields. |
 | runtime | info | an invalid filter means the record does not match (no error) | (no message) |
 
-There is no publish-time trigger check.
+There is **no publish-time trigger check**. A flow whose `tableNo` is 0 or does not exist publishes and never fires.
 
 ## Runtime errors
 
-None raised to the deleting user.
+None raised to the deleting user, as long as every `outputFields[].fieldNo` exists (see Gotchas). Flow errors appear on the execution and in the Job Queue log.
 
 ## Example
 
@@ -78,5 +78,6 @@ The example sets `name` to the field's own name on purpose. See the first gotcha
 
 - **Name mismatch.** The flow declares the output as `outputFields[].name`, but the run stores the value under the table field's own name, for example `No.` rather than `No`. When the two differ, `{{trigger_<name>}}` stays empty. Use the field's exact name as `name`, and check with a test run. Fields whose names contain spaces or dots may not be referenceable at all.
 - No `Rec` output. List every field you need in `outputFields`.
+- Every `outputFields[].fieldNo` must exist in the table. An unknown field number makes matching deletes fail with a Business Central error while the flow is published.
 - A **Confirm dialog** step gets a publish warning, because it runs inside the record change that started the flow.
 - Trigger-response steps are hidden in this flow type.

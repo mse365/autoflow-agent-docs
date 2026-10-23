@@ -31,9 +31,11 @@ None. This step ends the flow.
 
 | stage | severity | rule | message |
 |---|---|---|---|
-| editor | error | `fileName` must not be empty | (no text; required field / step reported invalid) |
+| editor | error | `fileName` is a required field in the dialog | Please fill in the highlighted fields. |
 | editor | info | Only shown in the step picker under the "When a report file name is generated" trigger | (picker filter, not enforced) |
 | publish | warning | No step may follow it and it must not have edges | Step "%1" is a terminating step but has a successor – terminating steps must end the path. |
+
+An empty `fileName` is not caught at publish; at run time Business Central then keeps its own name.
 
 **Trigger pairing is not enforced at publish.** The restriction is only a step-picker filter.
 

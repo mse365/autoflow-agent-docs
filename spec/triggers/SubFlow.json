@@ -16,7 +16,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "Input parameters: [{ \"name\": \"<identifier>\", \"type\": \"Value\"|\"Reference\", \"tableNo\": <integer, Reference only>, \"required\": <boolean> }]. name: letters, digits and underscore only, unique; becomes the trigger output name (truncated to 30). type defaults to 'Value'. tableNo narrows a Reference parameter to one table (0 = any table). Rows with an empty name are dropped by the editor. An empty array is valid."
+      "description": "Input parameters: [{ \"name\": \"<identifier>\", \"type\": \"Value\"|\"Reference\", \"tableNo\": <integer, Reference only>, \"required\": <boolean> }]. name: letters, digits and underscore only, unique; becomes the trigger output name (truncated to 30). type: exactly 'Reference' makes a reference parameter, anything else (or missing) a value parameter. tableNo narrows a Reference parameter to one table (0 = any table). The editor drops rows with an empty name. An empty array is valid."
     },
     {
       "key": "subFlowCode",
@@ -26,7 +26,7 @@
       "enum": null,
       "maxLength": 60,
       "smart": "none",
-      "description": "Written only when the SubFlow is saved as a template / exported: the flow's Code. On import it is restored to the flow card if no other flow already uses that Code."
+      "description": "Written only when the SubFlow is saved as a template: the flow's Code. On import (template or file) it is applied to the flow's Code after the root 'code', unless another flow already uses it or it is malformed. Prefer the root 'code'; if you write subFlowCode, make it equal to the root 'code'."
     },
     {
       "key": "iconUrl",
@@ -36,7 +36,7 @@
       "enum": null,
       "maxLength": 250,
       "smart": "none",
-      "description": "Written only on template save / export: the flow's custom icon URL. Restored on import only if it starts with https://."
+      "description": "Written only when the SubFlow is saved as a template: the flow's custom icon URL. Applied on import only if it is acceptable (https://)."
     }
   ],
   "outputs": [
@@ -50,34 +50,29 @@
   "rules": [
     {
       "id": "SubFlow.inputs-type",
-      "severity": "error",
-      "stage": "editor",
-      "check": "configuration.inputs, if present, must be an array of objects.",
-      "message": "(no message)",
-      "machine": {
-        "type": "type",
-        "key": "inputs",
-        "valueType": "array"
-      }
+      "severity": "info",
+      "stage": "runtime",
+      "check": "configuration.inputs, if present, should be an array of objects. A non-array is read as no inputs.",
+      "message": "(no message)"
     },
     {
       "id": "SubFlow.input-name-valid",
-      "severity": "error",
-      "stage": "editor",
-      "check": "Every inputs[].name must be non-empty and contain only A-Z, a-z, 0-9 and '_' (regex ^[A-Za-z0-9_]+$).",
-      "message": "(no message; editor validation returns false)"
+      "severity": "info",
+      "stage": "runtime",
+      "check": "Every inputs[].name must be non-empty and contain only A-Z, a-z, 0-9 and '_' (regex ^[A-Za-z0-9_]+$). Not checked anywhere, but other names make outputs that references cannot address reliably.",
+      "message": "(no message)"
     },
     {
       "id": "SubFlow.input-name-unique",
-      "severity": "error",
-      "stage": "editor",
-      "check": "inputs[].name values must be unique (case-sensitive comparison).",
-      "message": "(no message; editor validation returns false)"
+      "severity": "info",
+      "stage": "runtime",
+      "check": "inputs[].name values must be unique (case-sensitive comparison). Not checked anywhere; a duplicate name makes two outputs with the same name.",
+      "message": "(no message)"
     },
     {
       "id": "SubFlow.input-type-enum",
-      "severity": "warning",
-      "stage": "editor",
+      "severity": "info",
+      "stage": "runtime",
       "check": "inputs[].type should be 'Value' or 'Reference'. Anything other than 'Reference' is treated as a value parameter.",
       "message": "(no message)"
     },
@@ -85,7 +80,7 @@
       "id": "SubFlow.code-required",
       "severity": "error",
       "stage": "publish",
-      "check": "The flow header must have a Code (not part of the definition JSON). Run SubFlow steps and templates reference SubFlows by Code.",
+      "check": "The flow header must have a Code (not part of the definition JSON; set it with the root 'code' on import). Checked while registering the trigger, after licensing (which SubFlows skip).",
       "message": "A Code must be set on the Flow Card before this SubFlow can be published. Run-SubFlow steps and templates reference SubFlows by Code, not by No."
     },
     {
@@ -94,16 +89,31 @@
       "stage": "runtime",
       "check": "A SubFlow execution cannot be driven by a Job Queue entry on its own.",
       "message": "Execution %1 belongs to a SubFlow. SubFlows run only as part of the flow that calls them and cannot be started directly."
+    },
+    {
+      "id": "SubFlow.no-yield",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "A step that answers a caller (Respond to Webhook, Return PDF, Set report file name, Set document field values, Prevent page close) fails when it runs inside a SubFlow.",
+      "message": "Step %1 (%2) requested an HTTP yield, but it is running inside a SubFlow. Yield is only valid in the synchronous phase of a Webhook flow."
+    },
+    {
+      "id": "SubFlow.no-deferral",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "A step that defers the run (Sleep) fails when it runs inside a SubFlow.",
+      "message": "Step %1 (%2) requested a deferred resume, but the flow is running synchronously. Use Sleep or other time-based deferral steps only outside of synchronous frames (Webhook sync phase or SubFlow body)."
     }
   ],
   "notes": [
-    "Runs synchronously inside the calling flow's Run SubFlow step, as part of the caller's run (same session, same transaction frame). Its steps are logged under the calling step. A SubFlow never starts on its own and has no Job Queue entry.",
+    "Runs synchronously inside the calling flow's Run SubFlow step, in the caller's session. The SubFlow gets its own child execution (with its own step log), linked from the caller's log entry \"SubFlow '%1' was executed.\". A SubFlow never starts on its own and has no Job Queue entry.",
+    "The SubFlow body does not commit step by step: it runs as part of the calling step, so it is committed (or rolled back) with that step, as the caller's trigger does it.",
     "SubFlows do not count against the licensed-flow limit; publishing skips the licensing registration.",
     "Publishing marks the flow as a SubFlow. No trigger registration is written; callers find the SubFlow by its Code.",
     "Return values are set with the Return SubFlow Output step, which is ONLY offered in SubFlow flows.",
-    "Use a trigger that runs in the background, such as a record trigger, a schedule or a manual start.'). Steps that yield (Respond to Webhook, Return PDF, Set report file name) fail at run time inside a SubFlow.",
+    "Steps that answer a caller (Respond to Webhook, Return PDF, Set report file name, Set document field values, Prevent page close) and Sleep fail at run time inside a SubFlow.",
     "Picker filters: Respond to Webhook, Return PDF, Set report file name, Set document field values and Prevent page close are hidden.",
-    "The 'required' flag is informational for the Run SubFlow step's input binding; the trigger itself does not enforce it.",
+    "The 'required' flag is used by the Run SubFlow step's input binding; the trigger itself does not enforce it.",
     "Reference parameters are passed by the caller as a record selector; Value parameters as text."
   ]
 }

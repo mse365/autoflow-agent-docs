@@ -40,10 +40,10 @@ Reference them as `{{trigger_Rec}}` and `{{trigger_ChangedFields}}`. To work wit
 
 | stage | severity | rule | message |
 |---|---|---|---|
-| editor | error | `tableNo` present and > 0 | (no message) |
+| editor | error | `tableNo` set and > 0 (the config canvas marks Table as required) | Please fill in the highlighted fields. |
 | runtime | info | an invalid filter means the record does not match (no error) | (no message) |
 
-There is **no publish-time trigger check**.
+There is **no publish-time trigger check**. A flow whose `tableNo` is 0 or does not exist publishes and never fires.
 
 ## Runtime errors
 
@@ -79,8 +79,9 @@ None raised to the modifying user. Flow errors appear on the execution and in th
 
 ## Gotchas
 
-- If a record has no snapshot yet, `oldValue` is `""`, and any non-empty value counts as changed. The snapshot fills in after the first modify.
+- If a record has no snapshot yet, every watched field counts as changed (even an empty one) and `oldValue` is `""`. The snapshot fills in after the first modify.
+- Every `watchFields[].fieldNo` must exist in the table. An unknown field number makes publishing fail (when the table has records) and, while the flow is published, makes every insert and modify of that table fail.
 - The snapshot belongs to the table, not the flow. Several flows on the same table share it.
-- A flow that writes to its own table again (for example Modify Record with triggers) re-triggers itself. Use `watchFields` or `filters` to stop the loop.
+- A flow that writes to its own table again (for example Modify Record) re-triggers itself, whether or not the write runs table triggers. Use `watchFields` or `filters` to stop the loop.
 - A **Confirm dialog** step gets a publish warning, because it runs inside the record change that started the flow.
 - Trigger-response steps (Respond to Webhook, Return SubFlow Output, Return PDF, Set report file name, Set document field values, Prevent page close) are hidden here.

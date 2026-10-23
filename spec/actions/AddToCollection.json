@@ -91,46 +91,15 @@
       }
     },
     {
-      "id": "AddToCollection.derivedType-enum",
-      "severity": "warning",
-      "stage": "editor",
-      "check": "derivedType should be \"value\" or \"reference\" and match the type of the Create Collection output named by collectionSelector. An empty or missing derivedType makes the run time append text even to a Reference collection.",
-      "message": "",
-      "machine": {
-        "type": "enum",
-        "key": "derivedType",
-        "values": [
-          "value",
-          "reference"
-        ]
-      }
-    },
-    {
-      "id": "AddToCollection.selector-resolves",
+      "id": "AddToCollection.editor-required",
       "severity": "error",
       "stage": "editor",
-      "check": "collectionSelector must resolve against the outputs of upstream steps (step validity check; not enforced at publish).",
-      "message": ""
-    },
-    {
-      "id": "AddToCollection.value-required-for-value-collection",
-      "severity": "error",
-      "stage": "editor",
-      "check": "For Value collections, configuration.value must be non-empty (required field in the config canvas and the step's validity check).",
+      "check": "configuration.collectionSelector and configuration.value must both be non-empty (required fields in the configuration dialog), for Value and Reference collections alike.",
       "message": "Please fill in the highlighted fields.",
       "machine": {
-        "type": "requiredIf",
-        "key": "value",
-        "ifKey": "derivedType",
-        "equals": "value"
+        "type": "required",
+        "key": "value"
       }
-    },
-    {
-      "id": "AddToCollection.reference-value-shape",
-      "severity": "error",
-      "stage": "editor",
-      "check": "For Reference collections, value must be a single {{name}} placeholder that resolves to a Reference output whose tableNo equals the collection's tableNo (step validity check; not enforced at publish).",
-      "message": ""
     },
     {
       "id": "AddToCollection.reference-value-wrapper",
@@ -156,7 +125,8 @@
   ],
   "notes": [
     "No outputs of its own: it appends to the Create Collection step's output. Entries are written as <collectionOutputName>[0], [1], ... (first free index).",
-    "The editor's validity check (selector resolves, reference table matches) is NOT run when publishing; only the generic dangling-reference warning ('Step \"%1\" references unknown slug \"%2\".') applies. When writing JSON by hand, set derivedType/derivedTableNo yourself.",
+    "Nothing checks that the selector names a real collection or that a Reference item has the collection's table – not in the editor, not at publish. Only the generic dangling-reference warning ('Step \"%1\" references unknown slug \"%2\".') applies. When writing JSON by hand, set derivedType/derivedTableNo yourself and make sure they match the Create Collection step.",
+    "The editor derives derivedType/derivedTableNo when the dialog is saved. If the selector cannot be resolved at that moment, it writes derivedType \"\" and derivedTableNo 0, and items are then appended as text.",
     "The selector is read unresolved, so {{...}} must name the full output, i.e. <CreateCollectionSlug>_<collectionName>."
   ]
 }

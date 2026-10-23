@@ -16,17 +16,17 @@
       "enum": null,
       "maxLength": 60,
       "smart": "none",
-      "description": "Code of the called SubFlow (the flow's Code field, format [NAMESPACE.]CODE with A-Z, 0-9, _ and -, at most one '.', e.g. ACME.CUSTOMER_LOOKUP). This – not the flow No. – identifies the SubFlow; it is the stable cross-company/cross-environment key. Compared as a BC Code value (uppercase)."
+      "description": "Code of the called SubFlow (the flow's Code field, format [NAMESPACE.]CODE with A-Z, 0-9, _ and -, at most one '.', e.g. ACME.CUSTOMER_LOOKUP). This – not the flow No. – identifies the SubFlow across companies and environments. Compared upper-cased. No SmartFields."
     },
     {
       "key": "subFlowVersion",
-      "type": "any",
+      "type": "integer",
       "required": false,
       "default": null,
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "Pinned SubFlow version. Current form: the SubFlow's version number as a string containing a dot (e.g. \"1.2.0\"), which is the same in every environment. Legacy form: an integer local version ID (meaningless outside the database that issued it). May be omitted in a hand-written definition that is imported via Create from file – import re-pins it to the SubFlow's currently published version (see notes). At run time a missing/unresolvable pin is an error; there is no automatic fallback to the latest version."
+      "description": "Version pin: the internal ID of one of the called SubFlow's versions in this database (not a version number; meaningless in another database). Never a string – a string such as \"1.2.0\" can't be read in 27.0.39 and breaks import and the run. Leave it out in hand-written JSON: import (Create from file, template install, Update from template, Duplicate) pins it to the SubFlow's currently published version when that SubFlow exists in the target company. At run time the pin is required and must be a version of that SubFlow; there is no fallback to the published version. Next release (not in 27.0.39): written as the version number string (\"1.2.0\"); integer pins keep working."
     },
     {
       "key": "inputBindings",
@@ -36,7 +36,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "text",
-      "description": "Map of SubFlow input parameter name -> value expression (string). Keys must match the names declared in the SubFlow trigger's configuration.inputs[].name (case-sensitive). Value-type inputs: any SmartText ({{slug_output}}, literals, formulas). Reference-type inputs: a flat wrapped selector {{name}} naming a Reference in the calling flow (no dots, no [index]). Keys that match no declared input are passed but have no effect; missing keys simply leave the input unset."
+      "description": "Map of SubFlow input parameter name -> value expression (string). Keys must match the SubFlow trigger's configuration.inputs[].name (case-sensitive). Value inputs: any SmartText ({{slug_output}}, literals, formulas). Reference inputs: a flat wrapped selector {{name}} naming a reference in the calling flow (no dots, no [index]); anything else is passed as text. Undeclared keys are still passed in, but the editor drops them when the step is confirmed; missing keys leave the input empty."
     },
     {
       "key": "customIconUrl",
@@ -54,16 +54,16 @@
       "name": "<SubFlow output name>",
       "type": "value",
       "tableNo": null,
-      "when": "one entry per entry of the called SubFlow's Return SubFlow Output configuration.outputs[]; type 'reference' (with that entry's tableNo) when the SubFlow declares it as Reference"
+      "when": "Editor-generated: one entry per entry of configuration.outputs of the first Return SubFlow Output step in the resolved SubFlow version (pinned version if it belongs to the SubFlow, else the published one); type 'reference' with that entry's tableNo when declared \"Reference\"; names truncated to 30 chars. None when the Code is unknown. At run time every returned entry arrives as a value."
     }
   ],
   "rules": [
     {
       "id": "RunSubFlow.code-required",
       "severity": "error",
-      "stage": "editor",
-      "check": "configuration.subFlowCode must be non-empty (step reported as invalid without a message).",
-      "message": "(no message – the step is reported as not configured)",
+      "stage": "runtime",
+      "check": "configuration.subFlowCode must be non-empty and name a flow in this company.",
+      "message": "No SubFlow with Code \"%1\" exists in this company.",
       "machine": {
         "type": "required",
         "key": "subFlowCode"
@@ -72,9 +72,9 @@
     {
       "id": "RunSubFlow.code-format",
       "severity": "error",
-      "stage": "editor",
-      "check": "subFlowCode should be a valid flow Code: [NAMESPACE.]CODE, A-Z 0-9 _ -, at most one '.', not first or last. (Format rule of the flow Code field; a code that breaks it can never match a flow.)",
-      "message": "Code must be empty or match <NAMESPACE.>CODE – letters A–Z, digits, \"_\" and \"-\" only, with at most one \".\" separator and no empty halves.",
+      "stage": "runtime",
+      "check": "subFlowCode must be a valid flow Code ([NAMESPACE.]CODE: A-Z 0-9 _ -, at most one '.', not first or last); any other value can never match a flow.",
+      "message": "No SubFlow with Code \"%1\" exists in this company.",
       "machine": {
         "type": "regex",
         "key": "subFlowCode",
@@ -84,9 +84,9 @@
     {
       "id": "RunSubFlow.code-length",
       "severity": "error",
-      "stage": "editor",
-      "check": "subFlowCode is at most 60 characters (longer values are truncated and will not match).",
-      "message": "(no message – value is truncated to 60 characters)",
+      "stage": "runtime",
+      "check": "subFlowCode is at most 60 characters (longer values are truncated and won't match).",
+      "message": "No SubFlow with Code \"%1\" exists in this company.",
       "machine": {
         "type": "maxLength",
         "key": "subFlowCode",
@@ -94,59 +94,57 @@
       }
     },
     {
-      "id": "RunSubFlow.version-required",
+      "id": "RunSubFlow.version-integer",
       "severity": "error",
-      "stage": "editor",
-      "check": "subFlowVersion must resolve to a positive local version ID (step reported as invalid without a message).",
-      "message": "(no message – the step is reported as not configured)"
+      "stage": "import",
+      "check": "subFlowVersion, if present, must be an integer (a version record ID). A string such as \"1.2.0\" can't be converted in 27.0.39: import of the definition and the run fail with a JSON conversion error.",
+      "message": "(platform conversion error)",
+      "machine": {
+        "type": "type",
+        "key": "subFlowVersion",
+        "valueType": "integer"
+      }
     },
     {
       "id": "RunSubFlow.subflow-unresolved",
-      "severity": "error",
+      "severity": "warning",
       "stage": "editor",
-      "check": "Live status line: the SubFlow Code must exist in this company and have a published version.",
+      "check": "Status line of the step dialog (does not block saving): the Code must exist in this company with a published version. Confirming the dialog in this state saves empty inputBindings.",
       "message": "SubFlow \"%1\" is not installed on this system, or has no published version. Install and publish it, then reopen this step."
     },
     {
       "id": "RunSubFlow.reference-table-mismatch",
-      "severity": "error",
+      "severity": "warning",
       "stage": "editor",
-      "check": "Live status line: a Reference binding must point at a record of the table the SubFlow input declares (when the input has a tableNo).",
+      "check": "Status line of the step dialog (does not block saving): a Reference binding must point at a record of the table the SubFlow input declares (when it declares one).",
       "message": "Parameter \"%1\" expects a reference to table %2, but the selected reference resolves to table %3."
     },
     {
       "id": "RunSubFlow.stale-version",
       "severity": "info",
       "stage": "editor",
-      "check": "A newer published version of the SubFlow exists than the pinned one; the editor offers a one-click switch.",
+      "check": "A newer published version of the SubFlow exists than the pinned one; the dialog offers a one-click switch.",
       "message": "A newer version of this SubFlow is available."
     },
     {
       "id": "RunSubFlow.save-as-template-unresolved",
       "severity": "error",
       "stage": "publish",
-      "check": "Save as template (not normal publish): every referenced subFlowCode must exist with a published version. Legacy integer pins are turned into version numbers or removed.",
+      "check": "Save as template only (not normal publish): every referenced subFlowCode must exist with a published version. Save as template also removes subFlowVersion from every Run SubFlow step.",
       "message": "Run-SubFlow step references SubFlow Code \"%1\", but no SubFlow with that Code is published on this tenant. Publish the missing SubFlow first, or remove the Run-SubFlow step before saving as template."
-    },
-    {
-      "id": "RunSubFlow.runtime-missing",
-      "severity": "error",
-      "stage": "runtime",
-      "check": "No flow with this Code exists in the company.",
-      "message": "No SubFlow with Code \"%1\" exists in this company."
     },
     {
       "id": "RunSubFlow.runtime-version-missing",
       "severity": "error",
       "stage": "runtime",
-      "check": "The pinned version does not resolve to an existing version (includes an absent pin, which resolves to 0).",
+      "check": "The pin does not name an existing version (includes an absent pin, which reads as 0). No fallback to the published version.",
       "message": "SubFlow %1 has no published version pinned in the call (version %2)."
     },
     {
       "id": "RunSubFlow.runtime-version-foreign",
       "severity": "error",
       "stage": "runtime",
-      "check": "A legacy integer pin exists but belongs to a different flow (definition copied from another database).",
+      "check": "The pin names a version of a different flow (e.g. JSON copied from another database without import re-pinning).",
       "message": "SubFlow %1 is pinned to version %2, which belongs to a different flow. The call was imported from another system; open the step and pick the version to run."
     },
     {
@@ -186,13 +184,14 @@
     }
   ],
   "notes": [
-    "Identification: the called flow is found by Code only. The flow No. never appears in the step. The Code is restored on import of the SubFlow itself (from the root 'code' and from its trigger configuration 'subFlowCode'), unless another flow in the company already owns it.",
-    "Import ('Create from file', template install, update from template): after the definition is stored, every Run SubFlow step (also nested in edges) is re-pinned: if the SubFlow Code exists here and has a published version, a pin that does not resolve to one of that SubFlow's own versions is replaced by the SubFlow's currently published version (written as its version number). If the SubFlow is not installed yet, the step is left untouched (import still succeeds); open the step after installing/publishing the SubFlow, or re-import. inputBindings are never changed by import.",
-    "Recommended order across environments: import + publish the SubFlow first (with its Code), then import the calling flow.",
-    "Outputs are computed from the pinned (or, failing that, currently published) SubFlow version's Return SubFlow Output step – the first such step found walking the SubFlow's steps and nested edges. Output names are truncated to 30 characters. Downstream: {{<thisStepSlug>_<outputName>}}.",
-    "At run time every returned output is added as a value output carrying the text the SubFlow returned (non-scalar JSON is serialized). Whether a Reference-declared output arrives as a usable record reference in the caller is not established by the source; prefer Value outputs (e.g. return a No. or SystemId) when the caller needs a record.",
-    "Input projection: each binding becomes the SubFlow trigger output {{<subflowTriggerSlug>_<paramName>}} (normally {{trigger_<paramName>}}). The 'required' flag on SubFlow inputs is NOT enforced at run time.",
+    "Identification: the called flow is found by Code only; the flow No. never appears in the step. A SubFlow can't be published without a Code, and a published flow's Code can't be changed (only cleared with Reset Code, which breaks callers). Export writes the Code to the root 'code'; Save as template also writes it into the SubFlow trigger configuration ('subFlowCode'). Import restores it unless another flow in the company already owns it.",
+    "Import re-pinning (Create from file, template install, Update from template, Duplicate): every Run SubFlow step, also nested in edges, is re-pinned. If the Code exists in the target company, a pin that is one of that SubFlow's own versions is kept; anything else (absent, unknown, another flow's version) becomes the SubFlow's currently published version ID. If the Code is unknown or the SubFlow is unpublished, the step is left as imported (import still succeeds); open and confirm the step after publishing the SubFlow, or re-import. inputBindings are never changed by import.",
+    "Hand-written JSON: omit subFlowVersion and import the caller after the SubFlow is published in the target. This also works in the next release.",
+    "Next release (not in 27.0.39): subFlowVersion is written as the SubFlow's version number string (\"1.2.0\"), portable across environments; integer pins still resolve. Every flow then needs a Code.",
+    "Outputs are editor-generated from the resolved SubFlow version's first Return SubFlow Output step (document order, depth-first into edges). Names truncated to 30 characters. Downstream: {{<thisStepSlug>_<outputName>}}.",
+    "At run time every returned output is added as a value output carrying the text the SubFlow returned. A Reference-declared return arrives as the selector text, not a record; return a No. or SystemId and find the record in the caller.",
+    "Input projection: each binding becomes the SubFlow trigger output {{<subflowTriggerSlug>_<paramName>}} (normally {{trigger_<paramName>}}), cut to 30 characters in total. The 'required' flag on SubFlow inputs is not enforced.",
     "Runs synchronously and inline in the caller's transaction (no commit between caller and SubFlow). Errors inside the SubFlow fail this step with the inner message unchanged.",
-    "The step is hidden from the generic step picker; every published SubFlow is offered as its own tile, which creates a Run SubFlow step pre-pinned to its Code and published version."
+    "Hidden from the generic step picker; every published SubFlow is offered as its own tile, which creates a Run SubFlow step pinned to its Code and published version."
   ]
 }

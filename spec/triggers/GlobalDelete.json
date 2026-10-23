@@ -52,8 +52,8 @@
       "id": "GlobalDelete.tableNo-required",
       "severity": "error",
       "stage": "editor",
-      "check": "configuration.tableNo must be present and > 0 (editor ValidateConfiguration returns false otherwise). Not checked at publish.",
-      "message": "(no message)",
+      "check": "configuration.tableNo must be set: the config canvas marks Table as required and does not save without it. Not checked at publish: a flow with tableNo 0 or a table that does not exist publishes and never fires.",
+      "message": "Please fill in the highlighted fields.",
       "machine": {
         "type": "required",
         "key": "tableNo"
@@ -63,36 +63,12 @@
       "id": "GlobalDelete.tableNo-positive",
       "severity": "error",
       "stage": "editor",
-      "check": "configuration.tableNo must be an integer > 0.",
-      "message": "(no message)",
+      "check": "configuration.tableNo must be > 0; 0 shows as an empty required Table field in the config canvas.",
+      "message": "Please fill in the highlighted fields.",
       "machine": {
         "type": "range",
         "key": "tableNo",
         "min": 1
-      }
-    },
-    {
-      "id": "GlobalDelete.filters-type",
-      "severity": "error",
-      "stage": "editor",
-      "check": "configuration.filters, if present, must be an array.",
-      "message": "(no message)",
-      "machine": {
-        "type": "type",
-        "key": "filters",
-        "valueType": "array"
-      }
-    },
-    {
-      "id": "GlobalDelete.outputFields-type",
-      "severity": "error",
-      "stage": "editor",
-      "check": "configuration.outputFields, if present, must be an array.",
-      "message": "(no message)",
-      "machine": {
-        "type": "type",
-        "key": "outputFields",
-        "valueType": "array"
       }
     },
     {
@@ -107,6 +83,7 @@
     "There is no Rec reference output: the record no longer exists when the flow runs. Only the fields listed in outputFields are carried, as locale-invariant (XML-format) text.",
     "KNOWN DISCREPANCY: the declared output name is outputFields[].name (editor default: PascalCase of the caption, e.g. 'No' for 'No.'), but at run time the value is stored under the table field's own name (e.g. 'No.', 'Credit Limit (LCY)', truncated to 30). When the two differ, a reference to the declared name does not receive the value. Until this is resolved, set name equal to the table field's name, or verify with a test run. Field names containing spaces or dots may not be usable in {{slug_name}} references at all.",
     "Execution is asynchronous: the delete creates a pending execution in the deleting transaction; a recurring Job Queue entry (every 5 minutes, created on publish) queues one Job Queue run per pending execution. Runs commit after every step.",
+    "Every outputFields[].fieldNo must exist in the table. An unknown field number makes every delete of that table that passes the filters fail with a Business Central error while the flow is published.",
     "Step-level rule imposed by this trigger: a Confirm dialog step gets the publish warning that it runs inside the record change that started the flow.",
     "Picker filters: Respond to Webhook, Return SubFlow Output, Return PDF, Set report file name, Set document field values and Prevent page close are hidden."
   ]

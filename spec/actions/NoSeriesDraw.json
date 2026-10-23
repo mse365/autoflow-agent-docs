@@ -16,7 +16,7 @@
       "enum": null,
       "maxLength": 20,
       "smart": "text",
-      "description": "Code of the No. Series to draw from (e.g. 'S-ORD'), or a SmartField that yields it. Truncated to 20 characters."
+      "description": "Code of the No. Series to draw from (e.g. 'S-ORD'), or a SmartField that yields it. Cut to 20 characters at runtime."
     },
     {
       "key": "usageDate",
@@ -42,8 +42,8 @@
       "id": "NoSeriesDraw.noSeriesCode-required",
       "severity": "error",
       "stage": "editor",
-      "check": "configuration.noSeriesCode must be non-empty (a SmartField placeholder counts).",
-      "message": "Select the number series to draw the next number from.",
+      "check": "The configuration dialog refuses to save while noSeriesCode is empty (a SmartField placeholder counts as filled).",
+      "message": "Please fill in the highlighted fields.",
       "machine": {
         "type": "required",
         "key": "noSeriesCode"
@@ -53,7 +53,7 @@
       "id": "NoSeriesDraw.noSeriesCode-maxLength",
       "severity": "warning",
       "stage": "runtime",
-      "check": "Codes longer than 20 characters are truncated.",
+      "check": "Codes longer than 20 characters are cut to 20 at runtime, so the wrong series (or none) is used.",
       "message": "",
       "machine": {
         "type": "maxLength",
@@ -72,19 +72,20 @@
       "id": "NoSeriesDraw.series-exists",
       "severity": "error",
       "stage": "runtime",
-      "check": "The No. Series must exist.",
+      "check": "The No. Series must exist (an unresolved {{token}} stays in the text and fails here).",
       "message": "The number series %1 does not exist."
     },
     {
       "id": "NoSeriesDraw.series-drawable",
       "severity": "error",
       "stage": "runtime",
-      "check": "The series must allow drawing for the date (default numbers, a series line valid for the date, not exhausted).",
+      "check": "The series must allow drawing for the date (default numbers allowed, a series line valid for the date, not exhausted). Business Central's own No. Series error is raised.",
       "message": ""
     }
   ],
   "notes": [
     "The output name is 'Number' (capital N) - reference it as {{slug_Number}}.",
+    "The editor's default description is the short caption 'Draw Number'; once a series is chosen it becomes 'Draw Number from <code>'. The enum caption is 'Draw number from number series'.",
     "The number is consumed: the series' last-used number is advanced when the step runs, so each run yields a new number.",
     "usageDate is parsed with the regional date format of the session that runs the flow (there is no invariant/9 option here). Leave it empty unless the series has date-dependent lines.",
     "Writing step: a Confirm dialog placed after this step (in document order) produces a publish warning, because Business Central cannot open a dialog once the flow has written to the database."

@@ -7,7 +7,7 @@ Every flow starts with exactly one trigger step, `steps[0]`:
   "iconUrl": "...", "configuration": { }, "outputs": [ ], "level": 0 }
 ```
 
-`trigger` is the ordinal from the table below. `outputs` lists what the trigger exposes to later steps, which reference it as `{{trigger_<name>}}`. The slug defaults to `trigger`; if you rename it, references use the new slug. Rebuild `outputs` whenever you change `configuration`, because outputs are derived from it (see each page).
+`trigger` is the ordinal from the table below. `outputs` lists what the trigger exposes to later steps, which reference it as `{{trigger_<name>}}`. The trigger's slug is always `trigger`. Rebuild `outputs` whenever you change `configuration`, because outputs are derived from it (see each page).
 
 ## Comparison
 
@@ -18,10 +18,10 @@ Every flow starts with exactly one trigger step, `steps[0]`:
 | [When a record is inserted](GlobalInsert.md) | `5564402` | async (picked up every 5 min) | commit per step | `Rec` | React to new records in any table |
 | [When a record is modified](GlobalModify.md) | `5564450` | async (picked up every 5 min) | commit per step | `Rec`, `ChangedFields` | React to field changes (watch fields) |
 | [When a record is deleted](GlobalDelete.md) | `5564451` | async (picked up every 5 min) | commit per step | selected field values only, no `Rec` | Clean-up or sync after deletes |
-| [When a webhook is received](Webhook.md) | `5564403` | InstantReturn: async. WaitForResponse: sync up to `timeoutSec`, then async | sync phase: one commit at the end | `Payload`, `Method`, `Headers`, `Query` | Inbound HTTP integrations (BC online only) |
-| [When invoked as a SubFlow](SubFlow.md) | `5564404` | sync, inline in the calling flow | the caller's | one output per declared input | Reusable building blocks |
-| [When a PDF is printed](OnPdfPrint.md) | `5564405` | sync, inside the report request (up to `timeoutSec`) | one commit at the end | `ObjectPayload`, `DocumentStream`, `ReportId`, … | Replace or stamp PDFs (one flow per environment) |
-| [When a report file name is generated](OnReportFileName.md) | `5564406` | sync, inside the report request (up to `timeoutSec`) | one commit at the end | `ProposedFileName`, `Rec_<reportId>`, … | Custom file names (one flow per environment) |
+| [When a webhook is received](Webhook.md) | `5564403` | InstantReturn: async. WaitForResponse: sync until Respond to Webhook or `timeoutSec`, the rest async | sync phase: one commit at the end | `Payload`, `Method`, `Headers`, `Query` | Inbound HTTP integrations (BC online only) |
+| [When invoked as a SubFlow](SubFlow.md) | `5564404` | sync, inline in the calling Run SubFlow step | no commits of its own, part of the calling step | one output per declared input | Reusable building blocks |
+| [When a PDF is printed](OnPdfPrint.md) | `5564405` | sync, inside the report request (up to `timeoutSec`) | commits when the run starts and again at the end | `ObjectPayload`, `DocumentStream`, `ReportId`, … | Replace or stamp PDFs (one flow per environment) |
+| [When a report file name is generated](OnReportFileName.md) | `5564406` | sync, inside the report request (up to `timeoutSec`) | commits when the run starts and again at the end | `ProposedFileName`, `Rec_<reportId>`, … | Custom file names (one flow per environment) |
 | [When a record is created or modified (interactive)](OnDocumentModify.md) | `5564529` | sync, in the user's save | **atomic** with the user's write, no commit | `Rec`, `xRec_<f>` / `Rec_<f>` | Validate or adjust records while they are saved |
 | [When a document is released (interactive)](OnDocumentRelease.md) | `5564543` | sync, before the release | **atomic**, no commit | `Rec` (header) | Release checks, custom approval status |
 | [When a document is posted (interactive)](OnDocumentPost.md) | `5564549` | sync, before posting | **atomic**, no commit | `Rec` (header) | Posting checks, last-minute header values |
@@ -58,15 +58,17 @@ When a flow is published, checks run in this order:
 1. The flow must contain at least one action step: "A flow must contain at least one action step before it can be published. Add a step after the trigger and try again."
 2. **Trigger validation (hard stop).** Manual, OnDocumentModify, OnDocumentRelease, OnDocumentPost, OnDocumentReopen, OnPageOpen and OnPageClose check their configuration. Errors are reported as `This flow's trigger cannot be published:` followed by the list. The other triggers have no checks at this point.
 3. Step warnings, such as dangling references and terminating steps with successors, are collected and need the user's confirmation. A headless publish cannot confirm them, so it fails.
-4. Trigger-specific header checks: Manual needs a Code on the flow card. SubFlow needs a Code and skips licensing.
+4. Manual needs a Code on the flow card (checked here, before licensing). SubFlow skips licensing.
 5. Licensing.
-6. Trigger registration: OnPdfPrint and OnReportFileName require at least one report line and allow only one published flow per environment. Webhook registers with the AutoFlow portal; failures there do not stop the publish.
+6. Trigger registration: SubFlow needs a Code on the flow card. OnPdfPrint and OnReportFileName require at least one report line and allow only one published flow per environment. Webhook registers with the AutoFlow portal; failures there do not stop the publish.
 7. Job Queue: Scheduled gets a recurring entry every 60 minutes. GlobalInsert, GlobalModify and GlobalDelete get a recurring pick-up entry every 5 minutes. All other triggers get none.
+
+Next release (not in 27.0.39): every flow, whatever its trigger, needs a Code on the flow card before it can be published.
 
 ## Shared configuration patterns
 
 - **`tableNo`** (integer): the watched table. It is stored on the trigger registration at publish. For record triggers, `0` means the flow never fires.
 - **`filters`**: `[{ "fieldNo": int, "filter": "text" }]`, used by every record, document and page trigger. Each filter is a standard Business Central filter expression on one field of the triggering record. It is applied literally, so `{{…}}` placeholders are **not** resolved. Max. 250 characters. Rows with `fieldNo` 0 are skipped, and a second row on the same field replaces the first. An invalid expression never errors; the record just does not match.
 - **`guiOnly`** (boolean, default `true`) on the interactive document triggers skips sessions without a UI.
-- **`timeoutSec`** (integer) on the synchronous triggers: 30 by default, 10 for the page triggers.
+- **`timeoutSec`** (integer) on the synchronous triggers: 30 by default, 10 for the page triggers. For Webhook and OnPdfPrint the limit is checked between steps (a running step is not interrupted), and `0` or less means no limit.
 - Values that triggers emit as text (watch-field values, deleted-record fields) use a locale-invariant format, such as `1234.5` and `2026-10-23`.

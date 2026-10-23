@@ -2,8 +2,8 @@
 
 Every trigger and action has two files:
 
-- `docs/<actions|triggers>/<Name>.md` — human/agent-readable reference page
-- `spec/<actions|triggers>/<Name>.json` — machine-readable spec consumed by `tools/validate_flow.py`
+- `docs/<actions|triggers>/<Name>.md` – human/agent-readable reference page
+- `spec/<actions|triggers>/<Name>.json` – machine-readable spec consumed by `tools/validate_flow.py`
 
 `<Name>` is the AL enum value name (e.g. `HttpRequest`, `ForEachLoop`, `GlobalModify`).
 
@@ -32,7 +32,7 @@ Every trigger and action has two files:
       "default": null,              // value used / written when absent
       "enum": null,                 // allowed values if constrained (list), else null
       "maxLength": null,            // if a length limit applies
-      "smart": "text",              // none | text | filter | formula | date | code | sorting | field | record — how references inside are interpreted
+      "smart": "text",              // none | text | filter | formula | date | code | sorting | field | record – how references inside are interpreted
       "description": "Target URL. Supports {{slug_output}} placeholders."
     }
   ],
@@ -43,7 +43,7 @@ Every trigger and action has two files:
     {
       "id": "HttpRequest.url-required",
       "severity": "error",          // error (blocks) | warning (publish asks to confirm; headless publish fails) | info
-      "stage": "publish",           // editor (config dialog / ValidateConfiguration) | publish | runtime | import
+      "stage": "publish",           // editor (checks in the config dialog) | publish | runtime | import
       "check": "configuration.url must be non-empty",
       "message": "Exact English message text from the source, with %1 placeholders",
       "machine": { "type": "required", "key": "url" }   // optional; see below

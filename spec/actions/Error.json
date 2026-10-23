@@ -33,11 +33,7 @@
       "severity": "error",
       "stage": "runtime",
       "check": "configuration must contain the key 'Error'",
-      "message": "No error message configured.",
-      "machine": {
-        "type": "required",
-        "key": "Error"
-      }
+      "message": "No error message configured."
     },
     {
       "id": "Error.terminating-no-successor",
@@ -49,8 +45,8 @@
   ],
   "notes": [
     "The step always fails the flow. With the key present, the error text is the resolved message. Without the key, it fails with 'No error message configured.'.",
-    "The machine 'required' check is stricter than the runtime: at runtime only the key's presence is checked, and an empty string still raises an error, but an empty message text is unhelpful. Treat a non-empty message as required.",
-    "The editor's configuration check always passes. There is no editor-side check of the message.",
+    "At runtime only the key's presence is checked. An empty string still fails the step, but with an empty message, which is unhelpful in the execution log. Treat a non-empty message as required.",
+    "There is no editor or publish check of the message: the message field is optional in the configuration dialog.",
     "The publish-time terminating check reads the step's own 'terminating' flag from the JSON. Keep terminating=true so that misplaced successors are reported."
   ]
 }

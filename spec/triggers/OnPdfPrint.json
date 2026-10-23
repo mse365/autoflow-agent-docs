@@ -16,7 +16,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "Report lines: [{ \"reportId\": <integer> }]. The flow runs only for these reports. At least one line, each report at most once. A 'tableNo' column is shown in the config canvas but is NOT stored or used by this trigger."
+      "description": "Report lines: [{ \"reportId\": <integer> }]. The flow runs only for these reports. At least one line (checked at publish); list each report once. A 'Source Table' column is shown in the config canvas but is NOT stored or used by this trigger."
     },
     {
       "key": "timeoutSec",
@@ -26,7 +26,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "How long the flow may run before Business Central uses the original PDF."
+      "description": "How long the flow may run before Business Central uses the original PDF. Checked between steps; 0 or less means no time limit."
     }
   ],
   "outputs": [
@@ -72,7 +72,7 @@
       "id": "OnPdfPrint.lines-required-publish",
       "severity": "error",
       "stage": "publish",
-      "check": "configuration.reports must contain at least one entry. Raised while registering the trigger (after licensing), aborting the publish.",
+      "check": "configuration.reports must contain at least one entry (an object; non-object entries are skipped). Raised while registering the trigger (after licensing), aborting the publish.",
       "message": "The \"When a PDF is printed\" trigger requires at least one report line."
     },
     {
@@ -83,34 +83,11 @@
       "message": "Only one published flow can use the \"When a PDF is printed\" trigger. It is already used by flow '%1'."
     },
     {
-      "id": "OnPdfPrint.reports-required",
-      "severity": "error",
-      "stage": "editor",
-      "check": "configuration.reports must be a non-empty array.",
-      "message": "Configure at least one report line.",
-      "machine": {
-        "type": "required",
-        "key": "reports"
-      }
-    },
-    {
-      "id": "OnPdfPrint.reports-type",
-      "severity": "error",
-      "stage": "editor",
-      "check": "configuration.reports must be an array of objects.",
-      "message": "Configure at least one report line.",
-      "machine": {
-        "type": "type",
-        "key": "reports",
-        "valueType": "array"
-      }
-    },
-    {
       "id": "OnPdfPrint.timeout-positive",
-      "severity": "error",
-      "stage": "editor",
-      "check": "configuration.timeoutSec must be at least 1.",
-      "message": "The timeout must be at least 1 second.",
+      "severity": "info",
+      "stage": "runtime",
+      "check": "configuration.timeoutSec should be at least 1. Not checked: 0 or less means the flow runs without a time limit while the user waits.",
+      "message": "(no message)",
       "machine": {
         "type": "range",
         "key": "timeoutSec",
@@ -119,17 +96,10 @@
     },
     {
       "id": "OnPdfPrint.report-exists",
-      "severity": "error",
-      "stage": "editor",
-      "check": "Every reports[].reportId must be an existing report.",
-      "message": "Report %1 does not exist."
-    },
-    {
-      "id": "OnPdfPrint.report-unique",
-      "severity": "error",
-      "stage": "editor",
-      "check": "A reportId may appear on only one line.",
-      "message": "Report %1 is configured on more than one line."
+      "severity": "info",
+      "stage": "runtime",
+      "check": "Every reports[].reportId should be an existing report. Not checked: a line for a report that does not exist never matches.",
+      "message": "(no message)"
     },
     {
       "id": "OnPdfPrint.runner-failed",
@@ -137,11 +107,18 @@
       "stage": "runtime",
       "check": "If the flow fails, the execution is marked Error and Business Central prints the original PDF (the print itself does not fail).",
       "message": "PDF Print flow failed before any body step could complete: %1"
+    },
+    {
+      "id": "OnPdfPrint.sync-no-deferral",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "A step that defers the run (Sleep) fails the flow, because the flow runs synchronously inside the report request. The user gets the original PDF.",
+      "message": "Step %1 (%2) requested a deferred resume, but the flow is running synchronously. Use Sleep or other time-based deferral steps only outside of synchronous frames (Webhook sync phase or SubFlow body)."
     }
   ],
   "notes": [
     "Fires from Business Central's 'document ready' report event for every intent (Print, Preview, Save, Download, Schedule), only for payloads with documenttype 'application/pdf' and only for reports listed in configuration.reports. If another extension already supplied a document, the flow is not started.",
-    "Synchronous: the flow runs inside the user's report request. The trigger output is committed first, then the flow runs until it yields (Return PDF), ends, fails or reaches timeoutSec. All step state is committed once at the end. Nothing continues in the background after the timeout.",
+    "Synchronous: the flow runs inside the user's report request. The trigger output is committed first, then the flow runs until it yields (Return PDF), ends, fails or exceeds timeoutSec (checked between steps). All step state is committed once at the end; a failure rolls back the flow's database changes. Nothing continues in the background after a timeout.",
     "End the flow with a Return PDF step to replace the document; otherwise the original PDF is used.",
     "The DocumentStream output (base64 of the whole PDF) is deleted from the execution data after the run to keep the database small; it is not available when inspecting the execution afterwards.",
     "Single catch-all flow: one published flow per environment handles all configured reports. Branch on {{trigger_ReportId}} for per-report logic.",

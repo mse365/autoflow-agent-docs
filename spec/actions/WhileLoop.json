@@ -21,12 +21,12 @@
     {
       "key": "condition",
       "type": "string",
-      "required": true,
+      "required": false,
       "default": "",
       "enum": null,
       "maxLength": null,
       "smart": "filter",
-      "description": "SmartFilter expression, same grammar as the Decision step's condition. It is re-substituted and re-evaluated on every pass, so it should reference values that the body changes. An empty or unparseable condition evaluates to false."
+      "description": "SmartFilter expression, same grammar as the Decision step's condition. It is re-substituted and re-evaluated on every pass, so it should reference values that the body changes. An empty or unparseable condition evaluates to false (mode 0: the body never runs; mode 1: it runs once)."
     },
     {
       "key": "mode",
@@ -44,12 +44,12 @@
     {
       "key": "maxIterations",
       "type": "integer",
-      "required": true,
+      "required": false,
       "default": 1000,
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "Runaway guard: the maximum number of body passes. The runtime uses 1000 when the value is missing or <= 0, but the editor requires >= 1."
+      "description": "Runaway guard: the maximum number of body passes. A missing value or a value <= 0 means 1000. The editor pre-fills 1000 for a new step."
     }
   ],
   "outputs": [
@@ -61,44 +61,6 @@
     }
   ],
   "rules": [
-    {
-      "id": "WhileLoop.condition-required",
-      "severity": "error",
-      "stage": "editor",
-      "check": "configuration.condition must be non-empty",
-      "message": "",
-      "machine": {
-        "type": "required",
-        "key": "condition"
-      }
-    },
-    {
-      "id": "WhileLoop.maxIterations-min",
-      "severity": "error",
-      "stage": "editor",
-      "check": "configuration.maxIterations must be an integer >= 1 (a missing key reads as 0 and fails)",
-      "message": "",
-      "machine": {
-        "type": "range",
-        "key": "maxIterations",
-        "min": 1
-      }
-    },
-    {
-      "id": "WhileLoop.mode-enum",
-      "severity": "info",
-      "stage": "runtime",
-      "check": "configuration.mode should be 0 or 1 (anything else is treated as 0 = While)",
-      "message": "",
-      "machine": {
-        "type": "enum",
-        "key": "mode",
-        "values": [
-          0,
-          1
-        ]
-      }
-    },
     {
       "id": "WhileLoop.max-iterations-exceeded",
       "severity": "error",
@@ -113,6 +75,6 @@
     "Do-While: on the first dispatch the condition is not evaluated, so the body always runs at least once. With mode 0, a condition that is false at the start skips the body entirely.",
     "The step emits a runtime-only 'result' ('loop' to enter the body, '' to exit) that the engine routes on. It is not declared in outputs[].",
     "Outputs of steps INSIDE the body are deleted every time control returns to the While step, so a condition cannot read body-step outputs. Make the condition depend on data that persists, such as records the body modifies or variables/collections outside the loop.",
-    "The editor's configuration check returns pass/fail without message text. Nothing checks the condition or the limit at publish time."
+    "Nothing checks the condition or the limit in the editor or at publish time. Write a condition anyway: an empty one never enters the body in mode 0."
   ]
 }

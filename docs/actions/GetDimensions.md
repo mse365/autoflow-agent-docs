@@ -20,15 +20,15 @@ The step resolves `reference`, checks that its table equals `tableNo` and reads 
 - `<CODE>`: the dimension value code.
 - `<CODE>_Name`: the value's name.
 
-If the record has no value for a code, both outputs are empty. The step only reads.
+If the record has no value for a code, or the code doesn't exist, both outputs are empty. The step only reads, so it doesn't trigger the Confirm dialog's "writing step" publish warning.
 
 ## Configuration
 
 | key | type | required | default | description |
 |---|---|---|---|---|
 | `reference` | string | yes | `""` | One SmartField placeholder resolving to the record, e.g. `"{{trigger_Rec}}"`. The table must have a *Dimension Set ID* field. |
-| `tableNo` | integer | yes | `0` | Table of the referenced record. It must match at runtime. |
-| `dimensions` | array | no | `[]` | Rows `{ "dimensionCode": "<code>" }`. Codes are trimmed and upper-cased, and duplicates and empty codes are ignored. The editor also writes `lineNo`, which the step ignores. |
+| `tableNo` | integer | yes | `0` | Table of the referenced record. The editor derives it from the reference. It must match at runtime. |
+| `dimensions` | array | no | `[]` | Rows `{ "dimensionCode": "<code>" }`. Codes are trimmed and upper-cased, and duplicates and empty codes are ignored. The editor also writes `lineNo` (10000, 20000, …), which the step ignores. |
 
 ## Outputs
 
@@ -45,16 +45,17 @@ There is no `rec` output.
 
 | stage | severity | rule | message |
 |---|---|---|---|
-| editor | error | `tableNo` missing/0, or `reference` is not a `{{…}}` placeholder | – (step shown as not configured) |
+| editor | error | `reference` is empty (required field in the config canvas) | `Please fill in the highlighted fields.` |
 
-There are no publish-time checks specific to this step.
+There are no publish-time checks for this step. A missing `tableNo` or a `reference` that isn't a single `{{…}}` placeholder is only caught at runtime (see below).
 
 ## Runtime errors
 
 | condition | message |
 |---|---|
 | `tableNo` 0/missing | `Table No. is required for a Get Dimensions step.` |
-| Reference does not resolve | `Reference "%1" cannot be resolved to a record.` |
+| `reference` is not a single `{{…}}` placeholder, or does not resolve | `Reference "%1" cannot be resolved to a record.` |
+| Referenced record no longer exists | Business Central's standard "record does not exist" error |
 | Resolved table ≠ `tableNo` | `Reference resolves to table %1 but the step is configured for table %2.` |
 | Table has no *Dimension Set ID* field | `Table "%1" has no "Dimension Set ID" field, so dimensions cannot be set on it.` (the same text as Set Dimension Values) |
 

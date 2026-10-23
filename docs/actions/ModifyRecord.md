@@ -36,8 +36,7 @@ The step resolves `reference` to a record ID and checks that it belongs to table
 
 | stage | severity | rule | message |
 |---|---|---|---|
-| editor | error | `tableNo` missing/0, or `reference` is not a `{{…}}` placeholder | – (step shown as not configured) |
-| editor | error | invalid `values[].inputFormat` | `"%1" is not a valid input format. Leave it empty for the regional format, enter 9 or xml for the invariant XML notation, or enter a date/time pattern such as yyyyMMdd (tokens yyyy, yy, MM, dd, HH, mm, ss plus separators).` |
+| editor | error | `reference` is empty (the Reference field is required) | `Please fill in the highlighted fields.` |
 
 There are no publish-time checks specific to this step. A Confirm dialog after this step gets a publish warning, because this step writes to the database.
 
@@ -46,11 +45,11 @@ There are no publish-time checks specific to this step. A Confirm dialog after t
 | condition | message |
 |---|---|
 | `tableNo` 0/missing | `Table No. is required for a Modify Record step.` |
-| Reference does not resolve | `Reference "%1" cannot be resolved to a record.` |
+| `reference` is not a single `{{…}}` placeholder, or does not resolve | `Reference "%1" cannot be resolved to a record.` |
 | Resolved table ≠ `tableNo` | `Reference resolves to table %1 but the step is configured for table %2.` |
 | A `values` row targets a primary-key field | `Field "%1" is part of the primary key and cannot be modified. Use a Rename Record step instead.` |
 | `fieldNo` not in table | `Field %1 does not exist in table %2.` |
-| Conversion / input format errors | Same as Insert Record (`Cannot convert value "%1" to %2 for field "%3".` …) |
+| Invalid `inputFormat`, conversion errors | Same as Insert Record (`Cannot convert value "%1" to %2 for field "%3".` …) |
 | Record deleted meanwhile, validation or OnModify errors | Business Central's own error |
 
 ## Example

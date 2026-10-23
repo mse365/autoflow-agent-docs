@@ -113,9 +113,9 @@
     {
       "id": "ModifyRecord.tableNo-required",
       "severity": "error",
-      "stage": "editor",
-      "check": "configuration.tableNo must be present and a non-zero integer.",
-      "message": "",
+      "stage": "runtime",
+      "check": "configuration.tableNo must be present and non-zero. The editor derives it from the reference; it is not a separate required field.",
+      "message": "Table No. is required for a Modify Record step.",
       "machine": {
         "type": "required",
         "key": "tableNo"
@@ -135,10 +135,10 @@
     },
     {
       "id": "ModifyRecord.tableNo-type",
-      "severity": "error",
+      "severity": "warning",
       "stage": "runtime",
-      "check": "tableNo must be a JSON number (integer); other JSON types are not reliably converted and are treated as 0.",
-      "message": "Table No. is required for a Modify Record step.",
+      "check": "Write tableNo as a JSON number. A value that cannot be read as an integer counts as 0, and the step fails.",
+      "message": "",
       "machine": {
         "type": "type",
         "key": "tableNo",
@@ -149,8 +149,8 @@
       "id": "ModifyRecord.reference-required",
       "severity": "error",
       "stage": "editor",
-      "check": "configuration.reference must be present and non-empty.",
-      "message": "",
+      "check": "configuration.reference must be present and non-empty. The editor's Reference field is required.",
+      "message": "Please fill in the highlighted fields.",
       "machine": {
         "type": "required",
         "key": "reference"
@@ -159,9 +159,9 @@
     {
       "id": "ModifyRecord.reference-placeholder",
       "severity": "error",
-      "stage": "editor",
-      "check": "configuration.reference must be a single SmartField placeholder: after trimming it starts with '{{', ends with '}}' and has a non-empty name inside.",
-      "message": "",
+      "stage": "runtime",
+      "check": "configuration.reference must be a single SmartField placeholder: after trimming it starts with '{{', ends with '}}' and has a non-empty name inside. Anything else cannot be resolved, and the step fails.",
+      "message": "Reference \"%1\" cannot be resolved to a record.",
       "machine": {
         "type": "regex",
         "key": "reference",
@@ -184,9 +184,9 @@
     },
     {
       "id": "ModifyRecord.values-type",
-      "severity": "error",
+      "severity": "warning",
       "stage": "runtime",
-      "check": "values must be a JSON array; any other type is ignored.",
+      "check": "values must be a JSON array; any other type is ignored, so the record is saved unchanged.",
       "message": "",
       "machine": {
         "type": "type",
@@ -207,17 +207,10 @@
       }
     },
     {
-      "id": "ModifyRecord.values-inputFormat-valid",
-      "severity": "error",
-      "stage": "editor",
-      "check": "every values[].inputFormat must be empty, '9', 'xml' (case-insensitive) or a structurally valid date/time pattern (tokens yyyy|yy, MM, dd, HH, mm, ss each at most once; only non-alphanumeric separators; date tokens all-or-nothing; ss requires mm, mm requires HH; at least a full date or HH+mm). One message per invalid row.",
-      "message": "\"%1\" is not a valid input format. Leave it empty for the regional format, enter 9 or xml for the invariant XML notation, or enter a date/time pattern such as yyyyMMdd (tokens yyyy, yy, MM, dd, HH, mm, ss plus separators)."
-    },
-    {
       "id": "ModifyRecord.values-inputFormat-runtime",
       "severity": "error",
       "stage": "runtime",
-      "check": "Same input-format check, repeated when the row is converted.",
+      "check": "values[].inputFormat must be empty, '9', 'xml' (case-insensitive) or a structurally valid date/time pattern (tokens yyyy|yy, MM, dd, HH, mm, ss each at most once; only non-alphanumeric separators; date tokens all-or-nothing; ss requires mm, mm requires HH; at least a full date or HH+mm). Checked when the row is converted (rows for Blob, Media and RecordId fields and rows with fieldNo 0 are not converted, so their inputFormat is not checked). The step fails on the first invalid row.",
       "message": "\"%1\" is not a valid input format. Leave it empty for the regional format, enter 9 or xml for the invariant XML notation, or enter a date/time pattern such as yyyyMMdd (tokens yyyy, yy, MM, dd, HH, mm, ss plus separators)."
     },
     {

@@ -46,16 +46,16 @@ Reference outputs inside the body as `{{<slug>_currentItem}}`, `{{<slug>_iterati
 
 | stage | severity | rule | message |
 |---|---|---|---|
-| editor | error | `selector` must be present and of the form `{{name}}` (trimmed, non-empty name) | (configuration rejected, no message text) |
+| editor | error | `selector` is empty (required field in the configuration dialog) | `Please fill in the highlighted fields.` |
 
 ## Runtime errors
 
 | condition | message |
 |---|---|
 | Selector is not a `{{name}}` placeholder | `The selector '%1' must use the SmartField placeholder notation (e.g. '{{name}}'). Bare selector names are no longer accepted – open the SmartField picker on the For Each step config to insert a valid placeholder.` |
-| Selector resolves to a non-empty scalar (not an array, not an iterable record reference) | `The provided selector '%1' does not resolve to an array or iterable reference.` |
+| Selector resolves to a non-empty scalar, or a dotted path doesn't resolve to records | `The provided selector '%1' does not resolve to an array or iterable reference.` |
 
-A selector that resolves to a present but **blank** value (e.g. a parser step that matched nothing) counts as an empty collection, not as an error.
+For a plain `{{<slug>_<output>}}` selector, a name that doesn't exist at run time (a collection nothing was added to, or a typo) and a **blank** output (e.g. a parser step that matched nothing) count as an empty collection, not as an error: the loop is skipped silently. Check the selector name carefully.
 
 ## Example
 

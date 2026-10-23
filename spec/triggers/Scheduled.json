@@ -9,22 +9,14 @@
   "group": false,
   "configuration": [],
   "outputs": [],
-  "rules": [
-    {
-      "id": "Scheduled.no-configuration",
-      "severity": "info",
-      "stage": "editor",
-      "check": "configuration must be an empty object. The editor validator reports any key as invalid; nothing reads configuration at run time.",
-      "message": "(no message; the configure dialog only says: There is nothing to configure for this trigger. This flow runs, whenever the associated job queue entry is started.)"
-    }
-  ],
+  "rules": [],
   "notes": [
-    "Enum caption is 'When scheduled to run'; the step picker shows 'On a schedule'.",
-    "Publishing creates (once per flow) a recurring Job Queue entry that runs every 60 minutes, on all weekdays, 00:00:00 to 23:59:59, with up to 3 attempts. The first run is one interval (60 minutes) after publish, not immediately. The schedule is NOT part of the flow definition: change it on the Job Queue entry in Business Central.",
-    "Every Job Queue run creates one execution of the published version and immediately queues it as its own Job Queue entry, so each scheduled tick is one asynchronous run.",
-    "Asynchronous runs commit after every step (no trigger in AutoFlow currently opts into one-transaction runs).",
+    "No configuration and no trigger-specific checks. Write configuration as {}; nothing reads it, and the configure dialog only shows: There is nothing to configure for this trigger. This flow runs, whenever the associated job queue entry is started.",
+    "The enum caption is 'When scheduled to run'; the step picker shows 'On a schedule'.",
+    "Publishing creates (once per flow) a recurring Job Queue entry that runs every 60 minutes on all weekdays, 00:00:00 to 23:59:59, with up to 3 attempts. The first run is one interval (60 minutes) after publishing, not immediately. The schedule is NOT part of the flow definition: change it on the Job Queue entry in Business Central.",
+    "Each Job Queue run checks the license, creates one execution of the published version and queues it as its own Job Queue entry, so each scheduled tick is one background run that commits after every step.",
     "No outputs: the flow has no record context. Use Find Records or similar steps to fetch data.",
-    "The flow card / Flow Workspace can also run a Scheduled flow once on demand ('Run this flow'); this starts one execution and opens its execution card.",
-    "Picker filters that depend on the trigger: Respond to Webhook, Return SubFlow Output, Return PDF, Set report file name, Set document field values and Prevent page close are hidden."
+    "The flow card and the Flow Workspace can also run a Scheduled flow once on demand ('Run this flow'). This starts one execution and opens its execution card.",
+    "Picker filters: Respond to Webhook, Return SubFlow Output, Return PDF, Set report file name, Set document field values and Prevent page close are hidden."
   ]
 }

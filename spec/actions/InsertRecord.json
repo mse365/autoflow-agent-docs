@@ -114,8 +114,8 @@
       "id": "InsertRecord.tableNo-required",
       "severity": "error",
       "stage": "editor",
-      "check": "configuration.tableNo must be present and a non-zero integer.",
-      "message": "",
+      "check": "configuration.tableNo must be present and non-zero. The editor's Table field is required.",
+      "message": "Please fill in the highlighted fields.",
       "machine": {
         "type": "required",
         "key": "tableNo"
@@ -135,10 +135,10 @@
     },
     {
       "id": "InsertRecord.tableNo-type",
-      "severity": "error",
+      "severity": "warning",
       "stage": "runtime",
-      "check": "tableNo must be a JSON number (integer); other JSON types are not reliably converted and are treated as 0.",
-      "message": "Table No. is required for an Insert Record step.",
+      "check": "Write tableNo as a JSON number. A value that cannot be read as an integer counts as 0, and the step fails.",
+      "message": "",
       "machine": {
         "type": "type",
         "key": "tableNo",
@@ -173,9 +173,9 @@
     },
     {
       "id": "InsertRecord.values-type",
-      "severity": "error",
+      "severity": "warning",
       "stage": "runtime",
-      "check": "values must be a JSON array; any other type is ignored (no fields are set).",
+      "check": "values must be a JSON array; any other type is ignored, so no fields are set.",
       "message": "",
       "machine": {
         "type": "type",
@@ -196,17 +196,10 @@
       }
     },
     {
-      "id": "InsertRecord.values-inputFormat-valid",
-      "severity": "error",
-      "stage": "editor",
-      "check": "every values[].inputFormat must be empty, '9', 'xml' (case-insensitive) or a structurally valid date/time pattern (tokens yyyy|yy, MM, dd, HH, mm, ss each at most once; only non-alphanumeric separators; date tokens all-or-nothing; ss requires mm, mm requires HH; at least a full date or HH+mm). One message per invalid row.",
-      "message": "\"%1\" is not a valid input format. Leave it empty for the regional format, enter 9 or xml for the invariant XML notation, or enter a date/time pattern such as yyyyMMdd (tokens yyyy, yy, MM, dd, HH, mm, ss plus separators)."
-    },
-    {
       "id": "InsertRecord.values-inputFormat-runtime",
       "severity": "error",
       "stage": "runtime",
-      "check": "Same input-format check, repeated when the row is converted.",
+      "check": "values[].inputFormat must be empty, '9', 'xml' (case-insensitive) or a structurally valid date/time pattern (tokens yyyy|yy, MM, dd, HH, mm, ss each at most once; only non-alphanumeric separators; date tokens all-or-nothing; ss requires mm, mm requires HH; at least a full date or HH+mm). Checked when the row is converted (rows for Blob, Media and RecordId fields and rows with fieldNo 0 are not converted, so their inputFormat is not checked). The step fails on the first invalid row.",
       "message": "\"%1\" is not a valid input format. Leave it empty for the regional format, enter 9 or xml for the invariant XML notation, or enter a date/time pattern such as yyyyMMdd (tokens yyyy, yy, MM, dd, HH, mm, ss plus separators)."
     },
     {
@@ -244,7 +237,8 @@
     "Primary-key fields are written like any other field. If you omit them and the table's OnInsert does not assign them, the insert may fail with a duplicate key or create a record with an empty key.",
     "Blob and Media fields: a bare {{token}} that resolves to binary content is streamed as-is; otherwise the resolved text is base64-decoded, and if that fails the text is stored as UTF-8. MediaSet is not supported.",
     "RecordId fields can only be filled from a reference SmartField ({{slug_rec}}, {{FindX_results}}, dotted paths); literal text cannot be converted to a RecordId.",
-    "Option fields accept the ordinal number, the English member name, or the caption in the user's language.",
+    "Option fields accept the ordinal number, the English member name, or the caption in the user's language. Names and captions must match exactly, including case.",
+    "values[].validate must be a JSON boolean when present; another type fails the step when the rows are loaded.",
     "Configuration values are resolved by the engine before the step runs: scalar SmartFields, SmartFormulas and SmartControls anywhere in the configuration text are substituted; reference SmartFields are preserved for the step to resolve.",
     "Writing step: a Confirm dialog placed after this step (in document order) produces a publish warning, because Business Central cannot open a dialog once the flow has written to the database."
   ]

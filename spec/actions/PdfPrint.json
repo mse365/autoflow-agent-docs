@@ -79,23 +79,11 @@
   ],
   "rules": [
     {
-      "id": "PdfPrint.selector-wrapped",
-      "severity": "error",
-      "stage": "editor",
-      "check": "configuration.selector, when non-empty, must be a SmartField placeholder in {{name}} notation",
-      "message": "The selector '%1' must use the SmartField placeholder notation (e.g. '{{name}}'). Bare selector names are no longer accepted – open the SmartField picker on the PDF Print step config to insert a valid placeholder.",
-      "machine": {
-        "type": "regex",
-        "key": "selector",
-        "pattern": "\\s*(\\{\\{[^{}]+\\}\\})?\\s*"
-      }
-    },
-    {
       "id": "PdfPrint.report-required-editor",
       "severity": "error",
       "stage": "editor",
-      "check": "The Report field is marked required in the configuration canvas",
-      "message": "(no dedicated message; the configuration dialog marks the Report field as required)",
+      "check": "The Report field is required in the step dialog.",
+      "message": "Please fill in the highlighted fields.",
       "machine": {
         "type": "required",
         "key": "report"
@@ -142,8 +130,13 @@
       "id": "PdfPrint.selector-wrapped-runtime",
       "severity": "error",
       "stage": "runtime",
-      "check": "A non-empty selector must be a {{name}} placeholder",
-      "message": "The selector '%1' must use the SmartField placeholder notation (e.g. '{{name}}'). Bare selector names are no longer accepted – open the SmartField picker on the PDF Print step config to insert a valid placeholder."
+      "check": "A non-empty selector must be a {{name}} placeholder (checked at run time only).",
+      "message": "The selector '%1' must use the SmartField placeholder notation (e.g. '{{name}}'). Bare selector names are no longer accepted – open the SmartField picker on the PDF Print step config to insert a valid placeholder.",
+      "machine": {
+        "type": "regex",
+        "key": "selector",
+        "pattern": "\\s*(\\{\\{[^{}]+\\}\\})?\\s*"
+      }
     },
     {
       "id": "PdfPrint.selector-found",
@@ -183,7 +176,7 @@
   ],
   "notes": [
     "The enum caption is 'Create PDF Document'; the step picker shows 'Create PDF'. Default step description is 'Create <report caption> PDF'.",
-    "No publish-time (OnValidateFlowStep) check exists for this step; every report/layout/selector problem surfaces at run time.",
+    "No publish-time check exists for this step; selector/report/layout problems surface at run time. The dialog only requires a report to be picked.",
     "The output 'Document' is a reference to an AutoFlow Document record (table 5564415: ID, Name, Content Type, Length, Data).",
     "{RecordNo} is the primary-key value(s) of the selector record joined with '_' (empty when there is no selector).",
     "The layout picker in the editor is read-only and lookup-only; on Business Central 24 no lookup page is available, so the layout can only be set by editing the JSON.",

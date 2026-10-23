@@ -40,10 +40,9 @@ Reference it as `{{<slug>_Document}}`, e.g. `{{CreateInvoicePdf_Document}}`.
 
 | stage | severity | rule | message |
 |---|---|---|---|
-| editor | error | `selector` must be empty or a `{{name}}` placeholder | The selector '%1' must use the SmartField placeholder notation (e.g. '{{name}}'). Bare selector names are no longer accepted – open the SmartField picker on the PDF Print step config to insert a valid placeholder. |
-| editor | error | Report is a required field in the dialog | (field marked required) |
+| editor | error | Report is a required field in the dialog | Please fill in the highlighted fields. |
 
-There is no publish-time check for this step.
+There is no publish-time check for this step. Everything else, including the selector format, is only checked at run time.
 
 ## Runtime errors
 
@@ -53,7 +52,7 @@ There is no publish-time check for this step.
 | `report` not an integer | Invalid Report ID: %1. Report ID must be a valid integer. |
 | report does not exist | Report ID %1 does not exist. |
 | layout name (and app) not found for the report | The layout '%1' no longer exists for report %2. Open the PDF Print step and pick a layout again, or clear it to use the report default. |
-| selector without braces | The selector '%1' must use the SmartField placeholder notation (e.g. '{{name}}'). … |
+| selector without braces | The selector '%1' must use the SmartField placeholder notation (e.g. '{{name}}'). Bare selector names are no longer accepted – open the SmartField picker on the PDF Print step config to insert a valid placeholder. |
 | selector not in context | Record selector '%1' could not be resolved. The selector was not found in the context buffer. |
 | selector is a value, not a reference | Record selector '%1' could not be resolved to a record reference. The field is not a reference type. |
 | referenced record deleted | The record referenced by selector '%1' could not be found. |
@@ -87,9 +86,9 @@ There is no publish-time check for this step.
 
 ## Gotchas
 
-- `report` is a **string** holding the number, not a JSON number.
+- `report` is a **string** holding the number (`"1306"`), as the editor writes it.
 - `{RecordNo}` is the record's primary-key values joined with `_`; it is empty when no selector is set.
 - The selector must resolve to a record reference (e.g. a trigger's `Rec` output or a Find Records result), not a text value.
-- If you edit `layout` by hand, clear or update `layoutAppId` as well; a stale app id makes the layout lookup fail at run time.
+- If you edit `layout` by hand, clear or update `layoutAppId` as well; a stale app id makes the layout lookup fail at run time. The editor re-derives `layoutAppId` from the report and layout name on every save.
 - On Business Central 24 the editor's layout picker has no lookup, so the layout can only be set by editing the JSON.
 - The generated document stays in the AutoFlow Document table; it is the hand-off format for Send Email attachments and Azure Blob uploads.

@@ -28,7 +28,7 @@ The step runs the codeunit or report in a **separate background session** and wa
 
 | key | type | required | default | description |
 |---|---|---|---|---|
-| `objectType` | string | no | `"Codeunit"` | `"Codeunit"` or `"Report"` (exact case). Empty means Codeunit. |
+| `objectType` | string | no | `"Codeunit"` | `"Codeunit"` or `"Report"` (exact case). Empty means Codeunit. At run time any value other than `report` (any case) runs a codeunit, and only the exact value `"Codeunit"` (or empty) gets the block-list check. |
 | `objectId` | integer | yes | `0` | ID of the codeunit or report. Must be a JSON number. |
 | `objectCaption` | string | no | `""` | Caption of the object, written by the editor. Display only; not read at run time. |
 | `sourceRecordSelector` | string | no | `""` | Optional record to pass: a wrapped, flat Reference SmartField such as `{{trigger_Rec}}`. For a codeunit, its `TableNo` must match the record's table. For a report, the record is the report's data record. |
@@ -44,22 +44,23 @@ Reference it downstream as `{{<slug>_success}}`.
 
 ## Validation
 
-The editor runs these checks when you confirm the dialog and refuses to save an invalid configuration. Core does **not** repeat them at publish, so an imported definition is not checked until the step is opened.
+When you confirm the step dialog, the step checks its configuration and refuses to save with *"The Run Codeunit/Report configuration is invalid:"* followed by the list below. Publish does **not** repeat these checks, so an imported definition is not checked until the step is opened and confirmed. Only the block-list is checked again at run time.
 
 | stage | severity | rule | message |
 |---|---|---|---|
 | editor | error | `objectId` is 0 or missing | Codeunit is required. / Report is required. |
-| editor | error | `objectType` is not `Codeunit` or `Report` | Unknown objectType: %1. Expected Codeunit or Report. |
-| editor + runtime | error | Codeunit is on the block-list: 1, 2, 40, 357, 358 (extensions may add more) | Codeunit %1: %2 (at run time: This codeunit is blocked for AutoFlow. %1) |
+| editor + runtime | error | Codeunit is on the block-list: 1, 2, 40, 357, 358 | Codeunit %1: %2 (at run time: This codeunit is blocked for AutoFlow. %1) |
 | editor | error | Codeunit does not exist | Codeunit %1 does not exist. |
 | editor | error | Codeunit subtype is not Normal | Codeunit %1 (%2) has subtype %3; only Normal codeunits are allowed. |
 | editor | error | Report does not exist | Report %1 does not exist. |
-| editor + runtime | error | Selector is not a wrapped `{{...}}` placeholder | Source record reference must be a wrapped SmartField placeholder, e.g. {{customer}}. Got: %1 |
+| editor | error | `sourceRecordSelector` is not a wrapped `{{...}}` placeholder | Source record reference must be a wrapped SmartField placeholder, e.g. {{customer}}. Got: %1 |
 | editor | error | Selector cannot be resolved | Source record reference %1 cannot be resolved to a known field. |
 | editor | error | Selector points at a Value, not a Reference | Source record reference %1 must point at a Reference-typed field, not a Value. |
-| editor (status line) | error | No object picked | Select a codeunit to run. / Select a report to run. |
+| editor (status line) | info | No object picked yet (does not block saving by itself) | Select a codeunit to run. / Select a report to run. |
 
-The block-list reasons are:
+The dialog always writes `objectType` as `"Codeunit"` or `"Report"`, so a hand-written value of another spelling is replaced when the step is confirmed.
+
+The block-list reasons (`%2` above) are:
 
 - **Codeunit 1**: legacy system bootstrap.
 - **Codeunit 2**: Company-Initialize.
@@ -70,6 +71,7 @@ The block-list reasons are:
 
 | condition | message |
 |---|---|
+| `sourceRecordSelector` is not a wrapped `{{...}}` placeholder | Source record reference must be a wrapped SmartField placeholder. Got: %1 |
 | The selector is not a Reference at run time | Source record reference '%1' could not be resolved at runtime. |
 | The record was deleted before the session started | Source record %1 in table %2 could not be found. (Reported inside the codeunit or report failure message.) |
 | The codeunit failed | Codeunit %1 failed: %2 |
@@ -78,7 +80,7 @@ The block-list reasons are:
 | The report failed without a message | Report %1 failed without a usable error message. Try invoking the same report manually from the BC UI to see the underlying validation error. |
 | The 10-minute limit was exceeded | Codeunit/report did not complete within %1 seconds. Job %2 is still Pending. |
 
-Error texts are truncated to 1024 characters.
+The object's own error text (`%2`) is truncated to 1024 characters.
 
 ## Example
 
@@ -110,3 +112,4 @@ Error texts are truncated to 1024 characters.
 - The codeunit runs in a background session. It cannot show UI, and `Confirm` or `Page.Run` in it fail.
 - Object IDs differ between extensions and environments. Make sure the object exists in the target environment.
 - The subtype and existence checks only run in the editor. A test codeunit imported via JSON is not stopped at run time.
+- `objectId` must be a JSON number. A string such as `"80"` can't be read and fails the step.

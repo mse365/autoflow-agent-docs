@@ -36,7 +36,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "Maximum run time. The editor replaces values <= 0 with 30."
+      "description": "Seconds the flow may run. Checked between steps: once it has passed, the remaining steps are skipped and the release goes ahead without the flow's answer. 0 or a negative value means no limit; the editor writes 30 instead."
     },
     {
       "key": "filters",
@@ -46,7 +46,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "Field filters on the document header: [{ \"fieldNo\": <integer>, \"filter\": \"<BC filter expression>\" }]. Applied literally (max 250 chars, no placeholders)."
+      "description": "Field filters on the document header: [{ \"fieldNo\": <integer>, \"filter\": \"<BC filter expression>\" }]. Applied literally with SetFilter (max 250 characters, no placeholders). A filter that Business Central cannot parse means the flow does not run. Two rows for the same field: the last one wins."
     }
   ],
   "outputs": [
@@ -74,31 +74,33 @@
       "id": "OnDocumentRelease.table-supported",
       "severity": "error",
       "stage": "publish",
-      "check": "configuration.tableNo must be a supported releasable document table. Hard stop at publish; also shown live in the canvas status line.",
+      "check": "configuration.tableNo must be a supported releasable document table (Sales Header 36, Purchase Header 38, or one registered by an extension). Hard stop at publish.",
       "message": "Table %1 is not one of the supported releasable document tables."
     },
     {
-      "id": "OnDocumentRelease.guiOnly-type",
+      "id": "OnDocumentRelease.table-required-editor",
       "severity": "error",
       "stage": "editor",
-      "check": "guiOnly must be a boolean.",
-      "message": "(no message)",
+      "check": "The configuration dialog refuses to save while no table is picked.",
+      "message": "Please fill in the highlighted fields."
+    },
+    {
+      "id": "OnDocumentRelease.table-status",
+      "severity": "info",
+      "stage": "editor",
+      "check": "Live status line in the configuration dialog (does not block saving): shown when the table does not exist or is not supported.",
+      "message": "Table %1 does not exist in this environment. | Table %1 is not supported by this trigger, so the flow would never run."
+    },
+    {
+      "id": "OnDocumentRelease.guiOnly-type",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "guiOnly should be a JSON boolean.",
+      "message": "(no message; a value that is not a boolean is ignored and the default true applies)",
       "machine": {
         "type": "type",
         "key": "guiOnly",
         "valueType": "boolean"
-      }
-    },
-    {
-      "id": "OnDocumentRelease.timeout-positive",
-      "severity": "warning",
-      "stage": "editor",
-      "check": "timeoutSec should be > 0 (the editor writes 30 for values <= 0).",
-      "message": "(no message)",
-      "machine": {
-        "type": "range",
-        "key": "timeoutSec",
-        "min": 1
       }
     },
     {
@@ -107,14 +109,21 @@
       "stage": "runtime",
       "check": "Any error in the flow (e.g. an Error step) prevents the release and shows the flow's message.",
       "message": "(the flow's own error message)"
+    },
+    {
+      "id": "OnDocumentRelease.no-deferred-steps",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The flow runs inline, so a step that defers the run (Sleep) fails and the release is prevented.",
+      "message": "Step %1 (%2) requested a deferred resume, but the flow is running synchronously. Use Sleep or other time-based deferral steps only outside of synchronous frames (Webhook sync phase or SubFlow body)."
     }
   ],
   "notes": [
     "Fires on the MANUAL release of a Sales or Purchase document (the Release action), before any release work. Release previews never fire it. With guiOnly (default), non-UI sessions are skipped.",
     "Synchronous and atomic: runs inline in the user's transaction, without commits. An error prevents the release. A Set document field values step writes values onto the header before it is released; with its 'Skip standard processing' option the header is saved with the flow's values and Business Central's own release is skipped (e.g. to set a custom Pending Approval status).",
+    "timeoutSec is checked between steps. When it has passed, the remaining steps are skipped and the release continues without a Set document field values answer.",
     "Because it runs outside a table event, a Confirm dialog step can ask the user; the release waits for the answer.",
     "Re-entrancy guard: a release that the running flow itself performs does not start the flow again.",
-    "No watch fields: configuration keys watchFields / triggerOnInsert / triggerOnModify are not used by this trigger.",
     "No recurring Job Queue entry; the registration is keyed by tableNo.",
     "Picker filter: Set document field values is offered. Respond to Webhook, Return SubFlow Output, Return PDF, Set report file name and Prevent page close are hidden."
   ]

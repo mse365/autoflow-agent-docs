@@ -41,7 +41,7 @@ The insert runs inside the flow's database transaction. Any error (conversion, v
 Conversion per field type:
 - **Integer, BigInteger, Decimal, Boolean, Duration**: Evaluate, regional or invariant.
 - **Date, Time, DateTime**: Evaluate, or the pattern.
-- **Option**: the ordinal, the English member name or the localized caption.
+- **Option**: the ordinal, the English member name or the localized caption. Names must match exactly, including case.
 - **Guid**: `""` gives an empty GUID.
 - **Code, Text**: taken as-is.
 - **RecordId**: only from a reference SmartField such as `{{FindItem_results}}`.
@@ -57,8 +57,7 @@ Conversion per field type:
 
 | stage | severity | rule | message |
 |---|---|---|---|
-| editor | error | `tableNo` missing or `0` | – (step shown as not configured) |
-| editor | error | a `values[].inputFormat` is not empty / `9` / `xml` / a valid pattern | `"%1" is not a valid input format. Leave it empty for the regional format, enter 9 or xml for the invariant XML notation, or enter a date/time pattern such as yyyyMMdd (tokens yyyy, yy, MM, dd, HH, mm, ss plus separators).` |
+| editor | error | `tableNo` missing or `0` (the Table field is required) | `Please fill in the highlighted fields.` |
 
 There are no publish-time checks specific to this step. A Confirm dialog placed after it gets a publish warning, because this step writes to the database.
 
@@ -70,6 +69,7 @@ There are no publish-time checks specific to this step. A Confirm dialog placed 
 | Template not found | `Configuration Template "%1" does not exist.` |
 | Template table ≠ `tableNo` | `Configuration Template "%1" is for table %2, but the step is configured for table %3.` |
 | `fieldNo` not in table | `Field %1 does not exist in table %2.` |
+| Invalid `inputFormat` (not empty, `9`, `xml` or a valid pattern) | `"%1" is not a valid input format. Leave it empty for the regional format, enter 9 or xml for the invariant XML notation, or enter a date/time pattern such as yyyyMMdd (tokens yyyy, yy, MM, dd, HH, mm, ss plus separators).` |
 | Pattern used on a non-date field | `Input format "%1" is a date/time pattern and can only be used for Date, Time, or DateTime fields. Field "%2" is of type %3.` |
 | Value not convertible | `Cannot convert value "%1" to %2 for field "%3".` / `Cannot convert value "%1" to %2 for field "%3" using input format "%4".` |
 | Duplicate `lineNo` in `values` | Platform "record already exists" error |
@@ -91,7 +91,7 @@ There are no publish-time checks specific to this step. A Confirm dialog placed 
     "triggers": true,
     "templateCode": "",
     "values": [
-      { "lineNo": 10000, "fieldNo": 1, "value": "{{trigger_Rec.no}}", "validate": true },
+      { "lineNo": 10000, "fieldNo": 1, "value": "NEW-{{trigger_Rec.no}}", "validate": true },
       { "lineNo": 20000, "fieldNo": 2, "value": "{{trigger_Rec.name}}", "validate": true },
       { "lineNo": 30000, "fieldNo": 35, "value": "DE", "validate": true },
       { "lineNo": 40000, "fieldNo": 20, "value": "5000.00", "validate": true, "inputFormat": "9" }
@@ -106,7 +106,7 @@ There are no publish-time checks specific to this step. A Confirm dialog placed 
 ## Gotchas
 
 - Fields are addressed by **number** (`fieldNo`), never by name.
-- `lineNo` must be unique. Two rows without `lineNo` both become 0 and the step fails.
+- `lineNo` must be unique. Two rows without `lineNo` both become 0 and the step fails. The editor renumbers rows `10000, 20000, …` on every save.
 - Rows are applied in `lineNo` order, and that order matters with `validate: true`: validating e.g. *Sell-to Customer No.* later overwrites fields you set earlier.
 - Keep `outputs[0].tableNo` equal to `configuration.tableNo`.
 - Without `inputFormat`, decimals and dates are parsed in the **regional format of the user or job-queue session that runs the flow**. Use `"inputFormat": "9"` for machine-generated values such as `1234.50` or `2026-07-16`.

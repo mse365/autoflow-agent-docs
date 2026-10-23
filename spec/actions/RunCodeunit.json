@@ -13,10 +13,13 @@
       "type": "string",
       "required": false,
       "default": "Codeunit",
-      "enum": ["Codeunit", "Report"],
+      "enum": [
+        "Codeunit",
+        "Report"
+      ],
       "maxLength": null,
       "smart": "none",
-      "description": "What to run. Absent or empty means Codeunit. Case-sensitive in the editor validation ('Codeunit' / 'Report'); at run time anything whose lowercase is not 'report' is run as a codeunit."
+      "description": "What to run: 'Codeunit' or 'Report'. Absent or empty means Codeunit. The editor always writes one of these two. At run time anything whose lowercase is not 'report' runs as a codeunit, and only the exact value 'Codeunit' (or empty) gets the block-list check."
     },
     {
       "key": "objectId",
@@ -60,38 +63,58 @@
     }
   ],
   "outputs": [
-    { "name": "success", "type": "value", "tableNo": null, "when": "always" }
+    {
+      "name": "success",
+      "type": "value",
+      "tableNo": null,
+      "when": "always"
+    }
   ],
   "rules": [
     {
       "id": "RunCodeunit.object-type",
       "severity": "error",
-      "stage": "editor",
-      "check": "objectType must be 'Codeunit' or 'Report' (empty = Codeunit).",
-      "message": "Unknown objectType: %1. Expected Codeunit or Report.",
-      "machine": { "type": "enum", "key": "objectType", "values": ["Codeunit", "Report"] }
+      "stage": "runtime",
+      "check": "objectType should be exactly 'Codeunit' or 'Report' (empty = Codeunit). Other spellings run a codeunit (or a report for any case of 'report') and, for codeunits, skip the block-list check. The editor overwrites the value on save, so its 'Unknown objectType' message never appears.",
+      "message": "(no message)",
+      "machine": {
+        "type": "enum",
+        "key": "objectType",
+        "values": [
+          "Codeunit",
+          "Report"
+        ]
+      }
     },
     {
       "id": "RunCodeunit.object-id-type",
       "severity": "error",
-      "stage": "editor",
-      "check": "objectId must be an integer.",
-      "message": "(no message – a non-integer value fails while reading the configuration)",
-      "machine": { "type": "type", "key": "objectId", "valueType": "integer" }
+      "stage": "runtime",
+      "check": "objectId must be a JSON integer; any other value fails while reading the configuration (in the editor and at run time).",
+      "message": "(platform conversion error)",
+      "machine": {
+        "type": "type",
+        "key": "objectId",
+        "valueType": "integer"
+      }
     },
     {
       "id": "RunCodeunit.object-id-required",
       "severity": "error",
       "stage": "editor",
-      "check": "objectId must be non-zero. Message is 'Codeunit is required.' or 'Report is required.' depending on objectType.",
+      "check": "objectId must be non-zero. Checked when the step dialog is confirmed (refuses to save); not at publish. Message is 'Codeunit is required.' or 'Report is required.' depending on objectType.",
       "message": "Codeunit is required.",
-      "machine": { "type": "range", "key": "objectId", "min": 1 }
+      "machine": {
+        "type": "range",
+        "key": "objectId",
+        "min": 1
+      }
     },
     {
       "id": "RunCodeunit.codeunit-blocked",
       "severity": "error",
       "stage": "editor",
-      "check": "objectType = Codeunit and objectId is on the block-list: 1, 2, 40, 357, 358 (extensions can add more). Also enforced at run time with 'This codeunit is blocked for AutoFlow. %1'.",
+      "check": "objectType = Codeunit and objectId is on the block-list: 1, 2, 40, 357, 358. Checked when the dialog is confirmed and again at run time ('This codeunit is blocked for AutoFlow. %1').",
       "message": "Codeunit %1: %2"
     },
     {
@@ -119,9 +142,13 @@
       "id": "RunCodeunit.selector-wrapped",
       "severity": "error",
       "stage": "editor",
-      "check": "A non-empty sourceRecordSelector must be a wrapped SmartField placeholder {{name}}. Also enforced at run time ('Source record reference must be a wrapped SmartField placeholder. Got: %1').",
+      "check": "A non-empty sourceRecordSelector must be a wrapped SmartField placeholder {{name}}. Also enforced at run time with 'Source record reference must be a wrapped SmartField placeholder. Got: %1'.",
       "message": "Source record reference must be a wrapped SmartField placeholder, e.g. {{customer}}. Got: %1",
-      "machine": { "type": "regex", "key": "sourceRecordSelector", "pattern": "(?:|\\s*\\{\\{[^{}]+\\}\\}\\s*)" }
+      "machine": {
+        "type": "regex",
+        "key": "sourceRecordSelector",
+        "pattern": "(?:|\\s*\\{\\{[^{}]+\\}\\}\\s*)"
+      }
     },
     {
       "id": "RunCodeunit.selector-resolvable",
@@ -177,8 +204,8 @@
     "Runs the object in a separate background session (its own transaction) and waits for it (polling, max 10 minutes). The step COMMITS the flow's open transaction before starting the session, also inside SubFlows and synchronous/interactive flows.",
     "The object's own changes are committed by the worker session independently of the flow: a later failure of the flow does not roll them back.",
     "Reports run via saved request-page parameters and never show a request page; rendered output is discarded – only side effects matter (use processing-only reports).",
-    "The editor validates on OK and refuses to save an invalid configuration; core does not re-run these checks on publish (an imported definition is not validated until the step is opened). The block-list check is repeated at run time; subtype and existence are not.",
+    "The step dialog runs these checks on OK and refuses to save an invalid configuration ('The Run Codeunit/Report configuration is invalid:' + list); publish does not re-run them, so an imported definition is not checked until the step is opened. The block-list check is repeated at run time; subtype and existence are not.",
     "success is always 'true' when the step completes; failures raise an error instead.",
-    "Error messages from the object are truncated to 1024 characters."
+    "The object's own error text is truncated to 1024 characters."
   ]
 }

@@ -25,9 +25,12 @@
       "id": "SetReportFileName.fileName-required-editor",
       "severity": "error",
       "stage": "editor",
-      "check": "configuration.fileName must be non-empty (required field in the dialog; editor validation returns false, no message text)",
-      "message": "(no message text; the step is reported as invalid)",
-      "machine": { "type": "required", "key": "fileName" }
+      "check": "configuration.fileName must be non-empty: a required field in the step dialog. Not checked at publish; an empty value at run time makes Business Central keep its own name.",
+      "message": "Please fill in the highlighted fields.",
+      "machine": {
+        "type": "required",
+        "key": "fileName"
+      }
     },
     {
       "id": "SetReportFileName.terminating-no-successor",

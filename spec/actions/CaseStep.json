@@ -44,39 +44,18 @@
       "id": "CaseStep.value-required",
       "severity": "error",
       "stage": "editor",
-      "check": "configuration.value must be non-empty",
-      "message": "",
+      "check": "configuration.value must be non-empty (required field in the configuration dialog)",
+      "message": "Please fill in the highlighted fields.",
       "machine": { "type": "required", "key": "value" }
-    },
-    {
-      "id": "CaseStep.branches-type",
-      "severity": "error",
-      "stage": "editor",
-      "check": "configuration.branches should be an array of strings mirroring the non-default edge values",
-      "message": "",
-      "machine": { "type": "type", "key": "branches", "valueType": "array" }
-    },
-    {
-      "id": "CaseStep.reserved-default-value",
-      "severity": "error",
-      "stage": "editor",
-      "check": "At most one edge may have the value '__default__' (a user branch must not use the reserved value)",
-      "message": "A branch cannot use the reserved value of the automatic \"Otherwise\" branch. Rename that branch."
-    },
-    {
-      "id": "CaseStep.duplicate-branch-value",
-      "severity": "warning",
-      "stage": "editor",
-      "check": "Non-default edge values should be unique",
-      "message": "Branch value \"%1\" is used more than once. Only the first branch will be reachable."
     }
   ],
   "notes": [
     "The 'result' output is the matched value, or '__default__' when nothing matches. It is what the engine routes on.",
     "Matching is exact text equality and case-sensitive. There is no trimming or numeric comparison: '1' does not match '1.0'.",
-    "An empty resolved value goes to the default branch, unless 'branches' contains an explicit empty string. The editor cannot create one, but hand-written JSON can.",
-    "The duplicate-value check is a non-blocking message. Duplicate values are not reliably routable, so avoid them.",
+    "An empty resolved value goes to the default branch. An explicit empty-string entry in 'branches' (possible only in hand-written JSON) makes the step emit '' instead, and the engine never routes on an empty value: the flow continues after the Case step and no branch runs.",
+    "Nothing checks for duplicate branch values or for a user branch that uses '__default__'. Avoid both: only the first edge with a given value is ever taken.",
     "Edge values are matched with a quoted path expression. Avoid single quotes (') in branch values.",
+    "The engine stores the routed value in a 100-character field. Keep branch values to 100 characters or fewer.",
     "Outputs of steps inside a branch are deleted when control leaves the branch."
   ]
 }

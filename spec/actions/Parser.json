@@ -36,7 +36,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "text",
-      "description": "Output definitions as { \"<outputName>\": \"<selector>\" }. Each key becomes a value output of the step; output names are truncated to 30 characters, selectors to 2048. Selector syntax depends on 'type': a JsonPath (e.g. \"$.data.id\"), an XPath (e.g. \"//Order/@id\"), or a .NET regular expression. The editor treats selectors as SmartText."
+      "description": "Output definitions as { \"<outputName>\": \"<selector>\" }. Each key becomes a value output of the step. Keep keys at most 30 characters: runtime values are written under the name cut to 30, while the declared outputs keep the full key. Selectors are cut to 2048 characters and are SmartText (resolved before the step runs). Selector syntax depends on 'type': a JsonPath (e.g. \"$.data.id\"), an XPath (e.g. \"//Order/@id\"), or a .NET regular expression. A non-object value is ignored (no outputs, no values)."
     },
     {
       "key": "namespaces",
@@ -46,7 +46,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "XPath only. Namespace overrides as { \"<prefix>\": \"<uri>\" } (prefix max 20, uri max 250 characters). When non-empty, ONLY these prefixes are registered (auto-discovery is skipped). When empty, namespaces are auto-discovered from the document (default namespace gets prefix 'def'; colliding prefixes get a numeric suffix such as 'ns2')."
+      "description": "XPath only. Namespace overrides as { \"<prefix>\": \"<uri>\" } (prefix max 20, uri max 250 characters; longer values are cut). When non-empty, ONLY these prefixes are registered (auto-discovery is skipped). When empty or not an object, namespaces are auto-discovered from the document (default namespace gets prefix 'def'; colliding prefixes get a numeric suffix such as 'ns2')."
     },
     {
       "key": "rawXmlLines",
@@ -76,23 +76,23 @@
     {
       "id": "Parser.type-enum",
       "severity": "warning",
-      "stage": "editor",
-      "check": "configuration.type should be exactly \"JsonPath\", \"XPath\" or \"RegEx\"; anything else silently falls back to JsonPath.",
+      "stage": "runtime",
+      "check": "configuration.type should be exactly \"JsonPath\", \"XPath\" or \"RegEx\"; anything else (or a missing key) silently falls back to JsonPath. The editor shows and saves it as JsonPath.",
       "message": "",
       "machine": { "type": "enum", "key": "type", "values": ["JsonPath", "XPath", "RegEx"] }
     },
     {
       "id": "Parser.lines-type",
-      "severity": "error",
-      "stage": "editor",
-      "check": "configuration.lines must be a JSON object mapping output name to selector string (not an array of rows).",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "configuration.lines should be a JSON object mapping output name to selector string (not an array of rows). Anything else is silently ignored: the step declares no outputs and writes no values.",
       "message": "",
       "machine": { "type": "type", "key": "lines", "valueType": "object" }
     },
     {
       "id": "Parser.lines-required",
       "severity": "warning",
-      "stage": "editor",
+      "stage": "runtime",
       "check": "configuration.lines should contain at least one entry; without lines the step produces no outputs.",
       "message": "",
       "machine": { "type": "required", "key": "lines" }
@@ -100,7 +100,7 @@
     {
       "id": "Parser.namespaces-type",
       "severity": "warning",
-      "stage": "editor",
+      "stage": "runtime",
       "check": "configuration.namespaces, if present, must be an object; any other type is ignored (treated as empty).",
       "message": "",
       "machine": { "type": "type", "key": "namespaces", "valueType": "object" }
@@ -108,7 +108,7 @@
     {
       "id": "Parser.rawXmlLines-type",
       "severity": "warning",
-      "stage": "editor",
+      "stage": "runtime",
       "check": "configuration.rawXmlLines, if present, must be an object of booleans; any other type is ignored.",
       "message": "",
       "machine": { "type": "type", "key": "rawXmlLines", "valueType": "object" }
@@ -117,7 +117,7 @@
       "id": "Parser.output-name-length",
       "severity": "warning",
       "stage": "editor",
-      "check": "Each key of 'lines' should be at most 30 characters (longer names are truncated). Keep names at most ~26 characters when the selector can return many items, because indexed runtime names (<name>[n]) are also cut at 30 characters.",
+      "check": "Each key of 'lines' should be at most 30 characters. The editor cuts names to 30 on save; a longer hand-written key is declared as an output under its full name but written at run time under the first 30 characters, so references to it never resolve. Keep names at most ~26 characters when the selector can return ten or more items, because indexed runtime names (<name>[n]) are also cut at 30 characters.",
       "message": ""
     },
     {
@@ -138,13 +138,13 @@
       "id": "Parser.invalid-selector",
       "severity": "error",
       "stage": "runtime",
-      "check": "A syntactically invalid XPath or regular expression (and a JsonPath the platform rejects, e.g. one that matches several tokens) raises the platform's error and fails the step.",
+      "check": "A syntactically invalid XPath or regular expression raises the platform's error and fails the step. (A JsonPath that matches nothing or several tokens is not an error; it yields <name> = ''.)",
       "message": ""
     }
   ],
   "notes": [
     "Runtime output naming per line <name>: a single result is written as <name>; an array/multi result is written as <name>[0], <name>[1], ... (and NOT as <name>); no match writes <name> = ''. Downstream: {{<slug>_<name>}} gives the scalar or, for an indexed result, the first element; {{<slug>_<name>[n]}} addresses element n; a For Each or aggregate over {{<slug>_<name>}} walks all elements.",
-    "JsonPath: the selected token yields <name>. A selected JSON array yields <name>[i] per element (objects/arrays serialised as JSON text, null as ''). Strings are returned unescaped; numbers/booleans as text; a selected object as JSON text.",
+    "JsonPath: the selected token yields <name>. A selected JSON array yields <name>[i] per element (objects/arrays serialised as JSON text, null as ''); an EMPTY array writes no value at all, so {{<slug>_<name>}} stays unresolved. Strings are returned unescaped; numbers/booleans as text; a selected object as JSON text. Only single-token paths work: a path matching several tokens (wildcards, '..') is treated as no match.",
     "XPath: results are ALWAYS indexed (<name>[0] even for a single node). Elements give their inner text (outer XML when flagged in rawXmlLines), attributes their value, text/CDATA nodes their value. Unprefixed element names in the selector are rewritten to *[local-name()='Name'], so namespaced documents match without prefixes; prefixed names, '@attr', '*', '.', function steps like text() are left as written.",
     "RegEx: every non-empty match produces one indexed output <name>[i]; if the pattern has a capture group, the first group's value is used, otherwise the whole match. Zero-width matches are skipped; if nothing remains, <name> = ''.",
     "The editor's live preview and 'previewSample' do not affect run time. No editor validity check and no publish-time step check exist for this step; only the generic dangling-reference warning applies.",

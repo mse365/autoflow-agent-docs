@@ -36,19 +36,11 @@
       "enum": null,
       "maxLength": null,
       "smart": "text",
-      "description": "What the user is told. Required when showMessage is true (the default). Supports SmartFields {{..}}, SmartFormulas [[..]] and SmartControls {#..#}. An empty message means nothing is shown."
+      "description": "What the user is told. Supports SmartFields {{..}}, SmartFormulas [[..]] and SmartControls {#..#}. Shown only when showMessage is true (or absent); cut to 2048 characters. An empty message means the page stays open without a word."
     }
   ],
   "outputs": [],
   "rules": [
-    {
-      "id": "PreventPageClose.message-required-if-shown",
-      "severity": "error",
-      "stage": "editor",
-      "check": "If showMessage is true (or absent, which defaults to true), configuration.message must be non-empty",
-      "message": "Enter the message to show, or turn off \"Tell the user why\".",
-      "machine": { "type": "requiredIf", "key": "message", "ifKey": "showMessage", "equals": true }
-    },
     {
       "id": "PreventPageClose.only-in-page-close-trigger",
       "severity": "info",
@@ -59,9 +51,9 @@
   ],
   "notes": [
     "Response step of the 'When a page is closed (interactive)' trigger (5564408). That trigger runs synchronously before the page closes. The step hands back a 'keep the page open' answer, and the flow ends there: no further steps run.",
-    "The step JSON carries terminating=false (the step does not set the terminating flag), yet in the page-close trigger it ends the run. Steps placed after it are not executed, and no publish warning flags them.",
-    "The machine requiredIf check only fires when showMessage is explicitly true. When showMessage is absent it also defaults to true, so a message is needed in that case as well.",
-    "If showMessage is false, any message is ignored and the page stays open silently.",
+    "The step JSON carries terminating=false (the step does not set the terminating flag), yet it ends the run. Steps placed after it are not executed, and no publish warning flags them.",
+    "showMessage defaults to true. Write a message whenever showMessage is true or absent: the step has a check for this ('Enter the message to show, or turn off \"Tell the user why\".'), but 27.0.39 runs it neither in the editor nor at publish, and an empty message simply keeps the page open silently.",
+    "If showMessage is false, any message is ignored and the page stays open silently. asDialog is only used when a message is shown.",
     "Outside the page-close trigger the step is hidden from the picker. Its effect elsewhere is not defined by this step.",
     "No outputs."
   ]

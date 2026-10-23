@@ -15,7 +15,7 @@ Downloads one file from Azure Blob Storage into the AutoFlow document library an
 
 ## What it does
 
-The step downloads the blob at `path` and stores its bytes as a new **AutoFlow Document** (table 5564415). You can use that document as an e-mail attachment, as an HTTP binary body, or as the content of an Azure Blob: Upload file step.
+The step downloads the blob at `path` and stores its bytes as a new **AutoFlow Document** (table 5564415). You can use that document as an e-mail attachment or as the content of an Azure Blob: Upload file step.
 
 It then reads the file's properties (content type, last-modified time, ETag, tags and metadata) through a one-entry listing of the exact path:
 
@@ -39,7 +39,7 @@ The connection settings (`credentialCode`, `storageAccount`, `container`), the c
 
 | name | type | tableNo | notes |
 |---|---|---|---|
-| `found` | value | – | `true` / `false`. This is the only output when the file is missing and `errorIfMissing` is off. |
+| `found` | value | – | `true` / `false`. This is the only value written when the file is missing and `errorIfMissing` is off; the other outputs then stay unresolved. |
 | `Document` | reference | 5564415 | The new AutoFlow Document. |
 | `name` | value | – | File name, the last path segment. |
 | `path` | value | – | Normalized path. |
@@ -56,12 +56,12 @@ Reference the outputs downstream, e.g. `{{GetInvoice_Document}}` or `{{GetInvoic
 
 | stage | severity | rule | message |
 |---|---|---|---|
-| editor | error | `credentialCode` empty | Select a credential for the Azure Blob Storage connection. |
-| editor + runtime | error | Credential missing or of a wrong type, or OAuth scope is not Azure Storage (scope: editor only) | See [Azure Blob: List files](AzureBlobList.md#validation) |
-| editor (literal) + runtime | error | Invalid storage account or container name | See [Azure Blob: List files](AzureBlobList.md#validation) |
-| editor + runtime | error | `path` empty after normalizing | Enter the path of the file, for example invoices/2026/INV-1001.pdf. |
-| editor + runtime | error | `path` ends with `/` | The path "%1" ends with a slash, so it names a folder. Enter the path of a file. |
-| editor status line + runtime | error | Endpoint is not covered by the credential's base URLs | The URL "%1" is not allowed by credential "%2". Allowed prefixes: %3. |
+| editor | error | `credentialCode`, `storageAccount`, `container` and `path` are required fields | Please fill in the highlighted fields. |
+| editor status line | warning | Credential problems and the base-URL allow-list, as for List files. Advisory only. | See [Azure Blob: List files](AzureBlobList.md#validation) |
+| runtime | error | Credential empty, missing or of a wrong type; invalid storage account or container (resolved values) | See [Azure Blob: List files](AzureBlobList.md#validation) |
+| runtime | error | `path` empty after resolving and normalizing | Enter the path of the file, for example invoices/2026/INV-1001.pdf. |
+| runtime | error | `path` ends with `/` | The path "%1" ends with a slash, so it names a folder. Enter the path of a file. |
+| runtime | error | Endpoint is not covered by the credential's base URLs | The URL "%1" is not allowed by credential "%2". Allowed prefixes: %3. |
 
 No publish-time check exists for this step.
 

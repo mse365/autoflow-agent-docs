@@ -10,7 +10,7 @@ Declares an empty, named list of text values or record references that later Add
 | Ordinal | `"action": 200` |
 | Category | Data |
 | Terminating | `false` |
-| Group / edges | no |
+| Group / edges | No |
 | Availability | GA |
 
 ## What it does
@@ -22,7 +22,7 @@ The step declares a collection and publishes it as an output so that later steps
 | key | type | required | default | description |
 |---|---|---|---|---|
 | `collectionName` | string | yes | `""` | Name of the collection and of the step's single output. Plain text, with no SmartText support. Use an identifier-like name (letters, digits, hyphens), because it is embedded in `{{...}}` placeholders. |
-| `collectionType` | integer | yes | `0` | `0` = Value (a list of text values), `1` = Reference (a list of record references). A missing or unknown value is treated as `0`. |
+| `collectionType` | integer | no | `0` | `0` = Value (a list of text values), `1` = Reference (a list of record references). A missing or unknown value is treated as `0`. |
 | `tableNo` | integer | if `collectionType` = 1 | `0` | Table that the references point to. The editor writes `0` for Value collections. It is copied into the output's `tableNo`. |
 
 ## Outputs
@@ -39,10 +39,9 @@ No output is generated while `collectionName` is empty. To reference the collect
 | stage | severity | rule | message |
 |---|---|---|---|
 | editor | error | `collectionName` must be non-empty | Please fill in the highlighted fields. |
-| editor | error | `collectionType` must be 0 or 1 | – |
 | editor | error | `tableNo` must be non-zero when `collectionType` = 1 | Please fill in the highlighted fields. |
 
-These are checks in the config canvas and the step's validity check. Publishing does not re-run them. At publish time only the generic warnings apply: a dangling `{{slug_…}}` reference, or a terminating step that has a successor.
+These are required-field checks in the configuration dialog. Publishing does not re-run them. At publish time only the generic warnings apply: a dangling `{{slug_…}}` reference, or a terminating step that has a successor.
 
 ## Runtime errors
 

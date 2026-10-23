@@ -36,7 +36,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "Maximum run time. The editor replaces values <= 0 with 30."
+      "description": "Seconds the flow may run. Checked between steps: once it has passed, the remaining steps are skipped and the posting goes ahead without the flow's answer. 0 or a negative value means no limit; the editor writes 30 instead."
     },
     {
       "key": "filters",
@@ -46,7 +46,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "Field filters on the document header: [{ \"fieldNo\": <integer>, \"filter\": \"<BC filter expression>\" }]. Applied literally (max 250 chars, no placeholders)."
+      "description": "Field filters on the document header: [{ \"fieldNo\": <integer>, \"filter\": \"<BC filter expression>\" }]. Applied literally with SetFilter (max 250 characters, no placeholders). A filter that Business Central cannot parse means the flow does not run. Two rows for the same field: the last one wins."
     }
   ],
   "outputs": [
@@ -74,31 +74,33 @@
       "id": "OnDocumentPost.table-supported",
       "severity": "error",
       "stage": "publish",
-      "check": "configuration.tableNo must be a supported postable document table. Hard stop at publish; also shown live in the canvas status line.",
+      "check": "configuration.tableNo must be a supported postable document table (Sales Header 36, Purchase Header 38, or one registered by an extension). Hard stop at publish.",
       "message": "Table %1 is not one of the supported postable document tables."
     },
     {
-      "id": "OnDocumentPost.guiOnly-type",
+      "id": "OnDocumentPost.table-required-editor",
       "severity": "error",
       "stage": "editor",
-      "check": "guiOnly must be a boolean.",
-      "message": "(no message)",
+      "check": "The configuration dialog refuses to save while no table is picked.",
+      "message": "Please fill in the highlighted fields."
+    },
+    {
+      "id": "OnDocumentPost.table-status",
+      "severity": "info",
+      "stage": "editor",
+      "check": "Live status line in the configuration dialog (does not block saving): shown when the table does not exist or is not supported.",
+      "message": "Table %1 does not exist in this environment. | Table %1 is not supported by this trigger, so the flow would never run."
+    },
+    {
+      "id": "OnDocumentPost.guiOnly-type",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "guiOnly should be a JSON boolean.",
+      "message": "(no message; a value that is not a boolean is ignored and the default true applies)",
       "machine": {
         "type": "type",
         "key": "guiOnly",
         "valueType": "boolean"
-      }
-    },
-    {
-      "id": "OnDocumentPost.timeout-positive",
-      "severity": "warning",
-      "stage": "editor",
-      "check": "timeoutSec should be > 0 (the editor writes 30 for values <= 0).",
-      "message": "(no message)",
-      "machine": {
-        "type": "range",
-        "key": "timeoutSec",
-        "min": 1
       }
     },
     {
@@ -107,11 +109,19 @@
       "stage": "runtime",
       "check": "Any error in the flow (e.g. an Error step) prevents the posting and shows the flow's message.",
       "message": "(the flow's own error message)"
+    },
+    {
+      "id": "OnDocumentPost.no-deferred-steps",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The flow runs inline, so a step that defers the run (Sleep) fails and the posting is prevented.",
+      "message": "Step %1 (%2) requested a deferred resume, but the flow is running synchronously. Use Sleep or other time-based deferral steps only outside of synchronous frames (Webhook sync phase or SubFlow body)."
     }
   ],
   "notes": [
     "Fires at the start of Sales/Purchase posting, before any posting work. Posting previews never fire it. With guiOnly (default), non-UI sessions (e.g. batch posting in the Job Queue) are skipped.",
     "Synchronous and atomic: runs inline in the user's transaction, without commits. An error prevents the posting. A Set document field values step writes values onto the header before it is posted. 'Skip standard processing' has no effect for this trigger (posting cannot be taken over).",
+    "timeoutSec is checked between steps. When it has passed, the remaining steps are skipped and the posting continues without a Set document field values answer.",
     "Because it runs outside a table event, a Confirm dialog step can ask the user; the posting waits for the answer.",
     "Re-entrancy guard: a posting that the running flow itself performs does not start the flow again.",
     "No recurring Job Queue entry; the registration is keyed by tableNo.",

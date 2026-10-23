@@ -16,7 +16,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "record",
-      "description": "SmartField reference to the record, written as exactly one placeholder in double braces, e.g. \"{{FindCustomers_results}}\" or \"{{trigger_Rec}}\". It must resolve to a Reference (RecordId) in the flow context: an undotted name is looked up directly (an array reference such as {{FindX_results}} resolves to its first element, results[0]); a dotted path (e.g. {{trigger_Rec.Customer}}) is walked through the SmartField definitions. Surrounding whitespace is ignored. Bare names without braces are rejected. The table must have a 'Dimension Set ID' field."
+      "description": "SmartField reference to the record, written as exactly one placeholder in double braces, e.g. \"{{trigger_Rec}}\" or \"{{FindCustomers_results}}\". An undotted name is looked up directly (an array reference such as {{FindX_results}} resolves to its first element); a dotted path (e.g. {{trigger_Rec.Customer}}) is walked through the SmartField definitions. Surrounding whitespace is ignored. Anything else fails at runtime. The table must have a 'Dimension Set ID' field."
     },
     {
       "key": "tableNo",
@@ -26,7 +26,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "Table number of the referenced record (derived from the reference by the editor); must match at runtime."
+      "description": "Table number of the referenced record. The editor derives it from the reference; it must match the resolved record at runtime."
     },
     {
       "key": "dimensions",
@@ -56,7 +56,7 @@
           "enum": null,
           "maxLength": null,
           "smart": "none",
-          "description": "Written by the editor on repeater rows; ignored by this step."
+          "description": "Written by the config canvas on repeater rows (10000, 20000, …); ignored by this step."
         }
       ]
     }
@@ -77,21 +77,44 @@
   ],
   "rules": [
     {
-      "id": "GetDimensions.tableNo-required",
+      "id": "GetDimensions.reference-required",
       "severity": "error",
       "stage": "editor",
-      "check": "configuration.tableNo must be present and a non-zero integer.",
-      "message": "",
+      "check": "configuration.reference must be non-empty (required field in the config canvas).",
+      "message": "Please fill in the highlighted fields.",
+      "machine": {
+        "type": "required",
+        "key": "reference"
+      }
+    },
+    {
+      "id": "GetDimensions.reference-placeholder",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "configuration.reference must be a single SmartField placeholder: after trimming it starts with '{{', ends with '}}' and has a non-empty name inside. Otherwise it cannot be resolved.",
+      "message": "Reference \"%1\" cannot be resolved to a record.",
+      "machine": {
+        "type": "regex",
+        "key": "reference",
+        "pattern": "\\s*\\{\\{\\s*[^{}]*\\S[^{}]*\\s*\\}\\}\\s*"
+      }
+    },
+    {
+      "id": "GetDimensions.tableNo-required",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "configuration.tableNo must be present and non-zero (missing, null or unreadable values count as 0). The editor derives it from the reference.",
+      "message": "Table No. is required for a Get Dimensions step.",
       "machine": {
         "type": "required",
         "key": "tableNo"
       }
     },
     {
-      "id": "GetDimensions.tableNo-runtime",
+      "id": "GetDimensions.tableNo-range",
       "severity": "error",
       "stage": "runtime",
-      "check": "configuration.tableNo is read as an integer (missing, null, non-integer -> 0); 0 fails the step.",
+      "check": "configuration.tableNo must not be 0.",
       "message": "Table No. is required for a Get Dimensions step.",
       "machine": {
         "type": "range",
@@ -101,9 +124,9 @@
     },
     {
       "id": "GetDimensions.tableNo-type",
-      "severity": "error",
+      "severity": "warning",
       "stage": "runtime",
-      "check": "tableNo must be a JSON number (integer); other JSON types are not reliably converted and are treated as 0.",
+      "check": "Write tableNo as a JSON integer. A value that cannot be read as an integer is treated as 0.",
       "message": "Table No. is required for a Get Dimensions step.",
       "machine": {
         "type": "type",
@@ -112,33 +135,10 @@
       }
     },
     {
-      "id": "GetDimensions.reference-required",
-      "severity": "error",
-      "stage": "editor",
-      "check": "configuration.reference must be present and non-empty.",
-      "message": "",
-      "machine": {
-        "type": "required",
-        "key": "reference"
-      }
-    },
-    {
-      "id": "GetDimensions.reference-placeholder",
-      "severity": "error",
-      "stage": "editor",
-      "check": "configuration.reference must be a single SmartField placeholder: after trimming it starts with '{{', ends with '}}' and has a non-empty name inside.",
-      "message": "",
-      "machine": {
-        "type": "regex",
-        "key": "reference",
-        "pattern": "\\s*\\{\\{\\s*[^{}]*\\S[^{}]*\\s*\\}\\}\\s*"
-      }
-    },
-    {
       "id": "GetDimensions.reference-resolvable",
       "severity": "error",
       "stage": "runtime",
-      "check": "The reference must resolve to an existing record reference in the flow context at run time.",
+      "check": "The reference must resolve to a record reference in the flow context at run time, and the record must still exist (otherwise Business Central's standard 'record does not exist' error).",
       "message": "Reference \"%1\" cannot be resolved to a record."
     },
     {
@@ -169,9 +169,9 @@
     }
   ],
   "notes": [
-    "Output names are the upper-cased dimension codes, so outputs[] must list e.g. {\"name\":\"DEPARTMENT\",\"type\":\"value\"} and {\"name\":\"DEPARTMENT_Name\",\"type\":\"value\"} for each code, in configuration order; reference them as {{slug_DEPARTMENT}} / {{slug_DEPARTMENT_Name}}.",
-    "A dimension code that does not exist, or is not on the record, simply yields empty outputs (no error).",
-    "The step has no 'rec' output.",
-    "The table-missing error message mentions 'set' because it is shared with Set Dimension Values."
+    "Output names are the trimmed, upper-cased dimension codes, two per distinct code in configuration order: {\"name\":\"DEPARTMENT\",\"type\":\"value\"} and {\"name\":\"DEPARTMENT_Name\",\"type\":\"value\"}. Reference them as {{slug_DEPARTMENT}} / {{slug_DEPARTMENT_Name}}.",
+    "A dimension code that does not exist, or has no value on the record, yields empty outputs (no error).",
+    "The step only reads. It has no 'rec' output and does not count as a writing step for the Confirm dialog publish warning.",
+    "The missing-field error message says 'set' because the text is shared with Set Dimension Values."
   ]
 }

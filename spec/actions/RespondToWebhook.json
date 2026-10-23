@@ -50,32 +50,26 @@
     },
     {
       "id": "RespondToWebhook.statusCode-range",
-      "severity": "error",
-      "stage": "editor",
-      "check": "The step's validity check requires a numeric status code between 200 and 599 (1xx is not a valid final response). Text that is not an integer (including an unresolved placeholder) evaluates as 200 and therefore passes. Not enforced at publish or run time. The machine check accepts 200-599 or a value containing a SmartField/SmartFormula.",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "The status code should be between 200 and 599 (or a SmartField/SmartFormula that resolves to one). No editor, publish or run-time check enforces this: any integer is handed to the caller as is, and text that is not an integer becomes 200. The machine check accepts 200-599 or a value containing {{ or [[.",
       "message": "",
-      "machine": {
-        "type": "regex",
-        "key": "statusCode",
-        "pattern": "\\s*(?:[2-5][0-9]{2}|.*(?:\\{\\{|\\[\\[).*)\\s*"
-      }
+      "machine": { "type": "regex", "key": "statusCode", "pattern": "\\s*(?:[2-5][0-9]{2}|.*(?:\\{\\{|\\[\\[).*)\\s*" }
     },
     {
       "id": "RespondToWebhook.contentType-required",
       "severity": "error",
       "stage": "editor",
-      "check": "contentType must be non-empty (required canvas field and part of the step's validity check). Note: an explicitly empty string is sent as an empty Content-Type at run time; only a missing key falls back to application/json.",
+      "check": "contentType must be non-empty (required canvas field). Note: an explicitly empty string is sent as an empty Content-Type at run time; only a missing key falls back to application/json.",
       "message": "Please fill in the highlighted fields.",
-      "machine": {
-        "type": "required",
-        "key": "contentType"
-      }
+      "machine": { "type": "required", "key": "contentType" }
     }
   ],
   "notes": [
     "Only offered in the step picker for flows whose trigger is Webhook (\"trigger\": 5564403). In other flows it has no caller to answer.",
     "Only effective when the Webhook trigger's configuration.responseMode is \"WaitForResponse\". In \"InstantReturn\" mode the trigger has already answered the caller.",
     "At run time the step hands status/content type/body to the waiting webhook call; steps after it continue asynchronously in the background. If it is the last step, the execution completes.",
-    "Not a terminating step: steps may follow it. The status code is not range-checked at run time."
+    "Not a terminating step: steps may follow it. The status code is not range-checked at run time.",
+    "In WaitForResponse mode the steps before this one run synchronously inside the caller's request: a failing step returns 500 with the error text to the caller, and a step that defers the run (Sleep) fails it. In InstantReturn mode the whole flow runs in the job queue and this step has no effect."
   ]
 }

@@ -16,7 +16,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "record",
-      "description": "SmartField reference to the record, written as exactly one placeholder in double braces, e.g. \"{{FindCustomers_results}}\" or \"{{trigger_Rec}}\". It must resolve to a Reference (RecordId) in the flow context: an undotted name is looked up directly (an array reference such as {{FindX_results}} resolves to its first element, results[0]); a dotted path (e.g. {{trigger_Rec.Customer}}) is walked through the SmartField definitions. Surrounding whitespace is ignored. Bare names without braces are rejected. The table must have a 'Dimension Set ID' field."
+      "description": "SmartField reference to the record, written as exactly one placeholder in double braces, e.g. \"{{trigger_Rec}}\" or \"{{FindCustomers_results}}\". An undotted name is looked up directly (an array reference such as {{FindX_results}} resolves to its first element); a dotted path (e.g. {{trigger_Rec.Customer}}) is walked through the SmartField definitions. Surrounding whitespace is ignored. Anything else fails at runtime. The table must have a 'Dimension Set ID' field."
     },
     {
       "key": "tableNo",
@@ -26,7 +26,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "Table number of the referenced record (derived from the reference by the editor); must match at runtime."
+      "description": "Table number of the referenced record. The editor derives it from the reference; it must match the resolved record at runtime."
     },
     {
       "key": "triggers",
@@ -46,7 +46,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "One row per dimension to change. Listed dimensions are added or updated, a row with an empty value removes that dimension, unlisted dimensions are kept. Rows are processed in array order.",
+      "description": "One row per dimension to change, processed in array order (if a code is listed twice, the last row wins). Listed dimensions are added or updated, a row with an empty value removes that dimension, unlisted dimensions are kept.",
       "items": [
         {
           "key": "dimensionCode",
@@ -66,7 +66,7 @@
           "enum": null,
           "maxLength": 20,
           "smart": "text",
-          "description": "Dimension value code, a literal or a SmartField. Resolved, then trimmed. Empty = remove the dimension from the set."
+          "description": "Dimension value code: a literal or SmartText with {{…}} placeholders. Resolved, then trimmed; the result must be an existing value code of that dimension (max 20 characters). Empty = remove the dimension from the set."
         },
         {
           "key": "lineNo",
@@ -76,7 +76,7 @@
           "enum": null,
           "maxLength": null,
           "smart": "none",
-          "description": "Written by the editor on repeater rows; ignored by this step."
+          "description": "Written by the config canvas on repeater rows (10000, 20000, …); ignored by this step."
         }
       ]
     }
@@ -97,21 +97,44 @@
   ],
   "rules": [
     {
-      "id": "SetDimensionValues.tableNo-required",
+      "id": "SetDimensionValues.reference-required",
       "severity": "error",
       "stage": "editor",
-      "check": "configuration.tableNo must be present and a non-zero integer.",
-      "message": "",
+      "check": "configuration.reference must be non-empty (required field in the config canvas).",
+      "message": "Please fill in the highlighted fields.",
+      "machine": {
+        "type": "required",
+        "key": "reference"
+      }
+    },
+    {
+      "id": "SetDimensionValues.reference-placeholder",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "configuration.reference must be a single SmartField placeholder: after trimming it starts with '{{', ends with '}}' and has a non-empty name inside. Otherwise it cannot be resolved.",
+      "message": "Reference \"%1\" cannot be resolved to a record.",
+      "machine": {
+        "type": "regex",
+        "key": "reference",
+        "pattern": "\\s*\\{\\{\\s*[^{}]*\\S[^{}]*\\s*\\}\\}\\s*"
+      }
+    },
+    {
+      "id": "SetDimensionValues.tableNo-required",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "configuration.tableNo must be present and non-zero (missing, null or unreadable values count as 0). The editor derives it from the reference.",
+      "message": "Table No. is required for a Set Dimension Values step.",
       "machine": {
         "type": "required",
         "key": "tableNo"
       }
     },
     {
-      "id": "SetDimensionValues.tableNo-runtime",
+      "id": "SetDimensionValues.tableNo-range",
       "severity": "error",
       "stage": "runtime",
-      "check": "configuration.tableNo is read as an integer (missing, null, non-integer -> 0); 0 fails the step.",
+      "check": "configuration.tableNo must not be 0.",
       "message": "Table No. is required for a Set Dimension Values step.",
       "machine": {
         "type": "range",
@@ -121,9 +144,9 @@
     },
     {
       "id": "SetDimensionValues.tableNo-type",
-      "severity": "error",
+      "severity": "warning",
       "stage": "runtime",
-      "check": "tableNo must be a JSON number (integer); other JSON types are not reliably converted and are treated as 0.",
+      "check": "Write tableNo as a JSON integer. A value that cannot be read as an integer is treated as 0.",
       "message": "Table No. is required for a Set Dimension Values step.",
       "machine": {
         "type": "type",
@@ -132,33 +155,10 @@
       }
     },
     {
-      "id": "SetDimensionValues.reference-required",
-      "severity": "error",
-      "stage": "editor",
-      "check": "configuration.reference must be present and non-empty.",
-      "message": "",
-      "machine": {
-        "type": "required",
-        "key": "reference"
-      }
-    },
-    {
-      "id": "SetDimensionValues.reference-placeholder",
-      "severity": "error",
-      "stage": "editor",
-      "check": "configuration.reference must be a single SmartField placeholder: after trimming it starts with '{{', ends with '}}' and has a non-empty name inside.",
-      "message": "",
-      "machine": {
-        "type": "regex",
-        "key": "reference",
-        "pattern": "\\s*\\{\\{\\s*[^{}]*\\S[^{}]*\\s*\\}\\}\\s*"
-      }
-    },
-    {
       "id": "SetDimensionValues.reference-resolvable",
       "severity": "error",
       "stage": "runtime",
-      "check": "The reference must resolve to an existing record reference in the flow context at run time.",
+      "check": "The reference must resolve to a record reference in the flow context at run time, and the record must still exist (otherwise Business Central's standard 'record does not exist' error).",
       "message": "Reference \"%1\" cannot be resolved to a record."
     },
     {
@@ -218,8 +218,7 @@
   ],
   "notes": [
     "Global/Shortcut Dimension 1 and 2 code fields on the record are kept in sync with the new set (assigned directly, without validation).",
-    "The record is saved with Modify(triggers). Line dimensions of documents are not propagated when you change a header - the step only writes the referenced record.",
-    "Dimension value codes are matched as codes; use the exact code (upper case) to be safe.",
-    "Writing step: a Confirm dialog placed after this step (in document order) produces a publish warning, because Business Central cannot open a dialog once the flow has written to the database."
+    "The record is saved with Modify(triggers). Only the referenced record changes: changing a document header's dimensions does not update its lines.",
+    "Writing step: a Confirm dialog placed after this step (in document order) gets a publish warning, because Business Central cannot open a dialog once the flow has written to the database."
   ]
 }

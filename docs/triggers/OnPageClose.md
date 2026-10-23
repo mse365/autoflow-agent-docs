@@ -22,8 +22,8 @@ Hooks the page's query-close event. In a session with a UI, and when the page sh
 | key | type | required | default | description |
 |---|---|---|---|---|
 | `pageNo` | integer | yes | `0` | Same 16 card pages as [When a page is opened](OnPageOpen.md): `41`, `42`, `43`, `44`, `6630`, `507`, `49`, `50`, `51`, `52`, `6640`, `509`, `21`, `26`, `5050`, `30`. |
-| `timeoutSec` | integer | no | `10` | Maximum run time. The user is waiting to leave. |
-| `filters` | array | no | `[]` | `[{ "fieldNo": int, "filter": "text" }]`. These are filters on the page's record, applied literally, max. 250 characters. |
+| `timeoutSec` | integer | no | `10` | Maximum run time. The user is waiting to leave. Checked between steps: when it has passed, the remaining steps are skipped and the page closes. `0` or less means 10. |
+| `filters` | array | no | `[]` | `[{ "fieldNo": int, "filter": "text" }]`. These are filters on the page's record, applied literally, max. 250 characters. A filter that Business Central can't parse means the flow never runs. |
 
 ## Outputs
 
@@ -40,10 +40,18 @@ Reference them as `{{trigger_Rec}}` and `{{trigger_PageNo}}`.
 |---|---|---|---|
 | publish | error (hard stop) | `pageNo` set | Pick the page the flow should watch. |
 | publish | error (hard stop) | `pageNo` supported | Page %1 is not supported by this trigger, so the flow would never run. |
+| editor | error | no page picked | Please fill in the highlighted fields. |
+| editor | info | status line (does not block saving) | Page %1 does not exist in this environment. / Page %1 is not supported by this trigger, so the flow would never run. |
+
+`%1` in the publish message is the page number and caption, for example `5 (Currencies)`. Trigger errors are reported as `This flow's trigger cannot be published:` followed by the list.
 
 ## Runtime errors
 
-None specific to this trigger. To keep the page open, use Prevent page close rather than an Error step.
+| condition | effect |
+|---|---|
+| a Sleep step runs | The flow fails with "Step %1 (%2) requested a deferred resume, but the flow is running synchronously. …" |
+
+To keep the page open, use Prevent page close rather than an Error step.
 
 ## Example
 

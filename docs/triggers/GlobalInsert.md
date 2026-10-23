@@ -36,7 +36,7 @@ Reference it as `{{trigger_Rec}}`.
 
 | stage | severity | rule | message |
 |---|---|---|---|
-| editor | error | `tableNo` required and > 0 (canvas marks it required) | (no message) |
+| editor | error | `tableNo` set and > 0 (the config canvas marks Table as required) | Please fill in the highlighted fields. |
 | runtime | info | an invalid filter makes the record not match (no error) | (no message) |
 
 There is **no publish-time trigger check**. A flow whose `tableNo` is 0 or does not exist publishes and never fires.

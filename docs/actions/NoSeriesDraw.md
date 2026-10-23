@@ -15,13 +15,13 @@ Draws (consumes) the next number from a Business Central number series and retur
 
 ## What it does
 
-The step resolves `noSeriesCode` and the optional `usageDate` (empty = work date) and checks that the No. Series exists. It then calls Business Central's standard *get next number* for that date. The series advances, so the same number is never drawn twice. The number is emitted as the value output `Number` and logged. The default description in the editor is "Draw Number". Once a series is chosen, it becomes "Draw Number from <code>".
+The step resolves `noSeriesCode` and the optional `usageDate` (empty = work date) and checks that the No. Series exists. It then calls Business Central's standard *get next number* for that date. The series advances, so the same number is never drawn twice. The number is emitted as the value output `Number` and logged as `Drew number %1 from series %2.` The default description in the editor is "Draw Number". Once a series is chosen, it becomes "Draw Number from <code>".
 
 ## Configuration
 
 | key | type | required | default | description |
 |---|---|---|---|---|
-| `noSeriesCode` | string | yes | `""` | No. Series code, e.g. `"P-INV"`, or a SmartField that yields it. Max 20 characters. |
+| `noSeriesCode` | string | yes | `""` | No. Series code, e.g. `"P-INV"`, or a SmartField that yields it. Max 20 characters; longer text is cut to 20. |
 | `usageDate` | string | no | `""` | Date that selects the No. Series line (Starting Date). Empty = work date. It can be a literal or a SmartField and is parsed in the **regional date format** of the session that runs the flow. |
 
 ## Outputs
@@ -34,7 +34,7 @@ The step resolves `noSeriesCode` and the optional `usageDate` (empty = work date
 
 | stage | severity | rule | message |
 |---|---|---|---|
-| editor | error | `noSeriesCode` is empty (a `{{…}}` placeholder is accepted) | `Select the number series to draw the next number from.` |
+| editor | error | `noSeriesCode` is empty when saving the dialog (a `{{…}}` placeholder is accepted) | `Please fill in the highlighted fields.` |
 
 There are no publish-time checks specific to this step. A Confirm dialog after this step gets a publish warning, because this step writes to the database.
 
@@ -43,8 +43,8 @@ There are no publish-time checks specific to this step. A Confirm dialog after t
 | condition | message |
 |---|---|
 | `usageDate` not parseable | `The usage date "%1" is not a valid date.` |
-| Series does not exist | `The number series %1 does not exist.` |
-| Series not drawable (no line for the date, exhausted, no default numbers) | Business Central's own No. Series error |
+| Series does not exist (also when a `{{…}}` token did not resolve and stays in the text) | `The number series %1 does not exist.` |
+| Series not drawable (no line for the date, exhausted, default numbers not allowed) | Business Central's own No. Series error |
 
 ## Example
 

@@ -15,7 +15,7 @@ Calls any HTTP endpoint and exposes the response status, headers and body to lat
 
 ## What it does
 
-The step sends one HTTP request from the Business Central server, with SmartFields in the URL, header values and body already resolved. It can use an **AutoFlow Credential** (by code), which adds authentication, a base URL and default headers. The step waits for the response and publishes its status, headers and body. A 4xx or 5xx response does **not** fail the step; branch on `responseStatus` instead. Only transport failures raise an error: invalid URL, connection or DNS failure, a timeout, or HTTP calls being blocked in the environment. Binary responses (PDF, images, octet-stream and so on) are kept as raw bytes.
+The step sends one HTTP request from the Business Central server, with SmartFields in the URL, header values and body already resolved. It can use an **AutoFlow Credential** (by code), which adds authentication, a base URL and default headers. The step waits for the response and publishes its status, headers and body. A 4xx or 5xx response does **not** fail the step; branch on `responseStatus` instead. Only transport failures raise an error: invalid URL, connection or DNS failure, a timeout, or HTTP calls being blocked in the environment. The response body is always read as text.
 
 ## Configuration
 
@@ -23,9 +23,9 @@ The step sends one HTTP request from the Business Central server, with SmartFiel
 |---|---|---|---|---|
 | `url` | string | yes | `""` | Request URL. SmartText. With a credential that has base URLs, a relative URL (one not starting with `http://` or `https://`) is prefixed with the credential's first base URL. |
 | `method` | string | yes | `"GET"` | `GET`, `POST`, `PUT`, `PATCH` or `DELETE` (upper case). It is sent as written. |
-| `headers` | object | no | `{}` | Flat object `{ "Header-Name": "value" }`. Values are SmartText. Names are truncated to 50 characters and values to 4096. The key `Content-Type` (exact spelling) sets the content type of the body. |
-| `body` | string | no | `""` | Request body, SmartText. The editor shows it only for POST, PUT and PATCH. If the unresolved body is exactly one `{{field}}` with no format suffix and that field holds binary data (a BLOB or Media field, or a binary output such as another HTTP response body), the raw bytes are sent. With a credential, the reserved tokens `{{credential.username}}` and `{{credential.password}}` are replaced at send time (XML-escaped). |
-| `credentialCode` | string (max 20) | no | `""` | Code of an AutoFlow Credential in the target company. Empty means no credential; authenticate through `headers` instead. |
+| `headers` | object | no | `{}` | Flat object `{ "Header-Name": "value" }`. Values are SmartText. Names are truncated to 50 characters and values to 4096. The key `Content-Type` (exact spelling) sets the content type of the body. Anything other than an object (for example an array of rows) is ignored and no step headers are sent. |
+| `body` | string | no | `""` | Request body, SmartText. The editor shows it only for POST, PUT and PATCH. If the unresolved body is exactly one `{{slug_output.field}}` with no format suffix, one level deep into a record reference, and that field is a BLOB, Media or MediaSet field, the raw bytes are sent. With a credential, the reserved tokens `{{credential.username}}` and `{{credential.password}}` are replaced at send time (XML-escaped). |
+| `credentialCode` | string (max 20) | no | `""` | Code of an AutoFlow Credential in the target company. Empty means no credential; authenticate through `headers` instead. Longer values are cut to 20 characters; the lookup is not case-sensitive. |
 
 ### Credentials: what goes in the flow JSON
 
@@ -40,7 +40,7 @@ A credential is a per-company Business Central record that holds the following:
 
 - Set `credentialCode` to the code of a credential that already exists in every company where the flow is imported. Credentials are environment-specific; an administrator creates them in the AutoFlow Credentials list.
 - Never put secrets into `headers`, `url` or `body` when a credential can be used. Values written in the flow are visible in the definition, and request headers are written to the execution log (only authentication headers added by a credential are removed from the log).
-- If the code does not exist at run time, the request is sent **without** the credential. There is no error, so the call usually comes back 401 or 403.
+- If the code does not exist at run time, the request is sent **without** the credential, and `{{credential.username}}` / `{{credential.password}}` stay in the body as literal text. There is no error, so the call usually comes back 401 or 403.
 - For SOAP or XML APIs that expect the login in the body, use a credential of type "Username + password (request body)" and put `{{credential.username}}` and `{{credential.password}}` in `body`. Those two tokens are the only way to reach a credential's secrets from the flow, and only for the credential selected on that step.
 
 When a credential is used, headers are merged in this order, with later sources winning: credential default headers, then step `headers`, then authentication headers. If the credential has base URLs, the final URL must start with one of them. The match is case-insensitive, respects path boundaries and ignores the query string. Otherwise the request is refused.
@@ -50,8 +50,8 @@ When a credential is used, headers are merged in this order, with later sources 
 | name | type | tableNo | notes |
 |---|---|---|---|
 | `responseStatus` | `value` | – | Numeric status code as text, for example `"200"`. |
-| `responseHeaders` | `value` | – | JSON object text holding the first value of each response header. |
-| `responseBody` | `value` | – | Body as text. For a binary Content-Type, the raw bytes; use the whole `{{slug_responseBody}}` to write them to a BLOB or Media field. |
+| `responseHeaders` | `value` | – | JSON object text holding the first value of each response header. Content headers such as `Content-Type` and `Content-Length` are not included. |
+| `responseBody` | `value` | – | Body as text, whatever the Content-Type. Binary responses (PDF, images) are decoded as text and are not usable as files. |
 
 To reference them, use `{{<slug>_responseStatus}}`, `{{<slug>_responseHeaders}}` and `{{<slug>_responseBody}}`. The `outputs` array always contains all three.
 
@@ -60,11 +60,12 @@ To reference them, use `{{<slug>_responseStatus}}`, `{{<slug>_responseHeaders}}`
 | stage | severity | rule | message |
 |---|---|---|---|
 | editor | error | `url` is required | Please fill in the highlighted fields. |
-| editor | warning | `method` is one of GET/POST/PUT/PATCH/DELETE (other text is sent as-is but is reset to GET when the step is next edited) | – |
-| editor | error | `headers` is an object of name → string | – |
+| editor | warning | `method` is one of GET/POST/PUT/PATCH/DELETE (other text is sent as-is, but the editor shows it as GET and saves GET on the next edit) | – |
+| runtime | warning | `headers` is an object of name → string (anything else is silently ignored) | – |
+| runtime | warning | `credentialCode` is at most 20 characters (longer values are truncated and then usually match no credential) | – |
 | editor (live status) | warning | with a credential that has base URLs, the URL is allowed | ⚠ The URL "%1" is not allowed by credential "%2". Allowed prefixes: %3. |
 
-There is no step-specific publish check. The step's validity check always passes. Only the generic dangling-reference warning applies.
+There is no step-specific publish check. Only the generic dangling-reference warning applies. The live status line is advisory and does not block saving.
 
 ## Runtime errors
 
@@ -110,3 +111,5 @@ In this example, `SHOP-API` must exist as a credential with a base URL such as `
 - The editor's "Send test request" button sends a real, authenticated request. It stores nothing in the configuration.
 - Business Central sandboxes block outgoing HTTP until "Allow HttpClient Requests" is enabled for the extension.
 - `Content-Type` is matched with that exact capitalisation. A header written as `content-type` is added as a normal request header instead of the body's content type.
+- The resolved configuration, including `url`, `headers` and `body`, is written to the execution log at debug level. Only credential secrets are kept out of it.
+- Next release (not in 27.0.39): responses with a binary Content-Type will be kept as raw bytes in `responseBody`, so a bare `{{slug_responseBody}}` can be written to a BLOB or Media field.

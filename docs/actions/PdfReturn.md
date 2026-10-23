@@ -31,9 +31,10 @@ None. This step ends the flow.
 
 | stage | severity | rule | message |
 |---|---|---|---|
-| editor | error | `documentBase64` must not be empty | (no text; step reported invalid) |
 | editor | info | Only shown in the step picker under the "When a PDF is printed" trigger | (picker filter, not enforced) |
 | publish | warning | No step may follow it and it must not have edges | Step "%1" is a terminating step but has a successor – terminating steps must end the path. |
+
+Nothing checks that `documentBase64` is filled in. If it is empty, or resolves to an empty string, Business Central silently keeps the original PDF.
 
 **Trigger pairing is not enforced at publish.** The trigger restriction is only a step-picker filter. A hand-written or imported definition that uses this step under another trigger publishes without any warning.
 

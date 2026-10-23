@@ -1,6 +1,6 @@
 # AutoFlow flow definitions: instructions for AI agents
 
-You are working with **AutoFlow** flow definitions: the JSON documents that *Export Flow* produces and *Create from file* imports into Microsoft Dynamics 365 Business Central. This repository is your reference. Use it in place of guessing.
+You are working with **AutoFlow** flow definitions: the JSON documents that *Export current version* produces and *Create from file* imports into Microsoft Dynamics 365 Business Central. This repository is your reference, verified against AutoFlow 27.0.39. Use it in place of guessing. If the user's AutoFlow is older or newer, say so, and treat notes marked **Next release** accordingly.
 
 ## Workflow
 

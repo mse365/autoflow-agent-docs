@@ -26,7 +26,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "Field filters applied with BC filter syntax before reading. Rows with fieldNo 0 are skipped; if two rows target the same fieldNo the later one wins.",
+      "description": "Field filters applied with BC filter syntax before reading. Rows with fieldNo 0 are skipped; if two rows target the same fieldNo the later one wins. The editor saves each row as {fieldNo, filter} only, one row per field.",
       "items": [
         {
           "key": "fieldNo",
@@ -46,17 +46,7 @@
           "enum": null,
           "maxLength": 250,
           "smart": "text",
-          "description": "Business Central filter expression as used in SETFILTER / the filter pane, e.g. '10000..20000', '<>0', 'A*|B*', '@*gmbh*', '' (= empty). {{SmartFields}} are resolved against the flow context (never against the records being searched) before the filter is set. Truncated to 250 characters after resolution. For a RecordId field, a value that is exactly one reference SmartField filters on that record directly."
-        },
-        {
-          "key": "lineNo",
-          "type": "integer",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "maxLength": null,
-          "smart": "none",
-          "description": "Written by the editor on repeater rows; ignored by this step."
+          "description": "Business Central filter expression as used in SETFILTER / the filter pane, e.g. '10000..20000', '<>0', 'A*|B*', '@*gmbh*', '' (= empty). {{SmartFields}} are resolved against the flow context (never against the records being searched) before the filter is set. The text is cut to 250 characters. For a RecordId field, a value that is exactly one reference SmartField filters on that record directly."
         }
       ]
     },
@@ -116,7 +106,7 @@
       "name": "count",
       "type": "value",
       "tableNo": null,
-      "when": "always - number of records returned, as text"
+      "when": "always - number of records returned, as text formatted with the regional settings (values of 1000 and more contain a thousands separator)"
     },
     {
       "name": "results",
@@ -130,8 +120,8 @@
       "id": "FindRecords.tableNo-required",
       "severity": "error",
       "stage": "editor",
-      "check": "configuration.tableNo must be present and a non-zero integer.",
-      "message": "",
+      "check": "configuration.tableNo must be present and non-zero. The editor's Table field is required.",
+      "message": "Please fill in the highlighted fields.",
       "machine": {
         "type": "required",
         "key": "tableNo"
@@ -140,8 +130,8 @@
     {
       "id": "FindRecords.tableNo-nonzero",
       "severity": "error",
-      "stage": "editor",
-      "check": "configuration.tableNo must be a positive table number (0 cannot be opened at runtime).",
+      "stage": "runtime",
+      "check": "configuration.tableNo must be an existing table number; 0 or an unknown number fails with Business Central's error when the table is opened.",
       "message": "",
       "machine": {
         "type": "range",
@@ -151,9 +141,9 @@
     },
     {
       "id": "FindRecords.tableNo-type",
-      "severity": "error",
+      "severity": "warning",
       "stage": "runtime",
-      "check": "tableNo must be a JSON integer; other types are read as 0 and opening table 0 fails.",
+      "check": "Write tableNo as a JSON number. A value that cannot be read as an integer counts as 0, and opening table 0 fails.",
       "message": "",
       "machine": {
         "type": "type",

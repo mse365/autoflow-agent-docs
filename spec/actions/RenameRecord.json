@@ -46,7 +46,7 @@
           "enum": null,
           "maxLength": null,
           "smart": "none",
-          "description": "Row key and application order. Rows are applied in ascending lineNo. Must be unique within the array: rows are loaded into a keyed buffer, so two rows with the same lineNo (including two rows that omit it -> both 0) fail at runtime with a duplicate-record error. The editor writes 10000, 20000, ... in display order."
+          "description": "Row key. Must be unique within the array: rows are loaded into a keyed buffer, so two rows with the same lineNo (including two rows that omit it -> both 0) fail at runtime with a duplicate-record error. If several rows target the same key field, the one with the lowest lineNo is used. The editor writes 10000, 20000, ... in display order."
         },
         {
           "key": "fieldNo",
@@ -56,7 +56,7 @@
           "enum": null,
           "maxLength": null,
           "smart": "none",
-          "description": "Field NUMBER (not name) of the target field in the configured table. Rows with fieldNo 0 are skipped. A number that does not exist in the table fails at runtime."
+          "description": "Field NUMBER (not name) of a primary-key field of the configured table. Rows for other fields (including unknown numbers and 0) are ignored."
         },
         {
           "key": "value",
@@ -93,9 +93,9 @@
     {
       "id": "RenameRecord.tableNo-required",
       "severity": "error",
-      "stage": "editor",
-      "check": "configuration.tableNo must be present and a non-zero integer.",
-      "message": "",
+      "stage": "runtime",
+      "check": "configuration.tableNo must be present and non-zero. The editor derives it from the reference; it is not a separate required field.",
+      "message": "Table No. is required for a Rename Record step.",
       "machine": {
         "type": "required",
         "key": "tableNo"
@@ -115,10 +115,10 @@
     },
     {
       "id": "RenameRecord.tableNo-type",
-      "severity": "error",
+      "severity": "warning",
       "stage": "runtime",
-      "check": "tableNo must be a JSON number (integer); other JSON types are not reliably converted and are treated as 0.",
-      "message": "Table No. is required for a Rename Record step.",
+      "check": "Write tableNo as a JSON number. A value that cannot be read as an integer counts as 0, and the step fails.",
+      "message": "",
       "machine": {
         "type": "type",
         "key": "tableNo",
@@ -129,8 +129,8 @@
       "id": "RenameRecord.reference-required",
       "severity": "error",
       "stage": "editor",
-      "check": "configuration.reference must be present and non-empty.",
-      "message": "",
+      "check": "configuration.reference must be present and non-empty. The editor's Reference field is required.",
+      "message": "Please fill in the highlighted fields.",
       "machine": {
         "type": "required",
         "key": "reference"
@@ -139,9 +139,9 @@
     {
       "id": "RenameRecord.reference-placeholder",
       "severity": "error",
-      "stage": "editor",
-      "check": "configuration.reference must be a single SmartField placeholder: after trimming it starts with '{{', ends with '}}' and has a non-empty name inside.",
-      "message": "",
+      "stage": "runtime",
+      "check": "configuration.reference must be a single SmartField placeholder: after trimming it starts with '{{', ends with '}}' and has a non-empty name inside. Anything else cannot be resolved, and the step fails.",
+      "message": "Reference \"%1\" cannot be resolved to a record.",
       "machine": {
         "type": "regex",
         "key": "reference",
@@ -189,17 +189,10 @@
       }
     },
     {
-      "id": "RenameRecord.values-inputFormat-valid",
-      "severity": "error",
-      "stage": "editor",
-      "check": "every values[].inputFormat must be empty, '9', 'xml' (case-insensitive) or a structurally valid date/time pattern (tokens yyyy|yy, MM, dd, HH, mm, ss each at most once; only non-alphanumeric separators; date tokens all-or-nothing; ss requires mm, mm requires HH; at least a full date or HH+mm). One message per invalid row.",
-      "message": "\"%1\" is not a valid input format. Leave it empty for the regional format, enter 9 or xml for the invariant XML notation, or enter a date/time pattern such as yyyyMMdd (tokens yyyy, yy, MM, dd, HH, mm, ss plus separators)."
-    },
-    {
       "id": "RenameRecord.values-inputFormat-runtime",
       "severity": "error",
       "stage": "runtime",
-      "check": "Same input-format check, repeated when the row is converted.",
+      "check": "values[].inputFormat must be empty, '9', 'xml' (case-insensitive) or a structurally valid date/time pattern (tokens yyyy|yy, MM, dd, HH, mm, ss each at most once; only non-alphanumeric separators; date tokens all-or-nothing; ss requires mm, mm requires HH; at least a full date or HH+mm). Checked when the key value is converted; inputFormat on rows for non-key fields is never checked.",
       "message": "\"%1\" is not a valid input format. Leave it empty for the regional format, enter 9 or xml for the invariant XML notation, or enter a date/time pattern such as yyyyMMdd (tokens yyyy, yy, MM, dd, HH, mm, ss plus separators)."
     },
     {
@@ -213,7 +206,7 @@
       "id": "RenameRecord.values-conversion",
       "severity": "error",
       "stage": "runtime",
-      "check": "The resolved value text cannot be converted to the field type (Integer, BigInteger, Decimal, Boolean, Date, Time, DateTime, Duration, Option, Guid, RecordId). Without inputFormat the first message is used, with an inputFormat the second.",
+      "check": "The resolved value text cannot be converted to the field type (Integer, BigInteger, Decimal, Boolean, Date, Time, DateTime, Duration, Option, Guid). Without inputFormat the first message is used, with an inputFormat the second.",
       "message": "Cannot convert value \"%1\" to %2 for field \"%3\". | Cannot convert value \"%1\" to %2 for field \"%3\" using input format \"%4\"."
     },
     {

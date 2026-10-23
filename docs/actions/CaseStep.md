@@ -45,9 +45,9 @@ The value `__default__` is reserved. A user branch must not use it.
 
 | stage | severity | rule | message |
 |---|---|---|---|
-| editor | error | `value` is empty | (configuration rejected, no message text) |
-| editor | error | More than one edge has the value `__default__` | `A branch cannot use the reserved value of the automatic "Otherwise" branch. Rename that branch.` |
-| editor | warning | Two branches share the same value | `Branch value "%1" is used more than once. Only the first branch will be reachable.` |
+| editor | error | `value` is empty (required field in the configuration dialog) | `Please fill in the highlighted fields.` |
+
+Nothing checks for duplicate branch values or for a branch that uses the reserved value `__default__`.
 
 ## Runtime errors
 
@@ -83,5 +83,6 @@ None from the step itself.
 
 - Whenever you add, rename or remove a branch edge, update `branches` too. The step routes only on `branches` and never looks at the edges itself.
 - Matching is plain text: `"1"` ≠ `"1.0"` ≠ `" 1"`, and `de` ≠ `DE`. Normalise the value with a SmartFormula if needed.
-- Avoid duplicate branch values and single quotes (`'`) in branch values.
+- Avoid duplicate branch values and single quotes (`'`) in branch values. Keep branch values to 100 characters or fewer.
+- Don't put an empty string in `branches`: the step then emits an empty `result`, which never routes, so no branch runs.
 - Outputs of steps inside a branch are deleted once the flow leaves the branch.

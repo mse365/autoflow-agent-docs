@@ -34,14 +34,16 @@ None.
 | stage | severity | rule | message |
 |---|---|---|---|
 | editor | error | `statusCode` is required (an empty value is saved as `"200"`) | Please fill in the highlighted fields. |
-| editor | error | a numeric `statusCode` must be between 200 and 599 | – |
 | editor | error | `contentType` must be non-empty | Please fill in the highlighted fields. |
+| – | warning | `statusCode` should be 200–599 or a SmartField/SmartFormula. Nothing checks this; any integer is passed to the caller as is. | – |
 
 These checks are not re-run at publish or at run time.
 
 ## Runtime errors
 
 None specific to this step. The status code is not range-checked at run time.
+
+In `WaitForResponse` mode, the steps **before** this one run synchronously inside the caller's request. If one of them fails, the caller gets status 500 with the error text. A step that defers the run (such as Sleep) is not allowed before this step and fails the run.
 
 ## Example
 

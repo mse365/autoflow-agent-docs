@@ -21,9 +21,9 @@ Each time the While step is dispatched, it re-substitutes and evaluates `conditi
 
 | key | type | required | default | description |
 |---|---|---|---|---|
-| `condition` | string | yes | – | SmartFilter expression with `{{..}}` placeholders, e.g. `{{trigger_Rec.status}} != Released`. Re-evaluated on every pass. An empty or unparseable condition evaluates to false. |
+| `condition` | string | yes (not checked) | – | SmartFilter expression with `{{..}}` placeholders, e.g. `{{trigger_Rec.status}} != Released`. Re-evaluated on every pass. An empty or unparseable condition evaluates to false. |
 | `mode` | integer | no | `0` | `0` = While (check first), `1` = Do-While (run the body first). Unknown values are treated as `0`. |
-| `maxIterations` | integer | yes (editor) | `1000` | Maximum number of body passes. The runtime uses 1000 when it is missing or ≤ 0, but the editor requires ≥ 1. |
+| `maxIterations` | integer | no | `1000` | Maximum number of body passes. A missing value or a value ≤ 0 means 1000. |
 
 ## Edges
 
@@ -41,12 +41,7 @@ The step also writes a runtime-only `result` (`loop` or empty) for routing. It i
 
 ## Validation
 
-| stage | severity | rule | message |
-|---|---|---|---|
-| editor | error | `condition` is empty | (configuration rejected, no message text) |
-| editor | error | `maxIterations` is missing or < 1 | (configuration rejected, no message text) |
-
-There are no publish-time checks.
+No editor or publish checks exist for this step. An empty `condition` is accepted and evaluates to false.
 
 ## Runtime errors
 
@@ -79,7 +74,7 @@ The limit is exact: with `maxIterations: 3`, the body runs at most 3 times. If t
 }
 ```
 
-(`Header_record` stands for a record reference output produced **before** the loop. Record references are stored as record ids, and their fields are read when the condition is substituted, so the condition sees changes the body made to that record. See the gotchas.)
+(`trigger_Rec` is a record reference. Record references are stored as record ids, and their fields are read from the database each time the condition is substituted, so the condition sees changes the body made to that record. See the gotchas.)
 
 ## Gotchas
 

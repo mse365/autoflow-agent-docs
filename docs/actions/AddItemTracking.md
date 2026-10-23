@@ -20,17 +20,17 @@ The step resolves `reference` to a **Sales Line (37)** or **Purchase Line (39)**
 - Inbound (positive): purchase documents, and sales return orders and sales credit memos.
 - Outbound (negative): purchase return orders and purchase credit memos, and all other sales documents.
 
-If the line already has a reservation without a serial number, the tracking is attached to that reservation. Otherwise a surplus item-tracking entry is created. For a drop-shipment **purchase** line, the tracking is also mirrored to the linked sales order line. The step has no outputs.
+If the line already has a reservation entry without a serial number, the tracking is attached to that reservation. Otherwise a surplus item-tracking entry is created; for a drop-shipment **purchase** line linked to a sales order, the new tracking is then mirrored to the linked sales order line. The step has no outputs.
 
 ## Configuration
 
 | key | type | required | default | description |
 |---|---|---|---|---|
-| `reference` | string | yes | `""` | One SmartField placeholder resolving to the sales or purchase line, e.g. `"{{FindSalesLine_results}}"`. |
+| `reference` | string | yes | `""` | One SmartField placeholder resolving to the sales or purchase line, e.g. `"{{FindSalesLine_results}}"`. A collection resolves to its first record. Bare names without braces fail at runtime. |
 | `trackingType` | integer | yes | `0` | `0` = Serial No., `1` = Lot No., `2` = Package No. |
-| `value` | string | yes | `""` | The serial, lot or package number. **This is the key the step reads.** SmartText (SmartFields, `[[formulas]]` and SmartControls are resolved before the step runs). Truncated to the target field length. |
-| `trackingValue` | string | no | `""` | The same number as written by the visual editor. It is **not read at runtime**. Set it to the same text as `value` so the editor shows it. |
-| `quantity` | string | no | `"1"` | Quantity in the line's unit of measure, as **text**, parsed in invariant format (`"2"`, `"2.5"`). Ignored for serial numbers (always 1). For lot and package numbers it must be > 0. SmartText. |
+| `value` | string | yes | `""` | The serial, lot or package number. **This is the key the step reads at runtime.** SmartText: SmartFields, `[[formulas]]` and SmartControls are resolved before the step runs. Stored in a Code field, so it is upper-cased and cut to the field length (50 characters in standard BC). |
+| `trackingValue` | string | no | `""` | The same number as written by the visual editor. It is **not read at runtime**. Set it to the same text as `value` so the editor shows it and its required-field check passes. |
+| `quantity` | string | lot/package: yes | – | Quantity in the line's unit of measure, as text parsed in invariant format (`"2"`, `"2.5"`). SmartText. Ignored for serial numbers (always 1). For lot and package numbers it must be > 0; a missing or unparseable value counts as 0 and fails. The editor writes `"1"` when left empty. |
 
 ## Outputs
 
@@ -40,8 +40,7 @@ None.
 
 | stage | severity | rule | message |
 |---|---|---|---|
-| editor | error | `reference` is not a `{{…}}` placeholder | `Select the sales or purchase line to add item tracking to.` |
-| editor | error | `value` is empty | `Enter the serial, lot or package number to assign.` |
+| editor | error | `reference` or `trackingValue` empty when saving the dialog (`quantity` is optional there) | `Please fill in the highlighted fields.` |
 
 There are no publish-time checks specific to this step. A Confirm dialog after this step gets a publish warning, because this step writes to the database.
 
@@ -49,7 +48,7 @@ There are no publish-time checks specific to this step. A Confirm dialog after t
 
 | condition | message |
 |---|---|
-| Reference does not resolve | `Reference "%1" cannot be resolved to a record.` |
+| `reference` is not a `{{…}}` placeholder or does not resolve | `Reference "%1" cannot be resolved to a record.` |
 | Reference is not a Sales Line / Purchase Line | `The Add Item Tracking step must reference a Sales Line or a Purchase Line, but the reference points to "%1".` |
 | `value` empty after resolution | `Enter the %1 to assign.` (`%1` = `serial number` / `lot number` / `package number`) |
 | Lot/package with quantity ≤ 0, missing or not parseable | `Enter a quantity greater than zero.` |
@@ -80,7 +79,7 @@ There are no publish-time checks specific to this step. A Confirm dialog after t
 
 ## Gotchas
 
-- **Key mismatch in the product:** the visual editor saves the number as `trackingValue`, but the runtime and the editor check read `value`. A step configured only in the editor therefore fails at runtime with "Enter the … number to assign." In JSON, always write `value`, and write `trackingValue` with the same content.
-- `quantity` is text in invariant format. Use `"2.5"`, not `"2,5"`.
+- **Key mismatch in 27.0.39:** the visual editor saves the number as `trackingValue`, but the runtime reads `value`. A step configured only in the editor fails at runtime with "Enter the … number to assign." In JSON, always write `value`, and write `trackingValue` with the same content.
+- `quantity` is text in invariant format. Use `"2.5"`, not `"2,5"`. A JSON number (`2`) is read as text too.
 - If the line's `No.` is not an existing item (e.g. a G/L account line), the step does nothing and still succeeds.
-- `trackingType` is the integer ordinal, not `"Lot"`.
+- `trackingType` is the integer ordinal, not `"Lot"`. Any other number is not rejected, but no tracking number is set.

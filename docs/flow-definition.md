@@ -1,6 +1,6 @@
 # Flow definition format
 
-A flow definition is a single UTF-8 JSON document. It is what **Export Flow** downloads (`AutoFlow_<FlowNo>_<VersionId>.json`) and what **Create from file** imports. Everything about a flow's logic lives in this document; environment-specific things (credentials, webhook registrations, the flow's number, folder, licensing) do not.
+A flow definition is a single UTF-8 JSON document. It is what **Export current version** downloads (`AutoFlow_<FlowNo>_<VersionId>.json`) and what **Create from file** imports. Everything about a flow's logic lives in this document; environment-specific things (credentials, webhook registrations, the flow's number, folder, licensing) do not.
 
 ## Top-level object
 
@@ -37,7 +37,7 @@ Only `name`, `code` and `iconUrl` are read from the root on import. The rest of 
   "slug": "trigger",
   "iconUrl": "https://…",
   "configuration": { },
-  "outputs": [ { "name": "record", "type": "reference", "tableNo": 18 } ],
+  "outputs": [ { "name": "Rec", "type": "reference", "tableNo": 18 }, { "name": "ChangedFields", "type": "value" } ],
   "level": 0
 }
 ```
@@ -159,7 +159,7 @@ Canvas sticky notes, display only:
 { "id": "…", "html": "Runs <b>nightly</b>", "color": "yellow", "x": 40, "y": 320, "width": 220, "height": 120 }
 ```
 
-`color` is one of `yellow`, `pink`, `blue`, `green`, `lavender`, `grey`. `html` is sanitised to `b`, `i`, `u`, `br` and text. `width` and `height` are optional; leave them out to auto-size.
+`color` is one of `yellow`, `pink`, `blue`, `green`, `lavender`, `grey`. In `html`, only `b`, `i`, `u`, `br` and text survive: the editor strips every other tag (keeping its text) when it shows or saves the note. `width` and `height` are optional; leave them out to auto-size.
 
 ## What is *not* in the definition
 
@@ -170,9 +170,18 @@ These are environment-local, so an agent can't set them through JSON:
 - Webhook URLs and registrations, which are created on publish.
 - Licensing.
 
+## Next release: flow versions and Codes
+
+The release after 27.0.39 changes how flows are identified and versioned. A definition written for 27.0.39 keeps working, but plan for this:
+
+- **Every flow needs a `code`** before it can be activated (published), not only SubFlows. Give every definition a `code` in the form `NAMESPACE.NAME`, for example `ACME.BLOCKED-CUSTOMER`.
+- **Versions get numbers** (`major.minor.patch`, e.g. `1.2.0`). Export writes the version to a root `version` key and names the file `AutoFlow_<Code>_<version>.json`. The key is read on import only for information; don't invent one.
+- **Importing a file whose `code` already exists** in the company no longer creates a second flow. After a confirmation, it becomes a new **draft version** of the existing flow. Without that flow, import creates a new flow as before.
+- **Run SubFlow pins** use the SubFlow's version number instead of a local ID. See [Run SubFlow](actions/RunSubFlow.md).
+
 ## Lifecycle: import → draft → publish
 
 1. **Import** (*Create from file*): creates a new flow in **Draft** with this definition. No validation runs.
 2. **Edit**: the editor rewrites the step you edit (configuration, outputs, slug) and leaves everything else alone.
-3. **Publish**: runs the publish checks in [validation.md](validation.md). Hard errors block publishing. Warnings ask for confirmation, and a non-interactive (API) publish treats them as *No*, so a flow with warnings can't be published headless.
+3. **Publish changes**: runs the publish checks in [validation.md](validation.md). Hard errors block publishing. Warnings ask for confirmation, and a non-interactive (API) publish treats them as *No*, so a flow with warnings can't be published headless.
 4. **Run**: runtime errors are logged per step on the execution.

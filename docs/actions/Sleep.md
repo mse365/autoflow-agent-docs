@@ -20,14 +20,14 @@ The step converts `duration` × `unit` into milliseconds and then does one of tw
 - **Short wait**: unit Milliseconds and less than 10,000 ms. The worker blocks in-process for that time, and the step then completes.
 - **Deferred wait**: any other unit, or 10,000 ms and more. The run is parked with status *Sleeping*, and a one-time job queue entry resumes it at *now + duration*. On resume, the step completes immediately and the flow continues with the next step.
 
-A deferred wait is only possible in an asynchronous (job queue) run. Inside a synchronous frame (webhook synchronous phase, SubFlow body, interactive document or page triggers), the step fails instead.
+A deferred wait is only possible in an asynchronous (job queue) run. Inside a synchronous frame (for example the webhook synchronous phase, a SubFlow body, interactive document or page triggers, PDF hooks), the step fails instead.
 
 ## Configuration
 
 | key | type | required | default | description |
 |---|---|---|---|---|
 | `duration` | string (integer text) | yes | – | Positive whole number in the chosen unit, e.g. `"30"`. Can be a SmartField such as `"{{RetryDelay_Seconds}}"`, which is resolved at runtime. Decimals are not accepted. |
-| `unit` | integer | no | `1` | `0` = Milliseconds, `1` = Seconds, `2` = Minutes, `3` = Hours. A missing or unknown value is treated as Seconds. |
+| `unit` | integer | no | `1` | `0` = Milliseconds, `1` = Seconds, `2` = Minutes, `3` = Hours. A missing value or an unknown number is treated as Seconds. A non-numeric value fails the step. |
 
 ## Outputs
 
@@ -39,7 +39,7 @@ None.
 |---|---|---|---|
 | publish | warning | `duration` is empty or missing | `Sleep step '%1' has no duration configured.` |
 | publish | warning | `duration` is not an integer > 0 and contains no `{{…}}` token | `Sleep step '%1' duration '%2' is not a positive integer or SmartField token.` |
-| editor | error | same two conditions (configuration rejected) | – |
+| editor | error | `duration` is empty (required field in the configuration dialog; the editor does not check that it is a number) | `Please fill in the highlighted fields.` |
 
 `%1` is the step **id**, not its description.
 

@@ -5,8 +5,8 @@ AutoFlow checks a flow definition at four stages. Knowing which stage a rule bel
 | Stage | When | Effect of a failure |
 |---|---|---|
 | **import** | *Create from file* | Almost nothing is checked. The definition is stored as-is. |
-| **editor** | A step's configuration dialog is confirmed in the flow editor | The dialog refuses to save. **These checks are not re-run at publish**, so a hand-written definition can skip them. Treat them as requirements anyway: a definition that breaks them nearly always fails at runtime. |
-| **publish** | *Publish* on a draft | **error**: publish is refused. **warning**: the user is asked to confirm. A non-interactive (API) publish answers *No*, so a flow with warnings can't be published headless. |
+| **editor** | A step's configuration dialog is confirmed in the flow editor | The dialog refuses to save. Mostly these are required fields (*"Please fill in the highlighted fields."*) plus a few step-specific checks. **They are not re-run at publish**, so a hand-written definition can skip them. Treat them as requirements anyway: a definition that breaks them nearly always fails at runtime. |
+| **publish** | *Publish changes* on a draft | **error**: publish is refused. **warning**: the user is asked to confirm. A non-interactive (API) publish answers *No*, so a flow with warnings can't be published headless. |
 | **runtime** | While a step runs | The step fails, the run stops with status *Error* and the message is logged. A restart retries the failed step. |
 
 Run the preflight validator before handing a definition to a user:
@@ -27,7 +27,7 @@ What *Create from file* does with the root:
 |---|---|
 | File encoding | Read as UTF-8. |
 | `name` | Becomes the flow description, truncated to 100 characters. A duplicate description gets ` (2)`, ` (3)`, … appended. |
-| `code` | Applied only if it is valid **and** no other flow in the company has it. Otherwise it is **silently dropped**, and a SubFlow then can't be published until a Code is set. |
+| `code` | Applied only if it is valid **and** no other flow in the company has it. Otherwise it is **silently dropped**, and a SubFlow then can't be published until a Code is set. **Next release:** a file whose `code` already exists becomes a new draft version of that flow, after a confirmation. |
 | `iconUrl` | Applied only if it starts with `https://`. Otherwise it is silently dropped. |
 | everything else | Stored verbatim as the draft. `outputs` are **not** regenerated, and steps are not validated. |
 | Run SubFlow steps | Re-pinned to the published version of the called SubFlow, if that SubFlow already exists and is published. Otherwise they are left unchanged and fail at runtime. **Import and publish SubFlows before the flows that call them.** |
@@ -38,13 +38,18 @@ Checks run in this order. The first hard error stops the publish.
 
 1. **Permission.** The user must be allowed to publish flows.
 2. **At least one action step** (error). The message: *"A flow must contain at least one action step before it can be published. Add a step after the trigger and try again."* Action steps inside edges count.
-3. **Trigger configuration** (error). Wrapped as *"This flow's trigger cannot be published:"* followed by a bulleted list. Only some triggers have these checks: Manual, the interactive document triggers, the page triggers, the PDF and file-name hooks, and SubFlow (Code required). See each trigger's page.
+3. **Trigger configuration** (error). Wrapped as *"This flow's trigger cannot be published:"* followed by a bulleted list. Only these triggers have such checks: Manual, the four interactive document triggers (modified, released, posted, reopened) and the two page triggers. See each trigger's page.
 4. **Step warnings**, collected for every action step and confirmed together:
    - **Terminating step with a successor**: *"Step "%1" is a terminating step but has a successor – terminating steps must end the path."* This is decided by the step's own `terminating` flag in the JSON, so the flag must be correct.
    - **Step-specific publish checks**: Sleep (duration), Confirm dialog (dialog in a non-interactive or post-write position), Send Notification (actions and targets). See [validation-rules.md](validation-rules.md#stage-publish).
    - **Dangling references**: *"Step "%1" references unknown slug "%2"."* AutoFlow scans every string inside every step's `configuration`. For each `{{…}}`, it takes the text before the **first underscore** as a slug and warns if no step has that slug. Tokens without an underscore, such as built-ins like `{{today}}`, are skipped. The check doesn't look at output names or field paths, so `{{trigger_Typo}}` passes publish and then silently resolves to the literal text at runtime. The validator's `reference.unknown-output` lint catches this.
-5. **Licensing.** The flow is registered with the licensing server. SubFlows don't count toward the licensed-flow limit.
-6. **Trigger registration**: job queue entries (scheduled, global record triggers), webhook registration, and so on. The Webhook trigger reports registration problems as warnings.
+5. **Licensing** (error). The flow is registered with the licensing server, for example *"You have no licensed flows remaining. Please upgrade your package in the AutoFlow Licensing page."* SubFlows don't count toward the licensed-flow limit and skip this step.
+6. **Trigger registration**: job queue entries (scheduled, global record triggers), webhook registration, and so on. Some triggers check their configuration only here, as hard errors that undo the whole publish:
+   - **SubFlow**: *"A Code must be set on the Flow Card before this SubFlow can be published. Run-SubFlow steps and templates reference SubFlows by Code, not by No."*
+   - **When a PDF is printed** and **When a report file name is generated**: at least one report line, and only one published flow per trigger in the environment. See their pages.
+   - **Webhook**: registration problems are reported as warnings, not errors.
+
+> **Next release:** every flow needs a Code before it can be published (activated), not only SubFlows, and the licensing messages change with the new licence models.
 
 ## What is never checked by AutoFlow (but breaks flows)
 

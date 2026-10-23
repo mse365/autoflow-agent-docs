@@ -148,7 +148,7 @@
       "severity": "error",
       "stage": "editor",
       "check": "'To' is a required field in the configuration dialog",
-      "message": "(no dedicated message; field marked required)",
+      "message": "Please fill in the highlighted fields.",
       "machine": { "type": "required", "key": "to" }
     },
     {
@@ -156,29 +156,29 @@
       "severity": "error",
       "stage": "editor",
       "check": "'Subject' is a required field in the configuration dialog",
-      "message": "(no dedicated message; field marked required)",
+      "message": "Please fill in the highlighted fields.",
       "machine": { "type": "required", "key": "subject" }
     },
     {
       "id": "SendEmail.attachments-type",
-      "severity": "error",
-      "stage": "editor",
-      "check": "configuration.attachments, if present, must be an array of objects (a non-object row fails the editor validation)",
-      "message": "(no message text; the step is reported as invalid)",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "configuration.attachments should be an array of objects. A non-array value, and rows that are not objects, are silently ignored (no attachment, no error).",
+      "message": "",
       "machine": { "type": "type", "key": "attachments", "valueType": "array" }
     },
     {
       "id": "SendEmail.inline-needs-filename-and-content",
       "severity": "error",
       "stage": "editor",
-      "check": "Each Inline row must have non-empty filename and contentBase64 (checked when the dialog is saved, and again at run time)",
+      "check": "Each Inline row must have non-empty filename and contentBase64 (checked when the dialog is saved, and again at run time after resolution).",
       "message": "Inline attachment is missing a filename or content."
     },
     {
       "id": "SendEmail.reference-required",
       "severity": "error",
       "stage": "editor",
-      "check": "Each Reference row must have a non-empty reference (checked when the dialog is saved, and again at run time)",
+      "check": "Each Reference row (type 'Reference', empty or unknown) must have a non-empty reference (checked when the dialog is saved, and again at run time).",
       "message": "Attachment reference selector is empty."
     },
     {
@@ -192,7 +192,7 @@
       "id": "SendEmail.reference-found",
       "severity": "error",
       "stage": "editor",
-      "check": "A Reference row's selector (with a trailing [N] stripped) must resolve to an output available at this step (dialog save, live status line); at run time it must exist in the run context / array must have element N",
+      "check": "A Reference row's selector (with a trailing [N] stripped) must resolve to an output available at this step (dialog save, live status line). At run time it must exist in the run context, and for name[N] the array must have element N.",
       "message": "Attachment reference selector \"%1\" was not found in the available outputs."
     },
     {
@@ -229,7 +229,11 @@
       "stage": "runtime",
       "check": "accountId must be a non-empty GUID of an email account registered for accountConnector",
       "message": "The configured email account is no longer registered or active.",
-      "machine": { "type": "regex", "key": "accountId", "pattern": "\\{?[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}\\}?" }
+      "machine": {
+        "type": "regex",
+        "key": "accountId",
+        "pattern": "\\{?[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}\\}?"
+      }
     },
     {
       "id": "SendEmail.document-exists",
@@ -247,11 +251,11 @@
     }
   ],
   "notes": [
-    "No publish-time check exists for this step. The attachment checks run when the step is saved in the configuration dialog (and as a live status line), and again at run time.",
+    "No publish-time check exists for this step. The attachment checks run when the step is saved in the configuration dialog (the selector checks also as a live status line), and again at run time.",
     "Test mode: when AutoFlow Setup has test mode active with test e-mail recipients, all To/CC/BCC recipients are replaced by the test recipients (in To; CC and BCC cleared) and the execution log notes the redirect.",
     "sentEmailId is the email message GUID (no braces), the same identifier Business Central shows as the Sent Email message id.",
     "accountId/accountConnector are environment-specific. A definition moved to another environment must have them re-selected, otherwise the step fails at run time.",
-    "Inline attachment content is decoded from base64 into text before being written as the attachment; byte-exact transfer of binary files (PDF, images) via Inline rows is not guaranteed. For binary files prefer a Reference row to an AutoFlow Document (e.g. from Create PDF or Azure Blob: Get file). This is inferred from the code path, not documented behaviour.",
-    "Sending uses Business Central's standard email module (Email.Send); a send failure raises the platform's error."
+    "Inline attachment content is decoded from base64 into text before being written as the attachment, so binary files (PDF, images) are not transferred byte-exact. Use Inline rows only for text; for binary files use a Reference row to an AutoFlow Document (e.g. from Create PDF or Azure Blob: Get file).",
+    "Sending uses Business Central's standard email module (Email.Send). Its result is not checked: if the connector fails, the step still succeeds, sentEmailId is returned, and the message stays in the Email Outbox with the error."
   ]
 }

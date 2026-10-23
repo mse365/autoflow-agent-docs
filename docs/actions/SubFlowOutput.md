@@ -27,8 +27,8 @@ If a SubFlow ends without reaching this step, it returns no outputs. That is not
 
 The fields of each `outputs[]` entry:
 
-- `name` is the output name the caller sees (truncated to 30 characters there). It must be non-empty and unique.
-- `type` defaults to `Value`.
+- `name` is the output name the caller sees (truncated to 30 characters there). Make it non-empty and unique: nothing checks this before run time, and a duplicate name fails the step.
+- `type` is `"Value"` or `"Reference"` (exact case); anything else, or a missing `type`, counts as `Value`.
 - `value` is SmartText for Value rows, or a wrapped reference selector such as `{{FindCustomer_Rec}}` for Reference rows.
 - `tableNo` is derived by the editor from the chosen reference, and is `0` for Value rows.
 
@@ -47,14 +47,14 @@ The caller's Run SubFlow step builds its `outputs[]` from this step's `configura
 
 | stage | severity | rule | message |
 |---|---|---|---|
-| editor | error | `outputs` is not an array of objects | *(no message – the step counts as invalid)* |
-| editor | error | An entry has no `name` or an empty `name` | *(no message)* |
-| editor | error | Duplicate `name` | *(no message)* |
 | publish | warning | The step has a successor (a following step in the same path, or edges) | Step "%1" is a terminating step but has a successor – terminating steps must end the path. |
+| runtime | error | Two `outputs[]` entries have the same `name` | *(platform JSON error about a duplicate key)* |
+
+The step is only offered in the step picker of flows whose trigger is **When invoked as a SubFlow**. Nothing stops it in other flows, but there it has no caller.
 
 ## Runtime errors
 
-None of its own. SmartField resolution errors in `value` fail the step as usual.
+Apart from duplicate names, none of its own. SmartField resolution errors in `value` fail the step as usual.
 
 ## Example
 
@@ -85,5 +85,5 @@ None of its own. SmartField resolution errors in `value` fail the step as usual.
 ## Gotchas
 
 - Type strings are case-sensitive here: `"Value"` / `"Reference"` (capitalized). This differs from the lowercase `outputs[].type` (`"value"` / `"reference"`) of step objects.
-- Reference-typed returns: Reference selectors are not turned into scalar text when SmartFields are resolved. What the caller receives for a Reference row is therefore not reliable. Return a scalar value (No., SystemId) and find the record again in the caller.
+- Reference-typed returns: a selector that points at a record (such as `{{FindCustomer_Rec}}`) is not replaced with text when SmartFields are resolved, so the caller receives the selector text itself as a plain value, not a record. Return a scalar value (No., SystemId) and find the record again in the caller.
 - `terminating` must be `true` in the step JSON, and nothing may follow the step in its path.

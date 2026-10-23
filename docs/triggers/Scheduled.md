@@ -15,11 +15,11 @@ Runs the flow periodically from a Job Queue entry that is created when the flow 
 
 ## What it does
 
-Publishing creates one recurring Job Queue entry for the flow. It runs every **60 minutes** on every weekday, all day. The first run comes one interval after publishing, not right away. Each Job Queue run starts one execution and queues it as its own Job Queue entry, so every tick is one background run that commits after every step. To change the interval or the time window, edit the Job Queue entry in Business Central. The schedule is not stored in the flow definition.
+Publishing creates one recurring Job Queue entry for the flow. It runs every **60 minutes** on every weekday, all day. The first run comes one interval after publishing, not right away. Each Job Queue run checks the license, starts one execution and queues it as its own Job Queue entry, so every tick is one background run that commits after every step. To change the interval or the time window, edit the Job Queue entry in Business Central. The schedule is not stored in the flow definition.
 
 ## Configuration
 
-None. `configuration` must be `{}`. The configure dialog only says "There is nothing to configure for this trigger."
+None. Write `configuration` as `{}`. Nothing reads it. The configure dialog only says "There is nothing to configure for this trigger. This flow runs, whenever the associated job queue entry is started."
 
 ## Outputs
 
@@ -27,15 +27,13 @@ None. The flow runs without a record. Fetch data with steps such as Find Records
 
 ## Validation
 
-| stage | severity | rule | message |
-|---|---|---|---|
-| editor | info | `configuration` must be empty | (no message) |
-
-No publish-time trigger checks. The general flow checks still apply, for example that the flow has at least one action step.
+No trigger-specific checks, at any stage. The general flow checks still apply, for example that the flow has at least one action step.
 
 ## Runtime errors
 
-None specific to this trigger. If the license check fails when the Job Queue entry runs, that run fails with "AutoFlow license validation failed for flow %1 – open Subscription Management to resolve."
+None specific to this trigger. If the license check fails when the Job Queue entry runs, that run fails with "AutoFlow license validation failed for flow %1 – open Subscription Management to resolve." The run shows up in the Job Queue log, not as an execution.
+
+Next release (not in 27.0.39): the text becomes "Flow %1 was not started because AutoFlow is not activated in this company or its license has expired. Open AutoFlow Setup to check the activation."
 
 ## Example
 

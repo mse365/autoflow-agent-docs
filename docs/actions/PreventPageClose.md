@@ -23,7 +23,7 @@ The "page is closed" trigger runs synchronously in the user's session before the
 |---|---|---|---|---|
 | `showMessage` | boolean | no | `true` | Tell the user why the page stays open. |
 | `asDialog` | boolean | no | `true` | `true` = dialog, `false` = notification bar on the page. Only used when `showMessage` is true. |
-| `message` | string | when `showMessage` is true | `""` | What the user is told. Say what to change, not just that something is wrong. Supports SmartFields `{{..}}`, SmartFormulas `[[..]]` and SmartControls `{#..#}`. |
+| `message` | string | when `showMessage` is true | `""` | What the user is told. Say what to change, not just that something is wrong. Supports SmartFields `{{..}}`, SmartFormulas `[[..]]` and SmartControls `{#..#}`. Cut to 2048 characters. |
 
 ## Outputs
 
@@ -31,11 +31,9 @@ None.
 
 ## Validation
 
-| stage | severity | rule | message |
-|---|---|---|---|
-| editor | error | `showMessage` is true (or missing) and `message` is empty | `Enter the message to show, or turn off "Tell the user why".` |
+No check is enforced. The step picker hides this step unless the flow's trigger is the page-close trigger, and no publish check enforces this either.
 
-The step picker hides this step unless the flow's trigger is the page-close trigger. No publish-time check enforces this.
+The step has a check for an empty message (`Enter the message to show, or turn off "Tell the user why".`), but 27.0.39 runs it neither in the editor nor at publish. An empty message with `showMessage` true keeps the page open without telling the user why, so always write one.
 
 ## Runtime errors
 
@@ -66,5 +64,5 @@ Typically placed in a Decision branch in a page-close flow:
 ## Gotchas
 
 - Treat it as the last step of its path. The JSON flag is `terminating: false`, so publishing does **not** warn about steps placed after it, but those steps never run.
-- `showMessage` defaults to `true`. If you omit it, you must provide `message`.
+- `showMessage` defaults to `true`. If you omit it, provide `message`, or the page stays open silently.
 - Use it only in flows with trigger `5564408` ("When a page is closed (interactive)").

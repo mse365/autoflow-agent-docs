@@ -16,7 +16,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "Report lines: [{ \"reportId\": <integer>, \"tableNo\": <integer, 0 = none> }]. The flow runs only for these reports. tableNo is the report's source table; when set, the matched records are exposed as the Rec_<reportId> reference output."
+      "description": "Report lines: [{ \"reportId\": <integer>, \"tableNo\": <integer, 0 = none> }]. The flow runs only for these reports. tableNo is the report's source table; when it is > 0 the matched records are exposed as the Rec_<reportId> reference output. Keep each reportId on one line only: when a report is listed twice, the first line is used."
     },
     {
       "key": "timeoutSec",
@@ -26,7 +26,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "How long the flow may run before Business Central keeps the name it generated."
+      "description": "Seconds the flow may run inside the report request. Checked between steps: once it has passed, the remaining steps do not run and Business Central keeps the name it generated. 0 or a negative value means no limit."
     }
   ],
   "outputs": [
@@ -58,7 +58,7 @@
       "name": "Rec_<reportId>",
       "type": "reference",
       "tableNo": null,
-      "when": "one per reports entry with tableNo > 0; name e.g. Rec_1306, tableNo = reports[].tableNo. At run time it points at the first matched record; Rec_<reportId>[0..n] (max 1000) carry every matched record but are not declared in outputs."
+      "when": "one per reports entry with tableNo > 0, in line order; name e.g. Rec_1306, tableNo = reports[].tableNo. At run time it points at the first matched record; Rec_<reportId>[0], [1], ... (max 1000) carry every matched record but are not declared in outputs. No record matched = the output is not set."
     }
   ],
   "rules": [
@@ -66,8 +66,12 @@
       "id": "OnReportFileName.lines-required-publish",
       "severity": "error",
       "stage": "publish",
-      "check": "configuration.reports must contain at least one entry. Raised while registering the trigger, aborting the publish.",
-      "message": "The \"When a report file name is generated\" trigger requires at least one report line."
+      "check": "configuration.reports must contain at least one entry. Raised while registering the trigger (after the licensing call), which undoes the whole publish.",
+      "message": "The \"When a report file name is generated\" trigger requires at least one report line.",
+      "machine": {
+        "type": "required",
+        "key": "reports"
+      }
     },
     {
       "id": "OnReportFileName.single-flow",
@@ -77,22 +81,11 @@
       "message": "Only one published flow can use the \"When a report file name is generated\" trigger. It is already used by flow '%1'."
     },
     {
-      "id": "OnReportFileName.reports-required",
-      "severity": "error",
-      "stage": "editor",
-      "check": "configuration.reports must be a non-empty array.",
-      "message": "Configure at least one report line.",
-      "machine": {
-        "type": "required",
-        "key": "reports"
-      }
-    },
-    {
       "id": "OnReportFileName.reports-type",
-      "severity": "error",
-      "stage": "editor",
-      "check": "configuration.reports must be an array of objects.",
-      "message": "Configure at least one report line.",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "configuration.reports must be an array of objects. Anything else is read as no lines, so the publish fails with the 'requires at least one report line' error.",
+      "message": "(no message of its own)",
       "machine": {
         "type": "type",
         "key": "reports",
@@ -100,52 +93,34 @@
       }
     },
     {
-      "id": "OnReportFileName.timeout-positive",
+      "id": "OnReportFileName.context-failed",
       "severity": "error",
-      "stage": "editor",
-      "check": "configuration.timeoutSec must be at least 1.",
-      "message": "The timeout must be at least 1 second.",
-      "machine": {
-        "type": "range",
-        "key": "timeoutSec",
-        "min": 1
-      }
-    },
-    {
-      "id": "OnReportFileName.report-exists",
-      "severity": "error",
-      "stage": "editor",
-      "check": "Every reports[].reportId must be an existing report.",
-      "message": "Report %1 does not exist."
-    },
-    {
-      "id": "OnReportFileName.table-exists",
-      "severity": "error",
-      "stage": "editor",
-      "check": "reports[].tableNo, when non-zero, must be an existing table.",
-      "message": "Table %1 (line for report %2) does not exist."
-    },
-    {
-      "id": "OnReportFileName.report-unique",
-      "severity": "error",
-      "stage": "editor",
-      "check": "A reportId may appear on only one line.",
-      "message": "Report %1 is configured on more than one line."
+      "stage": "runtime",
+      "check": "The registered flow's published version cannot be loaded. The error reaches the user and the report output fails.",
+      "message": "Failed to resolve trigger context for Report ID %1 (flow %2)."
     },
     {
       "id": "OnReportFileName.runner-failed",
       "severity": "error",
       "stage": "runtime",
-      "check": "If the flow fails, the execution is marked Error and Business Central keeps its own file name (the download does not fail).",
+      "check": "Any error in the flow: the execution is marked Error with this log entry, Business Central keeps its own file name, and the output does not fail.",
       "message": "Report file-name flow failed before any body step could complete: %1"
+    },
+    {
+      "id": "OnReportFileName.no-deferred-steps",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The flow runs synchronously, so a step that defers the run (Sleep) fails. The failure is handled like any other flow error (see runner-failed).",
+      "message": "Step %1 (%2) requested a deferred resume, but the flow is running synchronously. Use Sleep or other time-based deferral steps only outside of synchronous frames (Webhook sync phase or SubFlow body)."
     }
   ],
   "notes": [
-    "Fires for any output type (PDF, Word, Excel, ...) from both file-name paths of Business Central: the platform path (Send to..., request-page Save/Download) and the legacy custom-layout path (Word-layout email, custom-layout SaveAs; no report payload there). If another extension already named the file on the platform path, the flow is not started.",
-    "Synchronous: the flow runs inside the user's request until a Set report file name step yields, the flow ends, fails or reaches timeoutSec. All step state is committed once at the end. Business Central removes unsupported characters from the returned name afterwards.",
+    "Fires for any output type (PDF, Word, Excel, ...) from both file-name paths of Business Central: the platform path (Send to..., request-page Save/Download) and the legacy custom-layout path (Word-layout email, custom-layout SaveAs). If another extension already named the file on the platform path, the flow is not started.",
+    "Synchronous: the flow runs inside the user's request until a Set report file name step answers, the flow ends or fails, or timeoutSec has passed (checked between steps). Without an answer Business Central keeps its own name. Business Central removes characters that are not allowed in file names afterwards.",
     "Re-entrancy guard: if the flow itself renders a report, that nested file-name event does not start the flow again.",
-    "Matched records: Business Central hands over only one positioned record; the trigger recovers the full set from the report's request-page filter (payload 'filterviews') for the line's tableNo, and falls back to the single record. At most 1000 references are emitted; RecordCount reports the true total.",
+    "Matched records: on the platform path the trigger reads the report's request-page filter for the line's tableNo and returns every matching record, up to 1000 references; RecordCount reports the true total. On the legacy path, or when no filter is available, only the record Business Central passes is used.",
     "Single catch-all flow: one published flow per environment handles all configured reports. Branch on {{trigger_ReportId}}.",
+    "The trigger has its own configuration checks (at least one line, timeout of at least 1 second, report exists, table exists, report listed once), but 27.0.39 runs none of them in the editor or at publish. Only the publish-time 'at least one report line' check above is enforced. Use existing report and table numbers anyway: a line for a report that does not exist never fires.",
     "No recurring Job Queue entry is created on publish.",
     "Picker filter: Set report file name is ONLY offered in this trigger's flows. Respond to Webhook, Return SubFlow Output, Return PDF, Set document field values and Prevent page close are hidden."
   ]

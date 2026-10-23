@@ -32,7 +32,7 @@ None.
 
 | stage | severity | rule | message |
 |---|---|---|---|
-| editor | error | `reference` is not a `{{…}}` placeholder | – (step shown as not configured) |
+| editor | error | `reference` is empty (the Reference field is required) | `Please fill in the highlighted fields.` |
 
 There are no publish-time checks specific to this step. A Confirm dialog after this step gets a publish warning, because this step writes to the database.
 
@@ -40,7 +40,7 @@ There are no publish-time checks specific to this step. A Confirm dialog after t
 
 | condition | message |
 |---|---|
-| Reference does not resolve | `Reference "%1" cannot be resolved to a record.` |
+| `reference` is not a single `{{…}}` placeholder, or does not resolve | `Reference "%1" cannot be resolved to a record.` |
 | Record no longer exists | Business Central's "record does not exist" error |
 | OnDelete refuses (e.g. open entries) | Business Central's own error |
 

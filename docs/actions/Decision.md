@@ -90,8 +90,6 @@ None from the step itself. A condition that cannot be parsed evaluates to `false
 }
 ```
 
-(`GetBalance` and `GetLimit` stand for upstream steps. Use the slugs and output names that exist in your flow.)
-
 ## Gotchas
 
 - The expression is evaluated **after** substitution. If a substituted value contains operator or bracket characters (`= < > ~ & | ! ( ) ^ $`), the result can be wrong.
