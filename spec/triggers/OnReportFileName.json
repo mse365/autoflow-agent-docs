@@ -1,0 +1,152 @@
+{
+  "kind": "trigger",
+  "name": "OnReportFileName",
+  "id": 5564406,
+  "caption": "When a report file name is generated",
+  "category": "Reports",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "reports",
+      "type": "array",
+      "required": true,
+      "default": [],
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Report lines: [{ \"reportId\": <integer>, \"tableNo\": <integer, 0 = none> }]. The flow runs only for these reports. tableNo is the report's source table; when set, the matched records are exposed as the Rec_<reportId> reference output."
+    },
+    {
+      "key": "timeoutSec",
+      "type": "integer",
+      "required": false,
+      "default": 30,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "How long the flow may run before Business Central keeps the name it generated."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "ProposedFileName",
+      "type": "value",
+      "tableNo": null,
+      "when": "always; the file name Business Central generated"
+    },
+    {
+      "name": "ReportId",
+      "type": "value",
+      "tableNo": null,
+      "when": "always"
+    },
+    {
+      "name": "Extension",
+      "type": "value",
+      "tableNo": null,
+      "when": "always; file extension as passed by Business Central (verbatim)"
+    },
+    {
+      "name": "RecordCount",
+      "type": "value",
+      "tableNo": null,
+      "when": "always; number of records the output covers (true total, may exceed the emitted references), 0 when there is no source record"
+    },
+    {
+      "name": "Rec_<reportId>",
+      "type": "reference",
+      "tableNo": null,
+      "when": "one per reports entry with tableNo > 0; name e.g. Rec_1306, tableNo = reports[].tableNo. At run time it points at the first matched record; Rec_<reportId>[0..n] (max 1000) carry every matched record but are not declared in outputs."
+    }
+  ],
+  "rules": [
+    {
+      "id": "OnReportFileName.lines-required-publish",
+      "severity": "error",
+      "stage": "publish",
+      "check": "configuration.reports must contain at least one entry. Raised while registering the trigger, aborting the publish.",
+      "message": "The \"When a report file name is generated\" trigger requires at least one report line."
+    },
+    {
+      "id": "OnReportFileName.single-flow",
+      "severity": "error",
+      "stage": "publish",
+      "check": "Only one published flow per environment may use this trigger. Registrations of deleted or unpublished flows are cleaned up automatically.",
+      "message": "Only one published flow can use the \"When a report file name is generated\" trigger. It is already used by flow '%1'."
+    },
+    {
+      "id": "OnReportFileName.reports-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.reports must be a non-empty array.",
+      "message": "Configure at least one report line.",
+      "machine": {
+        "type": "required",
+        "key": "reports"
+      }
+    },
+    {
+      "id": "OnReportFileName.reports-type",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.reports must be an array of objects.",
+      "message": "Configure at least one report line.",
+      "machine": {
+        "type": "type",
+        "key": "reports",
+        "valueType": "array"
+      }
+    },
+    {
+      "id": "OnReportFileName.timeout-positive",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.timeoutSec must be at least 1.",
+      "message": "The timeout must be at least 1 second.",
+      "machine": {
+        "type": "range",
+        "key": "timeoutSec",
+        "min": 1
+      }
+    },
+    {
+      "id": "OnReportFileName.report-exists",
+      "severity": "error",
+      "stage": "editor",
+      "check": "Every reports[].reportId must be an existing report.",
+      "message": "Report %1 does not exist."
+    },
+    {
+      "id": "OnReportFileName.table-exists",
+      "severity": "error",
+      "stage": "editor",
+      "check": "reports[].tableNo, when non-zero, must be an existing table.",
+      "message": "Table %1 (line for report %2) does not exist."
+    },
+    {
+      "id": "OnReportFileName.report-unique",
+      "severity": "error",
+      "stage": "editor",
+      "check": "A reportId may appear on only one line.",
+      "message": "Report %1 is configured on more than one line."
+    },
+    {
+      "id": "OnReportFileName.runner-failed",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "If the flow fails, the execution is marked Error and Business Central keeps its own file name (the download does not fail).",
+      "message": "Report file-name flow failed before any body step could complete: %1"
+    }
+  ],
+  "notes": [
+    "Fires for any output type (PDF, Word, Excel, ...) from both file-name paths of Business Central: the platform path (Send to..., request-page Save/Download) and the legacy custom-layout path (Word-layout email, custom-layout SaveAs; no report payload there). If another extension already named the file on the platform path, the flow is not started.",
+    "Synchronous: the flow runs inside the user's request until a Set report file name step yields, the flow ends, fails or reaches timeoutSec. All step state is committed once at the end. Business Central removes unsupported characters from the returned name afterwards.",
+    "Re-entrancy guard: if the flow itself renders a report, that nested file-name event does not start the flow again.",
+    "Matched records: Business Central hands over only one positioned record; the trigger recovers the full set from the report's request-page filter (payload 'filterviews') for the line's tableNo, and falls back to the single record. At most 1000 references are emitted; RecordCount reports the true total.",
+    "Single catch-all flow: one published flow per environment handles all configured reports. Branch on {{trigger_ReportId}}.",
+    "No recurring Job Queue entry is created on publish.",
+    "Picker filter: Set report file name is ONLY offered in this trigger's flows. Respond to Webhook, Return SubFlow Output, Return PDF, Set document field values and Prevent page close are hidden."
+  ]
+}

@@ -1,0 +1,251 @@
+{
+  "kind": "action",
+  "name": "InsertRecord",
+  "id": 5564405,
+  "caption": "Insert Record",
+  "category": "Records",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "tableNo",
+      "type": "integer",
+      "required": true,
+      "default": 0,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Number of the table to insert into (e.g. 18 = Customer). Stored as a plain JSON integer."
+    },
+    {
+      "key": "triggers",
+      "type": "boolean",
+      "required": false,
+      "default": true,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Run Triggers. true (default when absent) = BC standard OnInsert(true): the table's OnInsert trigger and its subscribers run; false = OnInsert(false). Non-boolean values fall back to the default."
+    },
+    {
+      "key": "templateCode",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": 10,
+      "smart": "none",
+      "description": "Optional Configuration Template (RapidStart) code. Its field lines are validated into the new record before the values[] rows are applied, so values[] override template values for the same field. The template's Table ID must equal tableNo. Truncated to 10 characters. The editor always writes the key (empty string when unused)."
+    },
+    {
+      "key": "values",
+      "type": "array",
+      "required": false,
+      "default": [],
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Field assignments applied (in ascending lineNo) to the initialised record before Insert. Primary-key fields are allowed (and normally required, unless the table's OnInsert assigns them, e.g. from a number series). The editor pre-fills one row per primary-key field when a table is chosen.",
+      "items": [
+        {
+          "key": "lineNo",
+          "type": "integer",
+          "required": true,
+          "default": 0,
+          "enum": null,
+          "maxLength": null,
+          "smart": "none",
+          "description": "Row key and application order. Rows are applied in ascending lineNo. Must be unique within the array: rows are loaded into a keyed buffer, so two rows with the same lineNo (including two rows that omit it -> both 0) fail at runtime with a duplicate-record error. The editor writes 10000, 20000, ... in display order."
+        },
+        {
+          "key": "fieldNo",
+          "type": "integer",
+          "required": true,
+          "default": 0,
+          "enum": null,
+          "maxLength": null,
+          "smart": "none",
+          "description": "Field NUMBER (not name) of the target field in the configured table. Rows with fieldNo 0 are skipped. A number that does not exist in the table fails at runtime."
+        },
+        {
+          "key": "value",
+          "type": "string",
+          "required": false,
+          "default": "",
+          "enum": null,
+          "maxLength": null,
+          "smart": "text",
+          "description": "Value text. SmartFields ({{slug_output}}), SmartFormulas ([[...]]) and SmartControls are resolved first, then the text is converted to the field type (see inputFormat). Values longer than 2048 characters are supported (e.g. base64 for Blob/Media fields)."
+        },
+        {
+          "key": "validate",
+          "type": "boolean",
+          "required": false,
+          "default": true,
+          "enum": null,
+          "maxLength": null,
+          "smart": "none",
+          "description": "true (default when the key is absent) = assign via Validate so the field's OnValidate trigger runs (as if typed on the page); false = assign directly without validation."
+        },
+        {
+          "key": "inputFormat",
+          "type": "string",
+          "required": false,
+          "default": "",
+          "enum": null,
+          "maxLength": 30,
+          "smart": "none",
+          "description": "How the value text is parsed into the field type. Empty/absent = the session's regional format (locale-sensitive). \"9\" or \"xml\" (case-insensitive) = invariant XML notation (1000.00, 2026-07-16, true). Otherwise a date/time pattern built from the fixed-width tokens yyyy, yy, MM, dd, HH, mm, ss (each at most once) plus non-alphanumeric separators, e.g. yyyyMMdd, dd.MM.yyyy, yyyy-MM-dd HH:mm:ss. Patterns need a complete date (yyyy|yy + MM + dd) or at least HH+mm; ss needs mm, mm needs HH. Patterns are only allowed for Date, Time and DateTime fields. Omitted by the editor when empty."
+        }
+      ]
+    }
+  ],
+  "outputs": [
+    {
+      "name": "rec",
+      "type": "reference",
+      "tableNo": "<configuration.tableNo>",
+      "when": "always (after a successful insert)"
+    }
+  ],
+  "rules": [
+    {
+      "id": "InsertRecord.tableNo-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.tableNo must be present and a non-zero integer.",
+      "message": "",
+      "machine": {
+        "type": "required",
+        "key": "tableNo"
+      }
+    },
+    {
+      "id": "InsertRecord.tableNo-runtime",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "configuration.tableNo is read as an integer (missing, null, non-integer -> 0); 0 fails the step.",
+      "message": "Table No. is required for an Insert Record step.",
+      "machine": {
+        "type": "range",
+        "key": "tableNo",
+        "min": 1
+      }
+    },
+    {
+      "id": "InsertRecord.tableNo-type",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "tableNo must be a JSON number (integer); other JSON types are not reliably converted and are treated as 0.",
+      "message": "Table No. is required for an Insert Record step.",
+      "machine": {
+        "type": "type",
+        "key": "tableNo",
+        "valueType": "integer"
+      }
+    },
+    {
+      "id": "InsertRecord.template-exists",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "If templateCode is set, the Configuration Template must exist.",
+      "message": "Configuration Template \"%1\" does not exist."
+    },
+    {
+      "id": "InsertRecord.template-table",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "If templateCode is set, the template's Table ID must equal tableNo.",
+      "message": "Configuration Template \"%1\" is for table %2, but the step is configured for table %3."
+    },
+    {
+      "id": "InsertRecord.templateCode-maxLength",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "templateCode longer than 10 characters is silently truncated.",
+      "message": "",
+      "machine": {
+        "type": "maxLength",
+        "key": "templateCode",
+        "max": 10
+      }
+    },
+    {
+      "id": "InsertRecord.values-type",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "values must be a JSON array; any other type is ignored (no fields are set).",
+      "message": "",
+      "machine": {
+        "type": "type",
+        "key": "values",
+        "valueType": "array"
+      }
+    },
+    {
+      "id": "InsertRecord.triggers-type",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "triggers should be a JSON boolean; other types fall back to true.",
+      "message": "",
+      "machine": {
+        "type": "type",
+        "key": "triggers",
+        "valueType": "boolean"
+      }
+    },
+    {
+      "id": "InsertRecord.values-inputFormat-valid",
+      "severity": "error",
+      "stage": "editor",
+      "check": "every values[].inputFormat must be empty, '9', 'xml' (case-insensitive) or a structurally valid date/time pattern (tokens yyyy|yy, MM, dd, HH, mm, ss each at most once; only non-alphanumeric separators; date tokens all-or-nothing; ss requires mm, mm requires HH; at least a full date or HH+mm). One message per invalid row.",
+      "message": "\"%1\" is not a valid input format. Leave it empty for the regional format, enter 9 or xml for the invariant XML notation, or enter a date/time pattern such as yyyyMMdd (tokens yyyy, yy, MM, dd, HH, mm, ss plus separators)."
+    },
+    {
+      "id": "InsertRecord.values-inputFormat-runtime",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "Same input-format check, repeated when the row is converted.",
+      "message": "\"%1\" is not a valid input format. Leave it empty for the regional format, enter 9 or xml for the invariant XML notation, or enter a date/time pattern such as yyyyMMdd (tokens yyyy, yy, MM, dd, HH, mm, ss plus separators)."
+    },
+    {
+      "id": "InsertRecord.values-pattern-wrong-type",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "A date/time pattern inputFormat was used on a field that is not Date, Time or DateTime.",
+      "message": "Input format \"%1\" is a date/time pattern and can only be used for Date, Time, or DateTime fields. Field \"%2\" is of type %3."
+    },
+    {
+      "id": "InsertRecord.values-conversion",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The resolved value text cannot be converted to the field type (Integer, BigInteger, Decimal, Boolean, Date, Time, DateTime, Duration, Option, Guid, RecordId). Without inputFormat the first message is used, with an inputFormat the second.",
+      "message": "Cannot convert value \"%1\" to %2 for field \"%3\". | Cannot convert value \"%1\" to %2 for field \"%3\" using input format \"%4\"."
+    },
+    {
+      "id": "InsertRecord.values-lineNo-unique",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "values[].lineNo must be unique; duplicates (or several rows without lineNo) raise the platform's 'record already exists' error when the rows are loaded.",
+      "message": ""
+    },
+    {
+      "id": "InsertRecord.values-field-exists",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "Every non-zero values[].fieldNo must exist in the target table.",
+      "message": "Field %1 does not exist in table %2."
+    }
+  ],
+  "notes": [
+    "The table number lives in configuration.tableNo AND in outputs[0].tableNo; keep them identical (outputs are regenerated from configuration by the editor, but a hand-written file is used as-is).",
+    "Order of operations at runtime: open table -> Init -> apply template (validate each template field) -> apply values[] in lineNo order (Validate or direct assign per row) -> Insert(triggers) -> emit 'rec'.",
+    "Primary-key fields are written like any other field. If you omit them and the table's OnInsert does not assign them, the insert may fail with a duplicate key or create a record with an empty key.",
+    "Blob and Media fields: a bare {{token}} that resolves to binary content is streamed as-is; otherwise the resolved text is base64-decoded, and if that fails the text is stored as UTF-8. MediaSet is not supported.",
+    "RecordId fields can only be filled from a reference SmartField ({{slug_rec}}, {{FindX_results}}, dotted paths); literal text cannot be converted to a RecordId.",
+    "Option fields accept the ordinal number, the English member name, or the caption in the user's language.",
+    "Configuration values are resolved by the engine before the step runs: scalar SmartFields, SmartFormulas and SmartControls anywhere in the configuration text are substituted; reference SmartFields are preserved for the step to resolve.",
+    "Writing step: a Confirm dialog placed after this step (in document order) produces a publish warning, because Business Central cannot open a dialog once the flow has written to the database."
+  ]
+}

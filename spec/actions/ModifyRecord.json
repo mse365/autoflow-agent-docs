@@ -1,0 +1,267 @@
+{
+  "kind": "action",
+  "name": "ModifyRecord",
+  "id": 5564406,
+  "caption": "Modify Record",
+  "category": "Records",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "reference",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "record",
+      "description": "SmartField reference to the record, written as exactly one placeholder in double braces, e.g. \"{{FindCustomers_results}}\" or \"{{trigger_Rec}}\". It must resolve to a Reference (RecordId) in the flow context: an undotted name is looked up directly (an array reference such as {{FindX_results}} resolves to its first element, results[0]); a dotted path (e.g. {{trigger_Rec.Customer}}) is walked through the SmartField definitions. Surrounding whitespace is ignored. Bare names without braces are rejected."
+    },
+    {
+      "key": "tableNo",
+      "type": "integer",
+      "required": true,
+      "default": 0,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Table number of the referenced record. The editor derives it from the reference; at runtime the resolved record's table must equal this number."
+    },
+    {
+      "key": "triggers",
+      "type": "boolean",
+      "required": false,
+      "default": true,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Run Triggers. true (default when absent) = BC standard OnModify(true): the table's OnModify trigger and its subscribers run; false = OnModify(false). Non-boolean values fall back to the default."
+    },
+    {
+      "key": "values",
+      "type": "array",
+      "required": false,
+      "default": [],
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Field assignments applied (in ascending lineNo) to the fetched record before Modify. Only non-primary-key fields are allowed - use Rename Record to change key fields.",
+      "items": [
+        {
+          "key": "lineNo",
+          "type": "integer",
+          "required": true,
+          "default": 0,
+          "enum": null,
+          "maxLength": null,
+          "smart": "none",
+          "description": "Row key and application order. Rows are applied in ascending lineNo. Must be unique within the array: rows are loaded into a keyed buffer, so two rows with the same lineNo (including two rows that omit it -> both 0) fail at runtime with a duplicate-record error. The editor writes 10000, 20000, ... in display order."
+        },
+        {
+          "key": "fieldNo",
+          "type": "integer",
+          "required": true,
+          "default": 0,
+          "enum": null,
+          "maxLength": null,
+          "smart": "none",
+          "description": "Field NUMBER (not name) of the target field in the configured table. Rows with fieldNo 0 are skipped. A number that does not exist in the table fails at runtime."
+        },
+        {
+          "key": "value",
+          "type": "string",
+          "required": false,
+          "default": "",
+          "enum": null,
+          "maxLength": null,
+          "smart": "text",
+          "description": "Value text. SmartFields ({{slug_output}}), SmartFormulas ([[...]]) and SmartControls are resolved first, then the text is converted to the field type (see inputFormat). Values longer than 2048 characters are supported (e.g. base64 for Blob/Media fields)."
+        },
+        {
+          "key": "validate",
+          "type": "boolean",
+          "required": false,
+          "default": true,
+          "enum": null,
+          "maxLength": null,
+          "smart": "none",
+          "description": "true (default when the key is absent) = assign via Validate so the field's OnValidate trigger runs (as if typed on the page); false = assign directly without validation."
+        },
+        {
+          "key": "inputFormat",
+          "type": "string",
+          "required": false,
+          "default": "",
+          "enum": null,
+          "maxLength": 30,
+          "smart": "none",
+          "description": "How the value text is parsed into the field type. Empty/absent = the session's regional format (locale-sensitive). \"9\" or \"xml\" (case-insensitive) = invariant XML notation (1000.00, 2026-07-16, true). Otherwise a date/time pattern built from the fixed-width tokens yyyy, yy, MM, dd, HH, mm, ss (each at most once) plus non-alphanumeric separators, e.g. yyyyMMdd, dd.MM.yyyy, yyyy-MM-dd HH:mm:ss. Patterns need a complete date (yyyy|yy + MM + dd) or at least HH+mm; ss needs mm, mm needs HH. Patterns are only allowed for Date, Time and DateTime fields. Omitted by the editor when empty."
+        }
+      ]
+    }
+  ],
+  "outputs": [
+    {
+      "name": "rec",
+      "type": "reference",
+      "tableNo": "<configuration.tableNo>",
+      "when": "always (after a successful modify)"
+    }
+  ],
+  "rules": [
+    {
+      "id": "ModifyRecord.tableNo-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.tableNo must be present and a non-zero integer.",
+      "message": "",
+      "machine": {
+        "type": "required",
+        "key": "tableNo"
+      }
+    },
+    {
+      "id": "ModifyRecord.tableNo-runtime",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "configuration.tableNo is read as an integer (missing, null, non-integer -> 0); 0 fails the step.",
+      "message": "Table No. is required for a Modify Record step.",
+      "machine": {
+        "type": "range",
+        "key": "tableNo",
+        "min": 1
+      }
+    },
+    {
+      "id": "ModifyRecord.tableNo-type",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "tableNo must be a JSON number (integer); other JSON types are not reliably converted and are treated as 0.",
+      "message": "Table No. is required for a Modify Record step.",
+      "machine": {
+        "type": "type",
+        "key": "tableNo",
+        "valueType": "integer"
+      }
+    },
+    {
+      "id": "ModifyRecord.reference-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.reference must be present and non-empty.",
+      "message": "",
+      "machine": {
+        "type": "required",
+        "key": "reference"
+      }
+    },
+    {
+      "id": "ModifyRecord.reference-placeholder",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.reference must be a single SmartField placeholder: after trimming it starts with '{{', ends with '}}' and has a non-empty name inside.",
+      "message": "",
+      "machine": {
+        "type": "regex",
+        "key": "reference",
+        "pattern": "\\s*\\{\\{\\s*[^{}]*\\S[^{}]*\\s*\\}\\}\\s*"
+      }
+    },
+    {
+      "id": "ModifyRecord.reference-resolvable",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The reference must resolve to an existing record reference in the flow context at run time.",
+      "message": "Reference \"%1\" cannot be resolved to a record."
+    },
+    {
+      "id": "ModifyRecord.reference-table-match",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The table of the resolved record must equal configuration.tableNo.",
+      "message": "Reference resolves to table %1 but the step is configured for table %2."
+    },
+    {
+      "id": "ModifyRecord.values-type",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "values must be a JSON array; any other type is ignored.",
+      "message": "",
+      "machine": {
+        "type": "type",
+        "key": "values",
+        "valueType": "array"
+      }
+    },
+    {
+      "id": "ModifyRecord.triggers-type",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "triggers should be a JSON boolean; other types fall back to true.",
+      "message": "",
+      "machine": {
+        "type": "type",
+        "key": "triggers",
+        "valueType": "boolean"
+      }
+    },
+    {
+      "id": "ModifyRecord.values-inputFormat-valid",
+      "severity": "error",
+      "stage": "editor",
+      "check": "every values[].inputFormat must be empty, '9', 'xml' (case-insensitive) or a structurally valid date/time pattern (tokens yyyy|yy, MM, dd, HH, mm, ss each at most once; only non-alphanumeric separators; date tokens all-or-nothing; ss requires mm, mm requires HH; at least a full date or HH+mm). One message per invalid row.",
+      "message": "\"%1\" is not a valid input format. Leave it empty for the regional format, enter 9 or xml for the invariant XML notation, or enter a date/time pattern such as yyyyMMdd (tokens yyyy, yy, MM, dd, HH, mm, ss plus separators)."
+    },
+    {
+      "id": "ModifyRecord.values-inputFormat-runtime",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "Same input-format check, repeated when the row is converted.",
+      "message": "\"%1\" is not a valid input format. Leave it empty for the regional format, enter 9 or xml for the invariant XML notation, or enter a date/time pattern such as yyyyMMdd (tokens yyyy, yy, MM, dd, HH, mm, ss plus separators)."
+    },
+    {
+      "id": "ModifyRecord.values-pattern-wrong-type",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "A date/time pattern inputFormat was used on a field that is not Date, Time or DateTime.",
+      "message": "Input format \"%1\" is a date/time pattern and can only be used for Date, Time, or DateTime fields. Field \"%2\" is of type %3."
+    },
+    {
+      "id": "ModifyRecord.values-conversion",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The resolved value text cannot be converted to the field type (Integer, BigInteger, Decimal, Boolean, Date, Time, DateTime, Duration, Option, Guid, RecordId). Without inputFormat the first message is used, with an inputFormat the second.",
+      "message": "Cannot convert value \"%1\" to %2 for field \"%3\". | Cannot convert value \"%1\" to %2 for field \"%3\" using input format \"%4\"."
+    },
+    {
+      "id": "ModifyRecord.values-lineNo-unique",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "values[].lineNo must be unique; duplicates (or several rows without lineNo) raise the platform's 'record already exists' error when the rows are loaded.",
+      "message": ""
+    },
+    {
+      "id": "ModifyRecord.values-field-exists",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "Every non-zero values[].fieldNo must exist in the target table.",
+      "message": "Field %1 does not exist in table %2."
+    },
+    {
+      "id": "ModifyRecord.values-no-pk",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "values[] must not contain primary-key fields (the editor only offers non-key fields).",
+      "message": "Field \"%1\" is part of the primary key and cannot be modified. Use a Rename Record step instead."
+    }
+  ],
+  "notes": [
+    "The record is re-read from the database (Get) before the values are applied, so changes made by earlier steps are visible.",
+    "Output 'rec' points at the same record as the input reference; it is mainly useful to pass a typed reference on.",
+    "An empty values array is allowed: the record is then modified unchanged (Modify(triggers) still runs).",
+    "Primary-key fields in values[] fail the step at runtime; the editor's field lookup hides them.",
+    "See Insert Record for value conversion details (inputFormat, Option names, Blob/Media, RecordId fields).",
+    "Writing step: a Confirm dialog placed after this step (in document order) produces a publish warning, because Business Central cannot open a dialog once the flow has written to the database."
+  ]
+}

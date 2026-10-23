@@ -1,0 +1,177 @@
+{
+  "kind": "trigger",
+  "name": "Manual",
+  "id": 100,
+  "caption": "When manually started",
+  "category": "Base",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "tableNo",
+      "type": "integer",
+      "required": false,
+      "default": 0,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Optional table number the flow runs on. 0 (or absent) = standalone flow without a record. When set, every start needs exactly one record of this table, which becomes the Rec output."
+    },
+    {
+      "key": "openExecution",
+      "type": "integer",
+      "required": false,
+      "default": 0,
+      "enum": [
+        0,
+        1,
+        2
+      ],
+      "maxLength": null,
+      "smart": "none",
+      "description": "When the execution card opens after a run a user started and waited for: 0 = Never (a failed run is offered), 1 = On error, 2 = Always. Unknown values are treated as 0. Runs without a waiting user (from other flows, silent, background) never open it."
+    },
+    {
+      "key": "pages",
+      "type": "array",
+      "required": false,
+      "default": [],
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Array of page numbers (integers) on which the flow is offered through the \"Start Flow\" page action. Only pages that carry that action are allowed (see notes). 0 and duplicates are ignored. For a record-based flow each page must show records of tableNo."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "Rec",
+      "type": "reference",
+      "tableNo": null,
+      "when": "only when configuration.tableNo is non-zero; tableNo = configuration.tableNo"
+    }
+  ],
+  "rules": [
+    {
+      "id": "Manual.table-exists",
+      "severity": "error",
+      "stage": "publish",
+      "check": "If configuration.tableNo is non-zero, the table must exist in the environment. Hard stop at publish (trigger validation); also reported by the editor.",
+      "message": "The table %1 the flow runs on does not exist."
+    },
+    {
+      "id": "Manual.page-supported",
+      "severity": "error",
+      "stage": "publish",
+      "check": "Every page in configuration.pages must be one of the pages that carry the \"Start Flow\" action. Hard stop at publish; also shown live in the config canvas status line.",
+      "message": "The page %1 cannot show the \"Start Flow\" action."
+    },
+    {
+      "id": "Manual.page-table-match",
+      "severity": "error",
+      "stage": "publish",
+      "check": "For a record-based flow (tableNo <> 0), every assigned page must show records of that table. Standalone flows (tableNo = 0) fit every supported page.",
+      "message": "The page %1 shows records of the table %2, but the flow runs on the table %3."
+    },
+    {
+      "id": "Manual.code-required",
+      "severity": "error",
+      "stage": "publish",
+      "check": "The flow header must have a Code (not part of the definition JSON). Checked before the licensing call.",
+      "message": "Enter a Code on the flow card before publishing this flow. Manual flows are started from other flows and from extensions by their Code."
+    },
+    {
+      "id": "Manual.tableNo-type",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.tableNo, if present, should be an integer.",
+      "message": "(no message; non-numeric values are read as 0)",
+      "machine": {
+        "type": "type",
+        "key": "tableNo",
+        "valueType": "integer"
+      }
+    },
+    {
+      "id": "Manual.openExecution-enum",
+      "severity": "info",
+      "stage": "editor",
+      "check": "configuration.openExecution should be 0, 1 or 2; any other value silently behaves like 0 (Never).",
+      "message": "(no message)",
+      "machine": {
+        "type": "enum",
+        "key": "openExecution",
+        "values": [
+          0,
+          1,
+          2
+        ]
+      }
+    },
+    {
+      "id": "Manual.pages-type",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.pages, if present, must be an array of integers.",
+      "message": "(no message; a non-array is ignored)",
+      "machine": {
+        "type": "type",
+        "key": "pages",
+        "valueType": "array"
+      }
+    },
+    {
+      "id": "Manual.run-not-published",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "Starting the flow (API, Start flow step, page action) requires a published version.",
+      "message": "The flow %1 is not active. Publish it before starting it."
+    },
+    {
+      "id": "Manual.run-not-manual",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "Only flows whose published trigger is Manual can be started by Code.",
+      "message": "The flow %1 cannot be started this way, because it is not started by the trigger \"When manually started\"."
+    },
+    {
+      "id": "Manual.run-needs-record",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "A record-based flow must be started with a record.",
+      "message": "The flow %1 runs on a record of the table %2. Pass a record to start it."
+    },
+    {
+      "id": "Manual.run-no-record-expected",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "A standalone flow must be started without a record.",
+      "message": "The flow %1 does not run on a record. Start it without one."
+    },
+    {
+      "id": "Manual.run-wrong-table",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The record passed must be of configuration.tableNo.",
+      "message": "The flow %1 runs on records of the table %2, not of the table %3."
+    },
+    {
+      "id": "Manual.run-unsaved-record",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "Started from a card page, the record must already be saved.",
+      "message": "Save the record before starting a flow on it."
+    }
+  ],
+  "notes": [
+    "Execution is asynchronous: each start creates one pending execution (one per record for a record-based flow) plus its own Job Queue entry, queued in the caller's transaction. Interactive starts (flow card, Flow Workspace, page action) then commit and follow the run in a wait dialog. No recurring Job Queue entry is created on publish.",
+    "Integration callers choose a run mode: WaitDialog, Silent, FireAndForget (default for the external contract; queues in the caller's transaction, nothing is committed) or Inline (commits, then runs the flow to its end in the caller's session without the Job Queue; a step that defers itself, e.g. Sleep, fails the flow in this mode with 'The flow stopped before its end and cannot continue when it runs in this session.').",
+    "Asynchronous runs commit after every step (no trigger in AutoFlow currently opts into one-transaction runs).",
+    "Starting a record-based flow from the flow card shows a filter page on the table and starts one execution per matching record (confirmation when more than one; message 'No records match the filters, so the flow was not started.' when none).",
+    "Pages that carry the \"Start Flow\" action (card + list of each): Sales Quote 41 / Sales Quotes 9300, Sales Order 42 / Sales Order List 9305, Sales Invoice 43 / Sales Invoice List 9301, Sales Credit Memo 44 / Sales Credit Memos 9302, Sales Return Order 6630 / Sales Return Order List 9304, Blanket Sales Order 507 / Blanket Sales Orders 9303, Posted Sales Invoice 132 / Posted Sales Invoices 143, Posted Sales Credit Memo 134 / Posted Sales Credit Memos 144, Posted Sales Shipment 130 / Posted Sales Shipments 142, Purchase Quote 49 / Purchase Quotes 9306, Purchase Order 50 / Purchase Order List 9307, Purchase Invoice 51 / Purchase Invoices 9308, Purchase Credit Memo 52 / Purchase Credit Memos 9309, Purchase Return Order 6640 / Purchase Return Order List 9311, Blanket Purchase Order 509 / Blanket Purchase Orders 9310, Posted Purchase Invoice 138 / Posted Purchase Invoices 146, Posted Purchase Credit Memo 140 / Posted Purchase Credit Memos 147, Posted Purchase Receipt 136 / Posted Purchase Receipts 145, Reminder 434 / Reminder List 436, Issued Reminder 438 / Issued Reminder List 440, Customer Card 21 / Customer List 22, Vendor Card 26 / Vendor List 27, Item Card 30 / Item List 31, Contact Card 5050 / Contact List 5052. Page numbers are the standard Business Central ones; extensions may register additional pages. The validator in this repo cannot know extension-registered pages.",
+    "Page assignments take effect on publish. A page shows the action only while an active (published, Manual-trigger) flow is assigned to it and the flow's table fits the page.",
+    "The Step Selector offers each published Manual flow as its own tile (via the Start flow step); the generic Start flow action itself is hidden from the picker.",
+    "Picker filters that depend on the trigger: Respond to Webhook, Return SubFlow Output, Return PDF, Set report file name, Set document field values and Prevent page close are hidden in a Manual flow (they only apply to their own triggers).",
+    "The trigger step slug defaults to 'trigger', so the record is referenced as {{trigger_Rec}}. The config canvas lets the user rename the slug; references then use the new slug."
+  ]
+}

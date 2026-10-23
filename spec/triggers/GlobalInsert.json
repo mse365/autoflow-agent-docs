@@ -1,0 +1,106 @@
+{
+  "kind": "trigger",
+  "name": "GlobalInsert",
+  "id": 5564402,
+  "caption": "When a record is inserted",
+  "category": "Records",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "tableNo",
+      "type": "integer",
+      "required": true,
+      "default": 0,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Table whose inserts start the flow. Stored on the trigger registration at publish; 0 means the flow never fires."
+    },
+    {
+      "key": "filters",
+      "type": "array",
+      "required": false,
+      "default": [],
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Field filters the inserted record must match: [{ \"fieldNo\": <integer>, \"filter\": \"<BC filter expression>\" }]. Rows with fieldNo 0 are skipped; a second row on the same field overwrites the first. The filter text is applied literally with standard Business Central filter syntax (truncated to 250 characters); placeholders are not resolved. Empty array = every insert fires."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "Rec",
+      "type": "reference",
+      "tableNo": null,
+      "when": "always; type 'reference' with tableNo = configuration.tableNo when tableNo > 0, otherwise declared as type 'value'"
+    }
+  ],
+  "rules": [
+    {
+      "id": "GlobalInsert.tableNo-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.tableNo must be set (the config canvas marks the table as required). There is NO publish-time check: a flow with tableNo 0 or a non-existent table publishes and simply never fires.",
+      "message": "(no message)",
+      "machine": {
+        "type": "required",
+        "key": "tableNo"
+      }
+    },
+    {
+      "id": "GlobalInsert.tableNo-type",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.tableNo must be an integer.",
+      "message": "(no message)",
+      "machine": {
+        "type": "type",
+        "key": "tableNo",
+        "valueType": "integer"
+      }
+    },
+    {
+      "id": "GlobalInsert.tableNo-positive",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.tableNo must be greater than 0 to ever fire.",
+      "message": "(no message)",
+      "machine": {
+        "type": "range",
+        "key": "tableNo",
+        "min": 1
+      }
+    },
+    {
+      "id": "GlobalInsert.filters-type",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.filters, if present, must be an array of {fieldNo, filter} objects.",
+      "message": "(no message; non-object entries are ignored)",
+      "machine": {
+        "type": "type",
+        "key": "filters",
+        "valueType": "array"
+      }
+    },
+    {
+      "id": "GlobalInsert.filter-invalid",
+      "severity": "info",
+      "stage": "runtime",
+      "check": "A filter expression that cannot be applied (bad syntax, unknown field) does not raise an error; the record is treated as not matching and the flow does not start. The user's insert is never blocked.",
+      "message": "(no message)"
+    }
+  ],
+  "notes": [
+    "Fires on every insert of the table in any session (UI, API, background, posting) as long as the insert runs triggers that reach Business Central's global database events.",
+    "Execution is asynchronous: the insert creates a pending execution inside the inserting transaction (it disappears if that transaction rolls back). A recurring Job Queue entry created on publish (every 5 minutes) picks up pending executions and queues one Job Queue entry per execution. Expect up to ~5 minutes latency.",
+    "Asynchronous runs commit after every step (no trigger in AutoFlow currently opts into one-transaction runs).",
+    "At insert time an auto-increment primary key is not final yet; the engine re-resolves the Rec reference by SystemId when the flow runs, so Rec points at the stored record.",
+    "The editor's ValidateConfiguration always reports OK for this trigger; no OnValidateFlowTrigger rule exists. The rules above are recommendations derived from runtime behaviour.",
+    "Step-level rule imposed by this trigger: a Confirm dialog step gets a publish warning ('The confirm dialog '%1' runs inside the record change that started the flow. Business Central does not open dialogs there, so when a user triggers the flow it fails at this step. It only works when the flow runs in the background, where the answer under 'Without a user interface' applies.').",
+    "Picker filters: Respond to Webhook, Return SubFlow Output, Return PDF, Set report file name, Set document field values and Prevent page close are hidden.",
+    "The filter column is a SmartText column in the config canvas, but there are no upstream outputs to reference and the runtime applies the text as a plain filter expression."
+  ]
+}

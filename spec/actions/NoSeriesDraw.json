@@ -1,0 +1,92 @@
+{
+  "kind": "action",
+  "name": "NoSeriesDraw",
+  "id": 5564554,
+  "caption": "Draw number from number series",
+  "category": "Records",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "noSeriesCode",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": 20,
+      "smart": "text",
+      "description": "Code of the No. Series to draw from (e.g. 'S-ORD'), or a SmartField that yields it. Truncated to 20 characters."
+    },
+    {
+      "key": "usageDate",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "Date that selects the No. Series Line (Starting Date). Empty = work date. A literal date or a SmartField; parsed with the session's regional date format (not invariant)."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "Number",
+      "type": "value",
+      "tableNo": null,
+      "when": "always - the drawn number"
+    }
+  ],
+  "rules": [
+    {
+      "id": "NoSeriesDraw.noSeriesCode-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.noSeriesCode must be non-empty (a SmartField placeholder counts).",
+      "message": "Select the number series to draw the next number from.",
+      "machine": {
+        "type": "required",
+        "key": "noSeriesCode"
+      }
+    },
+    {
+      "id": "NoSeriesDraw.noSeriesCode-maxLength",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "Codes longer than 20 characters are truncated.",
+      "message": "",
+      "machine": {
+        "type": "maxLength",
+        "key": "noSeriesCode",
+        "max": 20
+      }
+    },
+    {
+      "id": "NoSeriesDraw.usageDate-valid",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "A non-empty usageDate (after SmartField resolution) must parse as a date in the session's format.",
+      "message": "The usage date \"%1\" is not a valid date."
+    },
+    {
+      "id": "NoSeriesDraw.series-exists",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The No. Series must exist.",
+      "message": "The number series %1 does not exist."
+    },
+    {
+      "id": "NoSeriesDraw.series-drawable",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The series must allow drawing for the date (default numbers, a series line valid for the date, not exhausted).",
+      "message": ""
+    }
+  ],
+  "notes": [
+    "The output name is 'Number' (capital N) - reference it as {{slug_Number}}.",
+    "The number is consumed: the series' last-used number is advanced when the step runs, so each run yields a new number.",
+    "usageDate is parsed with the regional date format of the session that runs the flow (there is no invariant/9 option here). Leave it empty unless the series has date-dependent lines.",
+    "Writing step: a Confirm dialog placed after this step (in document order) produces a publish warning, because Business Central cannot open a dialog once the flow has written to the database."
+  ]
+}

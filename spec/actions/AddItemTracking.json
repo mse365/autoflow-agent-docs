@@ -1,0 +1,169 @@
+{
+  "kind": "action",
+  "name": "AddItemTracking",
+  "id": 5564417,
+  "caption": "Add Item Tracking",
+  "category": "Records",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "reference",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "record",
+      "description": "SmartField reference to the record, written as exactly one placeholder in double braces, e.g. \"{{FindCustomers_results}}\" or \"{{trigger_Rec}}\". It must resolve to a Reference (RecordId) in the flow context: an undotted name is looked up directly (an array reference such as {{FindX_results}} resolves to its first element, results[0]); a dotted path (e.g. {{trigger_Rec.Customer}}) is walked through the SmartField definitions. Surrounding whitespace is ignored. Bare names without braces are rejected. Must point at a Sales Line (table 37) or Purchase Line (table 39)."
+    },
+    {
+      "key": "trackingType",
+      "type": "integer",
+      "required": true,
+      "default": 0,
+      "enum": [
+        0,
+        1,
+        2
+      ],
+      "maxLength": null,
+      "smart": "none",
+      "description": "0 = Serial No., 1 = Lot No., 2 = Package No."
+    },
+    {
+      "key": "value",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "The serial / lot / package number to assign - this is the key the step READS at runtime. SmartFields, SmartFormulas and SmartControls are resolved by the engine before the step runs. Truncated to the length of the target field (50 characters in standard BC)."
+    },
+    {
+      "key": "trackingValue",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "The same number as written by the visual editor. The runtime does NOT read this key - see notes. Write both 'value' and 'trackingValue' with the same content."
+    },
+    {
+      "key": "quantity",
+      "type": "string",
+      "required": false,
+      "default": "1",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "Quantity to track, in the line's unit of measure, stored as TEXT and parsed in invariant format ('2', '2.5'). Ignored for serial numbers (always 1). For lot/package numbers it must be > 0 (absent/unparseable -> 0 -> error). May hold a SmartField/SmartFormula resolved before the step runs."
+    }
+  ],
+  "outputs": [],
+  "rules": [
+    {
+      "id": "AddItemTracking.reference-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.reference must be present and non-empty.",
+      "message": "Select the sales or purchase line to add item tracking to.",
+      "machine": {
+        "type": "required",
+        "key": "reference"
+      }
+    },
+    {
+      "id": "AddItemTracking.reference-placeholder",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.reference must be a single SmartField placeholder ({{name}}).",
+      "message": "Select the sales or purchase line to add item tracking to.",
+      "machine": {
+        "type": "regex",
+        "key": "reference",
+        "pattern": "\\s*\\{\\{\\s*[^{}]*\\S[^{}]*\\s*\\}\\}\\s*"
+      }
+    },
+    {
+      "id": "AddItemTracking.value-required-editor",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.value must be non-empty (the editor check reads 'value', not 'trackingValue').",
+      "message": "Enter the serial, lot or package number to assign.",
+      "machine": {
+        "type": "required",
+        "key": "value"
+      }
+    },
+    {
+      "id": "AddItemTracking.trackingType-enum",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "trackingType must be 0, 1 or 2. Other values are not rejected but no tracking number is set on the created entry.",
+      "message": "",
+      "machine": {
+        "type": "enum",
+        "key": "trackingType",
+        "values": [
+          0,
+          1,
+          2
+        ]
+      }
+    },
+    {
+      "id": "AddItemTracking.reference-resolvable",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The reference must resolve to a record.",
+      "message": "Reference \"%1\" cannot be resolved to a record."
+    },
+    {
+      "id": "AddItemTracking.supported-table",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The referenced record must be a Sales Line or a Purchase Line.",
+      "message": "The Add Item Tracking step must reference a Sales Line or a Purchase Line, but the reference points to \"%1\"."
+    },
+    {
+      "id": "AddItemTracking.value-required-runtime",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The resolved tracking value must not be empty. %1 is 'serial number', 'lot number' or 'package number'.",
+      "message": "Enter the %1 to assign."
+    },
+    {
+      "id": "AddItemTracking.quantity-positive",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "For lot and package numbers, quantity (parsed invariantly) must be greater than zero.",
+      "message": "Enter a quantity greater than zero."
+    },
+    {
+      "id": "AddItemTracking.item-tracked",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The line's item must have an Item Tracking Code.",
+      "message": "Item %1 is not set up for item tracking, so no serial, lot or package number can be assigned."
+    },
+    {
+      "id": "AddItemTracking.no-sales-drop-shipment",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "A drop-shipment sales line cannot be tracked directly.",
+      "message": "This sales line is a drop shipment. For drop shipments, add the item tracking on the linked purchase order line instead – it is mirrored to the sales side automatically."
+    }
+  ],
+  "notes": [
+    "KEY MISMATCH: the visual editor stores the tracking number under 'trackingValue', but both the runtime and the editor validation read 'value'. A step configured only in the editor therefore fails with 'Enter the serial number to assign.' (or lot/package). In hand-written JSON always set 'value'; also set 'trackingValue' to the same text so the editor shows it.",
+    "Direction is derived from the line: sales orders/invoices/quotes etc. are outbound (negative), sales return orders and credit memos inbound; purchase documents are inbound except purchase return orders and credit memos. Item, variant, location, qty. per unit of measure and shipment / expected receipt date are taken from the line.",
+    "If the line has an existing reservation without serial number, the tracking is attached to it; otherwise a surplus reservation entry is created. For a drop-shipment purchase line the tracking is mirrored to the linked sales line.",
+    "If the line's No. is not an existing item (e.g. a G/L account line), the step does nothing and succeeds silently.",
+    "No outputs.",
+    "Writing step: a Confirm dialog placed after this step (in document order) produces a publish warning, because Business Central cannot open a dialog once the flow has written to the database."
+  ]
+}

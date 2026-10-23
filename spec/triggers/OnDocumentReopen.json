@@ -1,0 +1,122 @@
+{
+  "kind": "trigger",
+  "name": "OnDocumentReopen",
+  "id": 5564409,
+  "caption": "When a document is reopened (interactive)",
+  "category": "Interactive",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "tableNo",
+      "type": "integer",
+      "required": true,
+      "default": 0,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Document table: Sales Header 36 or Purchase Header 38 (the releasable documents). Extensions can register more tables. Known supported values: 36, 38. Extensions can register more, so other values are not rejected by this reference."
+    },
+    {
+      "key": "guiOnly",
+      "type": "boolean",
+      "required": false,
+      "default": true,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Run only in interactive client sessions."
+    },
+    {
+      "key": "timeoutSec",
+      "type": "integer",
+      "required": false,
+      "default": 30,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Maximum run time. The editor replaces values <= 0 with 30."
+    },
+    {
+      "key": "filters",
+      "type": "array",
+      "required": false,
+      "default": [],
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Field filters on the document header: [{ \"fieldNo\": <integer>, \"filter\": \"<BC filter expression>\" }]. Applied literally (max 250 chars, no placeholders)."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "Rec",
+      "type": "reference",
+      "tableNo": null,
+      "when": "always; tableNo = configuration.tableNo (declared as 'value' when tableNo is 0). Carries the status from before the reopen."
+    }
+  ],
+  "rules": [
+    {
+      "id": "OnDocumentReopen.table-required",
+      "severity": "error",
+      "stage": "publish",
+      "check": "configuration.tableNo must be > 0. Hard stop at publish.",
+      "message": "Pick the document table the flow should watch.",
+      "machine": {
+        "type": "range",
+        "key": "tableNo",
+        "min": 1
+      }
+    },
+    {
+      "id": "OnDocumentReopen.table-supported",
+      "severity": "error",
+      "stage": "publish",
+      "check": "configuration.tableNo must be a supported reopenable document table. Hard stop at publish; also shown live in the canvas status line.",
+      "message": "Table %1 is not one of the supported reopenable document tables."
+    },
+    {
+      "id": "OnDocumentReopen.guiOnly-type",
+      "severity": "error",
+      "stage": "editor",
+      "check": "guiOnly must be a boolean.",
+      "message": "(no message)",
+      "machine": {
+        "type": "type",
+        "key": "guiOnly",
+        "valueType": "boolean"
+      }
+    },
+    {
+      "id": "OnDocumentReopen.timeout-positive",
+      "severity": "warning",
+      "stage": "editor",
+      "check": "timeoutSec should be > 0 (the editor writes 30 for values <= 0).",
+      "message": "(no message)",
+      "machine": {
+        "type": "range",
+        "key": "timeoutSec",
+        "min": 1
+      }
+    },
+    {
+      "id": "OnDocumentReopen.flow-error-blocks",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "Any error in the flow (e.g. an Error step) prevents the reopen and shows the flow's message.",
+      "message": "(the flow's own error message)"
+    }
+  ],
+  "notes": [
+    "Fires on the MANUAL reopen of a Sales or Purchase document, including documents with status Pending Approval. Previews never fire it.",
+    "Synchronous and atomic: runs inline in the user's transaction, without commits. An error prevents the reopen. A Set document field values step adjusts the header; with 'Skip standard processing' the header is saved with the flow's values and Business Central's own reopen (Status := Open) is skipped.",
+    "Pending Approval: Business Central normally refuses to reopen such a document. When a reopen flow ran for it, that block is lifted - unless Business Central's own approval workflow still has open approval entries for the document.",
+    "Business Central version dependency: for Purchase documents on BC24-BC27 the flow runs one event later (after Business Central's Pending Approval check), so on those versions a Pending Approval purchase document cannot be reopened through the flow. Sales documents are not affected.",
+    "A Confirm dialog step can ask the user; the reopen waits for the answer.",
+    "Re-entrancy guard: a reopen that the running flow itself performs does not start the flow again.",
+    "No recurring Job Queue entry; the registration is keyed by tableNo.",
+    "Picker filter: Set document field values is offered. Respond to Webhook, Return SubFlow Output, Return PDF, Set report file name and Prevent page close are hidden."
+  ]
+}

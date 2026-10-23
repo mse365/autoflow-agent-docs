@@ -1,0 +1,257 @@
+{
+  "kind": "action",
+  "name": "SendEmail",
+  "id": 5564413,
+  "caption": "Send Email",
+  "category": "Web",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "accountId",
+      "type": "guid",
+      "required": true,
+      "default": "00000000-0000-0000-0000-000000000000",
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "ID of the Business Central email account to send from (Email Accounts page), as a GUID string without braces. Environment-specific: re-pick it after importing into another environment."
+    },
+    {
+      "key": "accountConnector",
+      "type": "integer",
+      "required": true,
+      "default": 0,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Ordinal of Business Central's 'Email Connector' enum for the account (which connectors exist depends on the installed email apps). Unknown ordinals fall back to the enum's default value."
+    },
+    {
+      "key": "accountCaption",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": 250,
+      "smart": "none",
+      "description": "Display text only, '<account name> (<email address>)'. Not read at run time."
+    },
+    {
+      "key": "to",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "Recipient addresses separated by ';' or ','. SmartFields resolved at run time."
+    },
+    {
+      "key": "cc",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "CC recipients, ';' or ',' separated."
+    },
+    {
+      "key": "bcc",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "BCC recipients, ';' or ',' separated."
+    },
+    {
+      "key": "subject",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "Subject line. Required in the dialog; not checked at run time."
+    },
+    {
+      "key": "body",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "HTML body (rich-text editor). SmartFields resolved at run time. Always sent as HTML."
+    },
+    {
+      "key": "attachments",
+      "type": "array",
+      "required": false,
+      "default": [],
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Array of attachment rows {type, reference, filename, contentBase64}. type 'Reference' (default when empty/unknown; compared case-insensitively): 'reference' is a {{selector}} to an AutoFlow Document reference, an array of them, an iterator over them, or 'name[N]' for one array element; each document becomes one attachment. type 'Inline': 'filename' + 'contentBase64' (both SmartText); the content type is guessed from the file extension."
+    },
+    {
+      "key": "attachments[].type",
+      "type": "string",
+      "required": false,
+      "default": "Reference",
+      "enum": ["Reference", "Inline"],
+      "maxLength": null,
+      "smart": "none",
+      "description": "Row type. Stored values are 'Reference' and 'Inline'; matched case-insensitively at run time, anything else is treated as Reference."
+    },
+    {
+      "key": "attachments[].reference",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "record",
+      "description": "Reference rows: {{selector}} pointing to AutoFlow Document reference(s) (table 5564415). Ignored for Inline rows."
+    },
+    {
+      "key": "attachments[].filename",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": 250,
+      "smart": "text",
+      "description": "Inline rows: file name incl. extension. Ignored for Reference rows (the document's Name is used, or 'document_<ID>' when empty)."
+    },
+    {
+      "key": "attachments[].contentBase64",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "Inline rows: base64-encoded file content."
+    }
+  ],
+  "outputs": [
+    { "name": "sentEmailId", "type": "value", "tableNo": null, "when": "always" }
+  ],
+  "rules": [
+    {
+      "id": "SendEmail.to-required-editor",
+      "severity": "error",
+      "stage": "editor",
+      "check": "'To' is a required field in the configuration dialog",
+      "message": "(no dedicated message; field marked required)",
+      "machine": { "type": "required", "key": "to" }
+    },
+    {
+      "id": "SendEmail.subject-required-editor",
+      "severity": "error",
+      "stage": "editor",
+      "check": "'Subject' is a required field in the configuration dialog",
+      "message": "(no dedicated message; field marked required)",
+      "machine": { "type": "required", "key": "subject" }
+    },
+    {
+      "id": "SendEmail.attachments-type",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.attachments, if present, must be an array of objects (a non-object row fails the editor validation)",
+      "message": "(no message text; the step is reported as invalid)",
+      "machine": { "type": "type", "key": "attachments", "valueType": "array" }
+    },
+    {
+      "id": "SendEmail.inline-needs-filename-and-content",
+      "severity": "error",
+      "stage": "editor",
+      "check": "Each Inline row must have non-empty filename and contentBase64 (checked when the dialog is saved, and again at run time)",
+      "message": "Inline attachment is missing a filename or content."
+    },
+    {
+      "id": "SendEmail.reference-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "Each Reference row must have a non-empty reference (checked when the dialog is saved, and again at run time)",
+      "message": "Attachment reference selector is empty."
+    },
+    {
+      "id": "SendEmail.reference-braces",
+      "severity": "error",
+      "stage": "editor",
+      "check": "A Reference row's selector must use {{name}} notation (dialog save, live status line, run time)",
+      "message": "Attachment reference selector '%1' must use the SmartField placeholder notation, e.g. '{{name}}'."
+    },
+    {
+      "id": "SendEmail.reference-found",
+      "severity": "error",
+      "stage": "editor",
+      "check": "A Reference row's selector (with a trailing [N] stripped) must resolve to an output available at this step (dialog save, live status line); at run time it must exist in the run context / array must have element N",
+      "message": "Attachment reference selector \"%1\" was not found in the available outputs."
+    },
+    {
+      "id": "SendEmail.reference-is-reference",
+      "severity": "error",
+      "stage": "editor",
+      "check": "A Reference row's selector must point to a record reference or an array of references, not a value (dialog save, live status line, run time)",
+      "message": "Attachment reference selector \"%1\" must point at a record reference (or array of references)."
+    },
+    {
+      "id": "SendEmail.reference-document-table",
+      "severity": "error",
+      "stage": "editor",
+      "check": "A Reference row's selector must point to records of the AutoFlow Document table (5564415) (dialog save, live status line, run time)",
+      "message": "Attachment reference selector \"%1\" must point at a record from the AutoFlow Document table; got table %2."
+    },
+    {
+      "id": "SendEmail.recipient-required",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "After resolution (and after a test-mode redirect) at least one of to/cc/bcc must be non-empty",
+      "message": "At least one recipient (To, CC, or BCC) is required."
+    },
+    {
+      "id": "SendEmail.address-valid",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "Every resolved address in to/cc/bcc must pass Business Central's email address check",
+      "message": "Invalid email address: %1"
+    },
+    {
+      "id": "SendEmail.account-active",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "accountId must be a non-empty GUID of an email account registered for accountConnector",
+      "message": "The configured email account is no longer registered or active.",
+      "machine": { "type": "regex", "key": "accountId", "pattern": "\\{?[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}\\}?" }
+    },
+    {
+      "id": "SendEmail.document-exists",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "Each referenced AutoFlow Document must still exist",
+      "message": "Document record %1 referenced by selector \"%2\" no longer exists."
+    },
+    {
+      "id": "SendEmail.inline-base64",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "Inline contentBase64 must be valid base64",
+      "message": "Inline attachment content is not valid base64-encoded data."
+    }
+  ],
+  "notes": [
+    "No publish-time check exists for this step. The attachment checks run when the step is saved in the configuration dialog (and as a live status line), and again at run time.",
+    "Test mode: when AutoFlow Setup has test mode active with test e-mail recipients, all To/CC/BCC recipients are replaced by the test recipients (in To; CC and BCC cleared) and the execution log notes the redirect.",
+    "sentEmailId is the email message GUID (no braces), the same identifier Business Central shows as the Sent Email message id.",
+    "accountId/accountConnector are environment-specific. A definition moved to another environment must have them re-selected, otherwise the step fails at run time.",
+    "Inline attachment content is decoded from base64 into text before being written as the attachment; byte-exact transfer of binary files (PDF, images) via Inline rows is not guaranteed. For binary files prefer a Reference row to an AutoFlow Document (e.g. from Create PDF or Azure Blob: Get file). This is inferred from the code path, not documented behaviour.",
+    "Sending uses Business Central's standard email module (Email.Send); a send failure raises the platform's error."
+  ]
+}

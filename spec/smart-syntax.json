@@ -1,0 +1,283 @@
+{
+  "$comment": "Machine-readable companion to docs/references-and-smart-fields.md. Regexes are Python 're' syntax. All token delimiters are literal; the first closing delimiter after an opener ends the token; an opener with no closer is literal text.",
+  "version": 1,
+
+  "tokens": {
+    "smartField": {
+      "open": "{{",
+      "close": "}}",
+      "regex": "\\{\\{(?P<body>(?:(?!\\}\\}).){1,250}?)\\}\\}",
+      "bodyRegex": "^(?P<path>[^;]+?)(?:;(?P<format>.*))?$",
+      "pathRegex": "^(?P<root>[^.\\[\\]]+(?:\\[\\d+\\])?)(?P<segments>(?:\\.[^.\\[\\]]+(?:\\[\\d+\\])?)*)$",
+      "stepOutputRootRegex": "^(?P<slug>[A-Za-z][A-Za-z0-9-]{0,19})_(?P<output>.+?)(?:\\[(?P<index>\\d+)\\])?$",
+      "maxBodyLength": 250,
+      "bodyTrimmed": false,
+      "pathSeparator": ".",
+      "formatSeparator": ";",
+      "arrayIndexBase": 0,
+      "notes": [
+        "The body is not trimmed: {{ x }} looks up ' x '.",
+        "A BC field name that contains '.' can't be written literally. Use the normalised name: lower-case, keeping only [a-z0-9] (\"Sell-to Customer No.\" -> selltocustomerno).",
+        "Intermediate path segments must be 'reference' SmartField definitions. Only the last segment may fall back to a BC field name."
+      ]
+    },
+    "smartFormula": {
+      "open": "[[",
+      "close": "]]",
+      "regex": "\\[\\[(?P<body>(?:(?!\\]\\]).){1,250}?)\\]\\]",
+      "formatSeparator": ";",
+      "maxBodyLength": 250
+    },
+    "smartDate": {
+      "open": "[@",
+      "close": "@]",
+      "regex": "\\[@(?P<body>.*?)@\\]",
+      "formatSeparator": ";",
+      "notes": ["The ';' that separates the format is found at top level, ignoring text inside {{...}}, inside double quotes and inside parentheses."]
+    },
+    "smartControl": {
+      "open": "{#",
+      "close": "#}",
+      "regex": "\\{#\\s*(?P<tag>if|elseif|else|endif|for|endfor)\\b\\s*(?P<param>.*?)\\s*#\\}",
+      "regexFlags": ["IGNORECASE", "DOTALL"],
+      "forParamRegex": "^\\{\\{(?P<selector>.+?)\\}\\}(?:\\[(?P<indexVar>[^\\]]+)\\])?$",
+      "tags": {
+        "if": "{#if <condition>#}",
+        "elseif": "{#elseif <condition>#}",
+        "else": "{#else#}",
+        "endif": "{#endif#}",
+        "for": "{#for {{selector}}[indexVar]#}",
+        "endfor": "{#endfor#}"
+      },
+      "indexBase": 1
+    },
+    "scanOrder": "At each position the earliest opener among '{{', '[[', '[@', '{#' wins; the token then ends at the first matching closer."
+  },
+
+  "resolutionPipeline": [
+    "SmartControls {#if#}/{#for#} are expanded (conditions: {{}} then [[]] then SmartFilter; SmartDates and aggregates are NOT evaluated in conditions)",
+    "SmartDates [@...@] are evaluated (any {{}} inside is resolved first)",
+    "Aggregates sum/avg/min/max/count({{list}}[, rowExpr]) are reduced to invariant numbers anywhere in the text",
+    "{{...}} selective substitution: scalars are replaced; references, reference arrays and unresolvable tokens are kept verbatim; substituted values are JSON-escaped",
+    "SmartFormulas [[...]] are evaluated only if every {{}} in the segment resolved; a failing formula is kept verbatim"
+  ],
+
+  "unresolvedBehaviour": {
+    "unknownToken": "kept verbatim, no error, not written to the execution log",
+    "referenceTokenInText": "kept verbatim (only selector-type keys consume references)",
+    "emptyValue": "substituted as an empty string",
+    "invalidFormat": "unformatted value",
+    "missingRecord": "fields resolve to empty or default values",
+    "publishCheck": {
+      "stage": "publish",
+      "severity": "warning",
+      "check": "Every {{X_...}} in any configuration string, where X is the text before the first '_', must equal (case-sensitive) the slug of some step in the flow",
+      "message": "Step \"%1\" references unknown slug \"%2\"."
+    }
+  },
+
+  "builtInTokens": [
+    { "name": "today", "kind": "value", "description": "Today's date, formatted in the session format. Use {{today;9}} for ISO." },
+    { "name": "workdate", "kind": "value", "description": "The work date of the session that started the execution (the current work date in design-time previews)." },
+    { "name": "currentDateTime", "kind": "value", "description": "Current date-time, formatted in the session format." },
+    { "name": "currentUser", "kind": "reference", "tableNo": 2000000120, "description": "User record of the user running the step, e.g. {{currentUser.username}}." },
+    { "name": "currentCompany", "kind": "reference", "tableNo": 79, "description": "Company Information record, e.g. {{currentCompany.name}}." },
+    { "name": "<indexVar>", "kind": "value", "description": "Only inside {#for {{sel}}[indexVar]#}; a 1-based counter." },
+    { "name": "credential.username", "kind": "special", "description": "HTTP Request body only, when a credential is selected; replaced at send time." },
+    { "name": "credential.password", "kind": "special", "description": "HTTP Request body only, when a credential is selected; replaced at send time." }
+  ],
+
+  "formatSuffixes": {
+    "integer": "BC standard format number, e.g. 9 = XML/invariant (ISO dates, '.' decimal)",
+    "formatString": "BC Format() string, e.g. <Year4>-<Month,2>-<Day,2> or <Precision,2:2><Standard Format,0>",
+    "binaryTokens": ["base64", "utf8", "utf16"],
+    "escapeTokens": ["xmlEscape", "utf8-xmlEscape", "utf16-xmlEscape"],
+    "tokenCaseInsensitive": true,
+    "notes": [
+      "The inline suffix takes precedence over the format of a 'value' SmartField definition.",
+      "Binary tokens only affect BLOB, Media or binary outputs; on text they do nothing.",
+      "xmlEscape escapes & < > \" ' (not idempotent)."
+    ]
+  },
+
+  "slug": {
+    "regex": "^[A-Za-z][A-Za-z0-9-]{0,19}$",
+    "maxLength": 20,
+    "forbidden": ["_"],
+    "triggerSlug": "trigger",
+    "uniqueness": "whole flow (all branches); auto-generation compares case-insensitively, renaming compares exactly",
+    "generation": [
+      "transliterate ä->ae ö->oe ü->ue Ä->Ae Ö->Oe Ü->Ue ß->ss é/è/ê/ë->e á/à/â->a ñ->n ç->c",
+      "PascalCase: non-[A-Za-z0-9] characters are word boundaries and are dropped; the first character of each word is upper-cased",
+      "strip leading non-letters; cut to 20 characters",
+      "empty -> 'Step'",
+      "collision -> append 2, 3, ... (base shortened to keep <= 20 characters)"
+    ],
+    "renameRewrite": "In every string in every step configuration, the literal '{{<old>_' is replaced by '{{<new>_' (editor only; hand-edited JSON is not rewritten)",
+    "messages": {
+      "rejected": "The slug \"%1\" cannot be applied. A slug must start with a letter, contain only letters, digits or hyphens (no underscore), be at most 20 characters long, and be unique within the flow."
+    },
+    "outputReference": {
+      "pattern": "{{<slug>_<outputName>}}",
+      "triggerKeyMaxLength": 30,
+      "outputNameMaxLength": 30
+    }
+  },
+
+  "stepProperties": {
+    "id": { "regex": "^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$", "description": "Upper-case GUID without braces; also used for edges and notes." },
+    "level": { "type": "integer", "description": "Nesting depth (number of edges[ segments on the path). Written but never read; always derived from position." },
+    "x": { "type": "integer", "optional": true },
+    "y": { "type": "integer", "optional": true },
+    "customIconUrl": { "type": "string", "optional": true, "description": "Copied from configuration.customIconUrl when the configuration is saved." },
+    "status": { "type": "object", "keys": ["running", "pending", "repeat", "success", "error"], "description": "Display-only execution counters; omit them in authored flows." },
+    "note": {
+      "keys": { "id": "string", "html": "string", "color": "string", "x": "integer", "y": "integer", "width": "integer?", "height": "integer?" },
+      "colors": ["yellow", "pink", "blue", "green", "lavender", "grey"],
+      "htmlAllowedTags": ["b", "i", "u", "br"],
+      "htmlMaxLength": 10240
+    }
+  },
+
+  "smartFieldDefs": {
+    "location": "flow root key 'smartFieldDefs'",
+    "shape": "{ \"<tableNo>\": { \"<name>\": ValueDef | RefDef } }",
+    "nameMaxLength": 30,
+    "valueDef": { "type": "value", "field": "integer (field no. on the table)", "format": "string (default format)" },
+    "referenceDef": {
+      "type": "reference",
+      "table": "integer (target table no.)",
+      "key": "optional string: comma-joined field NAMES of a key on the target table",
+      "descending": "optional boolean",
+      "relation": "array of { target: <field no. on target>, type: 'field'|'const'|'filter', value: <source field no.> | <literal> | <BC filter> }"
+    },
+    "messages": {
+      "nameRequired": "A SmartField must have a name.",
+      "nameTaken": "A SmartField named %1 already exists on this table. Choose a different name."
+    }
+  },
+
+  "smartFormula": {
+    "operators": [
+      { "op": "+", "precedence": 1 },
+      { "op": "-", "precedence": 1 },
+      { "op": "*", "precedence": 2 },
+      { "op": "/", "precedence": 2 },
+      { "op": "%", "precedence": 2, "meaning": "integer modulo" },
+      { "op": "^", "precedence": 3, "meaning": "power; evaluated left-to-right at runtime - use parentheses" }
+    ],
+    "unaryMinus": "Not supported at runtime directly after another operator (2*-3 is wrong); write 2*(0-3).",
+    "numberLiteral": "invariant, '.' decimal separator",
+    "functions": [
+      { "name": "abs", "args": 1 },
+      { "name": "min", "args": 2, "scalar": true },
+      { "name": "max", "args": 2, "scalar": true },
+      { "name": "round", "args": 2, "meaning": "round(value, decimals); decimals may be negative" },
+      { "name": "floor", "args": 2, "meaning": "round down to decimals" },
+      { "name": "ceil", "args": 2, "meaning": "round up to decimals" }
+    ],
+    "aggregates": [
+      { "name": "sum", "args": "{{list}}[, rowExpr]" },
+      { "name": "avg", "args": "{{list}}[, rowExpr]" },
+      { "name": "count", "args": "{{list}}[, rowExpr]" },
+      { "name": "min", "args": "{{valueList}} | {{refList}}, rowExpr" },
+      { "name": "max", "args": "{{valueList}} | {{refList}}, rowExpr" }
+    ],
+    "aggregateRules": [
+      "A value-array list takes no rowExpr.",
+      "A reference list needs a rowExpr (except count); the rowExpr refers to the row through the same path.",
+      "sum({{a.b.field}}) is shorthand for sum({{a.b}}, {{a.b.field}}).",
+      "Blank or unresolved rows are skipped; an empty or missing list gives 0."
+    ],
+    "functionNamesCaseInsensitive": true,
+    "defaultFormat": "<Standard Format,9> is appended unless the format already contains '<Standard Format' or '<Integer'",
+    "editorErrors": [
+      "Unexpected character \"%1\" in the formula.",
+      "A SmartField in the formula is missing its closing \"}}\".",
+      "The formula is incomplete.",
+      "Unexpected \"%1\" – check the brackets.",
+      "Unknown function \"%1\".",
+      "%1() needs %2 argument(s).",
+      "\"%1\" is not a number.",
+      "The aggregate %1() needs a {{list}} as its first argument."
+    ],
+    "runtimeFailure": "kept verbatim as [[...]]"
+  },
+
+  "smartDate": {
+    "keywords": ["today", "now", "workdate"],
+    "functions": [
+      { "name": "dateadd", "args": ["expr", "n", "\"unit\""], "units": ["day", "week", "month", "year", "hour", "minute"], "returns": "datetime" },
+      { "name": "startof", "args": ["expr", "\"unit\""], "units": ["day", "week", "month", "year"], "returns": "datetime (00:00)" },
+      { "name": "endof", "args": ["expr", "\"unit\""], "units": ["day", "week", "month", "year"], "returns": "datetime (23:59:59)" },
+      { "name": "calc", "args": ["expr", "\"BC date formula\""], "returns": "datetime", "notes": "invariant letters D W M Y C first, then session letters" },
+      { "name": "datediff", "args": ["a", "b", "\"unit\""], "units": ["day", "week", "month", "year", "hour", "minute"], "returns": "number (a - b)" },
+      { "name": "year", "args": ["expr"], "returns": "number" },
+      { "name": "month", "args": ["expr"], "returns": "number" },
+      { "name": "day", "args": ["expr"], "returns": "number" },
+      { "name": "weekday", "args": ["expr"], "returns": "number (1 = Monday)" }
+    ],
+    "literals": ["YYYY-MM-DD", "YYYY-MM-DDThh:mm:ss[Z]", "DD.MM.YYYY", "DD.MM.YY", "MM/DD/YYYY", "number", "\"quoted text\""],
+    "weekStart": "Monday",
+    "formatSentinels": { "": "date (session format)", "@date@": "date (session format)", "@time@": "HH:MM", "@datetime@": "date-time (session format)" },
+    "formatOtherwise": "BC Format() string or standard format number",
+    "caseInsensitive": ["function names", "units"],
+    "errors": [
+      "Unknown SmartDate function \"%1\".",
+      "The SmartDate function %1() got the wrong number of arguments.",
+      "\"%1\" is not a valid date or time.",
+      "\"%1\" is not a valid unit."
+    ],
+    "runtimeFailure": "kept verbatim, not reported"
+  },
+
+  "smartFilter": {
+    "comparisonOperators": [
+      { "op": "=", "meaning": "equals" },
+      { "op": "!=", "meaning": "not equal" },
+      { "op": ">", "meaning": "greater than" },
+      { "op": "<", "meaning": "less than" },
+      { "op": ">=", "meaning": "greater or equal" },
+      { "op": "<=", "meaning": "less or equal" },
+      { "op": "~", "meaning": "contains (text)" },
+      { "op": "^=", "meaning": "starts with (text)" },
+      { "op": "$=", "meaning": "ends with (text)" }
+    ],
+    "combinators": [ { "op": "&", "meaning": "and" }, { "op": "|", "meaning": "or" } ],
+    "negation": "!( ... )",
+    "literals": ["true", "false", "'' (empty string)"],
+    "operatorDetectionOrder": ["^=", "$=", ">=", "<=", "!=", "~", "=", ">", "<", "&", "|"],
+    "canonicalForms": {
+      "comparison": "<left> <op> <right>",
+      "negation": "!(<inner>)",
+      "combination": "(<left>) <&|> (<right>)"
+    },
+    "rules": [
+      "Both operands numeric (session culture) -> numeric comparison; otherwise case-sensitive text comparison.",
+      "Operands are trimmed; quotes are not stripped (except '' meaning empty).",
+      "Each side of & and | must be parenthesised, with at most two conditions per level.",
+      "A condition that can't be evaluated is false.",
+      "Not converted into a BC table filter; evaluated in memory."
+    ],
+    "editorMessages": [
+      "The SmartFilter expression is empty.",
+      "The SmartFilter expression \"%1\" cannot be parsed into the builder. Please edit it manually or clear it.",
+      "The SmartFilter expression \"%1\" combines more than two conditions at the top level. Wrap each pair in parentheses so the builder can load it.",
+      "Unknown SmartFilter operator \"%1\".",
+      "Unknown SmartFilter combinator \"%1\".",
+      "A value contains & | ( or ) outside a token – the filter may not evaluate as written."
+    ]
+  },
+
+  "pickerModes": [
+    { "mode": "copyclose", "selectable": "any (clipboard)" },
+    { "mode": "referenceorvalue", "selectable": "reference or value" },
+    { "mode": "referenceonly", "selectable": "reference" },
+    { "mode": "valueonly", "selectable": "value" }
+  ],
+
+  "selector": {
+    "regex": "^\\s*\\{\\{\\s*(?P<path>[^{}]*?\\S)\\s*\\}\\}\\s*$",
+    "description": "Exactly one braced token naming a reference, a reference array, an indexed element or a dotted relation path; used by selector-type configuration keys."
+  }
+}

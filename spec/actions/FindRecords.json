@@ -1,0 +1,250 @@
+{
+  "kind": "action",
+  "name": "FindRecords",
+  "id": 5564409,
+  "caption": "Find Records",
+  "category": "Records",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "tableNo",
+      "type": "integer",
+      "required": true,
+      "default": 0,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Number of the table to search (e.g. 18 = Customer)."
+    },
+    {
+      "key": "filters",
+      "type": "array",
+      "required": false,
+      "default": [],
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Field filters applied with BC filter syntax before reading. Rows with fieldNo 0 are skipped; if two rows target the same fieldNo the later one wins.",
+      "items": [
+        {
+          "key": "fieldNo",
+          "type": "integer",
+          "required": true,
+          "default": 0,
+          "enum": null,
+          "maxLength": null,
+          "smart": "none",
+          "description": "Field NUMBER to filter on (any field, including FlowFields that support filtering)."
+        },
+        {
+          "key": "filter",
+          "type": "string",
+          "required": true,
+          "default": "",
+          "enum": null,
+          "maxLength": 250,
+          "smart": "text",
+          "description": "Business Central filter expression as used in SETFILTER / the filter pane, e.g. '10000..20000', '<>0', 'A*|B*', '@*gmbh*', '' (= empty). {{SmartFields}} are resolved against the flow context (never against the records being searched) before the filter is set. Truncated to 250 characters after resolution. For a RecordId field, a value that is exactly one reference SmartField filters on that record directly."
+        },
+        {
+          "key": "lineNo",
+          "type": "integer",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "maxLength": null,
+          "smart": "none",
+          "description": "Written by the editor on repeater rows; ignored by this step."
+        }
+      ]
+    },
+    {
+      "key": "smartFilter",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "filter",
+      "description": "Optional SmartFilter expression (a plain string, NOT JSON) evaluated per found record; only records for which it is true are kept. Inside it, {{FieldName}} refers to the current record's field by its AL field NAME (e.g. {{Balance}}, {{Country/Region Code}}); other {{slug_output}} SmartFields come from the flow context. Grammar: 'left op right' with op one of = != > < >= <= ~ (contains) ^= (starts with) $= (ends with); combine with & / |, wrap EVERY operand of & / | in parentheses, e.g. ({{Blocked}} = ' ') & ({{Balance}} > 1000); negate with !( ... ); '' denotes empty. Comparisons are numeric when both sides parse as numbers, otherwise case-sensitive text."
+    },
+    {
+      "key": "limit",
+      "type": "integer",
+      "required": false,
+      "default": 100,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Maximum number of matching records to return. Missing, null, 0 or negative -> 100. The editor always writes the key."
+    },
+    {
+      "key": "errorOnEmpty",
+      "type": "boolean",
+      "required": false,
+      "default": false,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "true = fail the step when no record matches."
+    },
+    {
+      "key": "keyFields",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Sort key, identified by the comma-joined AL field NAMES of an active table key, without spaces after commas, exactly as declared (e.g. 'Document Type,Sell-to Customer No.'). Empty = primary key. A value that matches no key silently falls back to the primary key. The editor always writes the key (empty string by default)."
+    },
+    {
+      "key": "ascending",
+      "type": "boolean",
+      "required": false,
+      "default": true,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Read direction of the sort key. true = ascending (default), false = descending."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "count",
+      "type": "value",
+      "tableNo": null,
+      "when": "always - number of records returned, as text"
+    },
+    {
+      "name": "results",
+      "type": "reference",
+      "tableNo": "<configuration.tableNo>",
+      "when": "only when at least one record matched; {{slug_results}} is the first record, {{slug_results[i]}} the i-th (0-based)"
+    }
+  ],
+  "rules": [
+    {
+      "id": "FindRecords.tableNo-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.tableNo must be present and a non-zero integer.",
+      "message": "",
+      "machine": {
+        "type": "required",
+        "key": "tableNo"
+      }
+    },
+    {
+      "id": "FindRecords.tableNo-nonzero",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.tableNo must be a positive table number (0 cannot be opened at runtime).",
+      "message": "",
+      "machine": {
+        "type": "range",
+        "key": "tableNo",
+        "min": 1
+      }
+    },
+    {
+      "id": "FindRecords.tableNo-type",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "tableNo must be a JSON integer; other types are read as 0 and opening table 0 fails.",
+      "message": "",
+      "machine": {
+        "type": "type",
+        "key": "tableNo",
+        "valueType": "integer"
+      }
+    },
+    {
+      "id": "FindRecords.error-on-empty",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "With errorOnEmpty = true, the step fails when no record passes the field filters and the SmartFilter.",
+      "message": "No records found in table %1 matching the specified filters."
+    },
+    {
+      "id": "FindRecords.filter-syntax",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "Each resolved filters[].filter must be a valid BC filter expression for the field type, and filters[].fieldNo must exist in the table.",
+      "message": ""
+    },
+    {
+      "id": "FindRecords.limit-type",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "limit should be a JSON integer; other types fall back to 100.",
+      "message": "",
+      "machine": {
+        "type": "type",
+        "key": "limit",
+        "valueType": "integer"
+      }
+    },
+    {
+      "id": "FindRecords.errorOnEmpty-type",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "errorOnEmpty should be a JSON boolean; other types fall back to false.",
+      "message": "",
+      "machine": {
+        "type": "type",
+        "key": "errorOnEmpty",
+        "valueType": "boolean"
+      }
+    },
+    {
+      "id": "FindRecords.ascending-type",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "ascending should be a JSON boolean; other types fall back to true.",
+      "message": "",
+      "machine": {
+        "type": "type",
+        "key": "ascending",
+        "valueType": "boolean"
+      }
+    },
+    {
+      "id": "FindRecords.filters-type",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "filters should be a JSON array; other types are ignored (no field filters).",
+      "message": "",
+      "machine": {
+        "type": "type",
+        "key": "filters",
+        "valueType": "array"
+      }
+    },
+    {
+      "id": "FindRecords.keyFields-format",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "keyFields should be comma-separated field names with no space after the comma; anything that does not exactly match an active key falls back to the primary key without an error.",
+      "message": "",
+      "machine": {
+        "type": "regex",
+        "key": "keyFields",
+        "pattern": "[^,]+(,[^ ,][^,]*)*"
+      }
+    }
+  ],
+  "notes": [
+    "Sorting is stored as two keys: keyFields (string) + ascending (boolean). The editor's 'sortKey' / 'sortOrder' values are canvas-only and are NOT stored in the configuration.",
+    "filters (BC filter syntax, applied by the database) and smartFilter (AutoFlow expression, evaluated per record in AL) are different languages. Prefer filters for performance; the SmartFilter runs after reading and the limit counts only records that pass it.",
+    "In smartFilter, record fields are exposed under their AL field Name, formatted with the session's regional settings (decimals/dates). Blob, Media, MediaSet, Guid, RecordId and TableFilter fields and FlowFields (not calculated) are not available.",
+    "The SmartFilter evaluator is position-based: without parentheses, '=' is matched before '&' / '|', so 'A = 1 & B = 2' does not work - write '(A = 1) & (B = 2)'. Literal &, |, ( or ) inside operands break parsing.",
+    "In smartFilter a '.' inside {{...}} is a path separator and ';' starts a format suffix, so record fields whose AL name contains a dot (e.g. 'No.', 'External Document No.') cannot be referenced as {{FieldName}}; filter on them with filters[] instead.",
+    "Field filter SmartFields resolve against the flow context only; to filter by a value of the record being found, use smartFilter.",
+    "'results' is a reference ARRAY: use it as the source of a For Each loop, or {{slug_results}} / {{slug_results[0]}} for the first record. When nothing matched, no 'results' value exists and 'count' is '0'.",
+    "The step reads only; it does not lock records.",
+    "Publish-time dangling-reference check: any {{...}} containing an underscore is treated as {{slug_output}}. A record field name with an underscore used in smartFilter (e.g. {{My_Field}}) therefore triggers a publish warning about an unknown slug."
+  ]
+}

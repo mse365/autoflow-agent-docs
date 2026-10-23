@@ -1,0 +1,198 @@
+{
+  "kind": "action",
+  "name": "RunSubFlow",
+  "id": 5564411,
+  "caption": "Run SubFlow",
+  "category": "SubFlows",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "subFlowCode",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": 60,
+      "smart": "none",
+      "description": "Code of the called SubFlow (the flow's Code field, format [NAMESPACE.]CODE with A-Z, 0-9, _ and -, at most one '.', e.g. ACME.CUSTOMER_LOOKUP). This – not the flow No. – identifies the SubFlow; it is the stable cross-company/cross-environment key. Compared as a BC Code value (uppercase)."
+    },
+    {
+      "key": "subFlowVersion",
+      "type": "any",
+      "required": false,
+      "default": null,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Pinned SubFlow version. Current form: the SubFlow's version number as a string containing a dot (e.g. \"1.2.0\"), which is the same in every environment. Legacy form: an integer local version ID (meaningless outside the database that issued it). May be omitted in a hand-written definition that is imported via Create from file – import re-pins it to the SubFlow's currently published version (see notes). At run time a missing/unresolvable pin is an error; there is no automatic fallback to the latest version."
+    },
+    {
+      "key": "inputBindings",
+      "type": "object",
+      "required": false,
+      "default": {},
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "Map of SubFlow input parameter name -> value expression (string). Keys must match the names declared in the SubFlow trigger's configuration.inputs[].name (case-sensitive). Value-type inputs: any SmartText ({{slug_output}}, literals, formulas). Reference-type inputs: a flat wrapped selector {{name}} naming a Reference in the calling flow (no dots, no [index]). Keys that match no declared input are passed but have no effect; missing keys simply leave the input unset."
+    },
+    {
+      "key": "customIconUrl",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": 250,
+      "smart": "none",
+      "description": "Cosmetic: the called SubFlow's icon URL, written by the editor and mirrored to the step's top-level customIconUrl so the canvas shows the SubFlow's icon. Not used at run time."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "<SubFlow output name>",
+      "type": "value",
+      "tableNo": null,
+      "when": "one entry per entry of the called SubFlow's Return SubFlow Output configuration.outputs[]; type 'reference' (with that entry's tableNo) when the SubFlow declares it as Reference"
+    }
+  ],
+  "rules": [
+    {
+      "id": "RunSubFlow.code-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.subFlowCode must be non-empty (step reported as invalid without a message).",
+      "message": "(no message – the step is reported as not configured)",
+      "machine": {
+        "type": "required",
+        "key": "subFlowCode"
+      }
+    },
+    {
+      "id": "RunSubFlow.code-format",
+      "severity": "error",
+      "stage": "editor",
+      "check": "subFlowCode should be a valid flow Code: [NAMESPACE.]CODE, A-Z 0-9 _ -, at most one '.', not first or last. (Format rule of the flow Code field; a code that breaks it can never match a flow.)",
+      "message": "Code must be empty or match <NAMESPACE.>CODE – letters A–Z, digits, \"_\" and \"-\" only, with at most one \".\" separator and no empty halves.",
+      "machine": {
+        "type": "regex",
+        "key": "subFlowCode",
+        "pattern": "[A-Za-z0-9_-]+(?:\\.[A-Za-z0-9_-]+)?"
+      }
+    },
+    {
+      "id": "RunSubFlow.code-length",
+      "severity": "error",
+      "stage": "editor",
+      "check": "subFlowCode is at most 60 characters (longer values are truncated and will not match).",
+      "message": "(no message – value is truncated to 60 characters)",
+      "machine": {
+        "type": "maxLength",
+        "key": "subFlowCode",
+        "max": 60
+      }
+    },
+    {
+      "id": "RunSubFlow.version-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "subFlowVersion must resolve to a positive local version ID (step reported as invalid without a message).",
+      "message": "(no message – the step is reported as not configured)"
+    },
+    {
+      "id": "RunSubFlow.subflow-unresolved",
+      "severity": "error",
+      "stage": "editor",
+      "check": "Live status line: the SubFlow Code must exist in this company and have a published version.",
+      "message": "SubFlow \"%1\" is not installed on this system, or has no published version. Install and publish it, then reopen this step."
+    },
+    {
+      "id": "RunSubFlow.reference-table-mismatch",
+      "severity": "error",
+      "stage": "editor",
+      "check": "Live status line: a Reference binding must point at a record of the table the SubFlow input declares (when the input has a tableNo).",
+      "message": "Parameter \"%1\" expects a reference to table %2, but the selected reference resolves to table %3."
+    },
+    {
+      "id": "RunSubFlow.stale-version",
+      "severity": "info",
+      "stage": "editor",
+      "check": "A newer published version of the SubFlow exists than the pinned one; the editor offers a one-click switch.",
+      "message": "A newer version of this SubFlow is available."
+    },
+    {
+      "id": "RunSubFlow.save-as-template-unresolved",
+      "severity": "error",
+      "stage": "publish",
+      "check": "Save as template (not normal publish): every referenced subFlowCode must exist with a published version. Legacy integer pins are turned into version numbers or removed.",
+      "message": "Run-SubFlow step references SubFlow Code \"%1\", but no SubFlow with that Code is published on this tenant. Publish the missing SubFlow first, or remove the Run-SubFlow step before saving as template."
+    },
+    {
+      "id": "RunSubFlow.runtime-missing",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "No flow with this Code exists in the company.",
+      "message": "No SubFlow with Code \"%1\" exists in this company."
+    },
+    {
+      "id": "RunSubFlow.runtime-version-missing",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The pinned version does not resolve to an existing version (includes an absent pin, which resolves to 0).",
+      "message": "SubFlow %1 has no published version pinned in the call (version %2)."
+    },
+    {
+      "id": "RunSubFlow.runtime-version-foreign",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "A legacy integer pin exists but belongs to a different flow (definition copied from another database).",
+      "message": "SubFlow %1 is pinned to version %2, which belongs to a different flow. The call was imported from another system; open the step and pick the version to run."
+    },
+    {
+      "id": "RunSubFlow.runtime-max-depth",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "SubFlow nesting deeper than the AutoFlow Setup limit (default 32).",
+      "message": "Maximum SubFlow nesting depth (%1) exceeded. Call chain: %2."
+    },
+    {
+      "id": "RunSubFlow.runtime-empty-definition",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The pinned SubFlow version has an empty definition.",
+      "message": "SubFlow %1 version %2 has an empty definition."
+    },
+    {
+      "id": "RunSubFlow.runtime-no-trigger",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The pinned SubFlow version has no steps.",
+      "message": "SubFlow %1 version %2 has no trigger step."
+    },
+    {
+      "id": "RunSubFlow.runtime-no-deferral",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "A step inside the SubFlow requests a deferred resume (Sleep etc.).",
+      "message": "Step %1 (%2) requested a deferred resume, but the flow is running synchronously. Use Sleep or other time-based deferral steps only outside of synchronous frames (Webhook sync phase or SubFlow body)."
+    },
+    {
+      "id": "RunSubFlow.runtime-no-yield",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "A step inside the SubFlow requests an HTTP yield (Respond to webhook).",
+      "message": "Step %1 (%2) requested an HTTP yield, but it is running inside a SubFlow. Yield is only valid in the synchronous phase of a Webhook flow."
+    }
+  ],
+  "notes": [
+    "Identification: the called flow is found by Code only. The flow No. never appears in the step. The Code is restored on import of the SubFlow itself (from the root 'code' and from its trigger configuration 'subFlowCode'), unless another flow in the company already owns it.",
+    "Import ('Create from file', template install, update from template): after the definition is stored, every Run SubFlow step (also nested in edges) is re-pinned: if the SubFlow Code exists here and has a published version, a pin that does not resolve to one of that SubFlow's own versions is replaced by the SubFlow's currently published version (written as its version number). If the SubFlow is not installed yet, the step is left untouched (import still succeeds); open the step after installing/publishing the SubFlow, or re-import. inputBindings are never changed by import.",
+    "Recommended order across environments: import + publish the SubFlow first (with its Code), then import the calling flow.",
+    "Outputs are computed from the pinned (or, failing that, currently published) SubFlow version's Return SubFlow Output step – the first such step found walking the SubFlow's steps and nested edges. Output names are truncated to 30 characters. Downstream: {{<thisStepSlug>_<outputName>}}.",
+    "At run time every returned output is added as a value output carrying the text the SubFlow returned (non-scalar JSON is serialized). Whether a Reference-declared output arrives as a usable record reference in the caller is not established by the source; prefer Value outputs (e.g. return a No. or SystemId) when the caller needs a record.",
+    "Input projection: each binding becomes the SubFlow trigger output {{<subflowTriggerSlug>_<paramName>}} (normally {{trigger_<paramName>}}). The 'required' flag on SubFlow inputs is NOT enforced at run time.",
+    "Runs synchronously and inline in the caller's transaction (no commit between caller and SubFlow). Errors inside the SubFlow fail this step with the inner message unchanged.",
+    "The step is hidden from the generic step picker; every published SubFlow is offered as its own tile, which creates a Run SubFlow step pre-pinned to its Code and published version."
+  ]
+}

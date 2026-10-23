@@ -1,0 +1,82 @@
+{
+  "kind": "action",
+  "name": "CaseStep",
+  "id": 105,
+  "caption": "Case",
+  "category": "Control",
+  "availability": "ga",
+  "terminating": false,
+  "group": true,
+  "edges": {
+    "fixed": [
+      { "value": "__default__", "description": "Otherwise" }
+    ],
+    "dynamic": true,
+    "rules": "One edge per explicit branch, edge.value = the match value and edge.description = the branch label, followed by exactly one default edge with the reserved value \"__default__\" as the LAST edge. configuration.branches must list the explicit edge values, i.e. every edge value except \"__default__\", as strings. At runtime the resolved configuration.value is matched exactly and case-sensitively against configuration.branches. On a match, the edge with that value is taken. Otherwise the \"__default__\" edge is taken. An edge whose value is not in 'branches' is unreachable. A 'branches' entry without an edge, or an edge with no steps, continues after the Case step."
+  },
+  "configuration": [
+    {
+      "key": "value",
+      "type": "string",
+      "required": true,
+      "default": null,
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "The value to route on. Supports SmartFields {{..}}, SmartFormulas [[..]] and SmartControls {#..#}. Resolved before matching."
+    },
+    {
+      "key": "branches",
+      "type": "array",
+      "required": true,
+      "default": null,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Array of strings: the explicit branch match values, in edge order, without '__default__'. Written by the editor from the branch list (rows with an empty match value are dropped). If this key is absent, the step runs in legacy mode: it emits the raw value with no default routing, so an unmatched value continues after the Case step and the '__default__' edge is never taken."
+    }
+  ],
+  "outputs": [
+    { "name": "result", "type": "value", "tableNo": null, "when": "always" }
+  ],
+  "rules": [
+    {
+      "id": "CaseStep.value-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.value must be non-empty",
+      "message": "",
+      "machine": { "type": "required", "key": "value" }
+    },
+    {
+      "id": "CaseStep.branches-type",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.branches should be an array of strings mirroring the non-default edge values",
+      "message": "",
+      "machine": { "type": "type", "key": "branches", "valueType": "array" }
+    },
+    {
+      "id": "CaseStep.reserved-default-value",
+      "severity": "error",
+      "stage": "editor",
+      "check": "At most one edge may have the value '__default__' (a user branch must not use the reserved value)",
+      "message": "A branch cannot use the reserved value of the automatic \"Otherwise\" branch. Rename that branch."
+    },
+    {
+      "id": "CaseStep.duplicate-branch-value",
+      "severity": "warning",
+      "stage": "editor",
+      "check": "Non-default edge values should be unique",
+      "message": "Branch value \"%1\" is used more than once. Only the first branch will be reachable."
+    }
+  ],
+  "notes": [
+    "The 'result' output is the matched value, or '__default__' when nothing matches. It is what the engine routes on.",
+    "Matching is exact text equality and case-sensitive. There is no trimming or numeric comparison: '1' does not match '1.0'.",
+    "An empty resolved value goes to the default branch, unless 'branches' contains an explicit empty string. The editor cannot create one, but hand-written JSON can.",
+    "The duplicate-value check is a non-blocking message. Duplicate values are not reliably routable, so avoid them.",
+    "Edge values are matched with a quoted path expression. Avoid single quotes (') in branch values.",
+    "Outputs of steps inside a branch are deleted when control leaves the branch."
+  ]
+}

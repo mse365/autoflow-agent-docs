@@ -1,0 +1,94 @@
+{
+  "kind": "action",
+  "name": "CreateCollection",
+  "id": 200,
+  "caption": "Create Collection",
+  "category": "Data",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "collectionName",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Name of the collection. Becomes the step's single output name, so downstream steps address it as {{<slug>_<collectionName>}}. Plain text (no SmartField resolution). Use an identifier-like name (letters, digits, hyphens) because it is embedded in placeholders."
+    },
+    {
+      "key": "collectionType",
+      "type": "integer",
+      "required": true,
+      "default": 0,
+      "enum": [0, 1],
+      "maxLength": null,
+      "smart": "none",
+      "description": "0 = Value (collection of text values), 1 = Reference (collection of record references). Missing/unknown is treated as 0 (Value) when outputs are generated."
+    },
+    {
+      "key": "tableNo",
+      "type": "integer",
+      "required": false,
+      "default": 0,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Table number the references point to. Required when collectionType = 1; the editor writes 0 for Value collections. Copied into the output's tableNo."
+    }
+  ],
+  "outputs": [
+    { "name": "<collectionName>", "type": "value", "tableNo": null, "when": "collectionType = 0 and collectionName non-empty" },
+    { "name": "<collectionName>", "type": "reference", "tableNo": "<tableNo>", "when": "collectionType = 1 and collectionName non-empty" }
+  ],
+  "rules": [
+    {
+      "id": "CreateCollection.collectionName-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.collectionName must be non-empty (required field in the config canvas; the step's validity check also fails without it). Without a name no output is generated.",
+      "message": "Please fill in the highlighted fields.",
+      "machine": { "type": "required", "key": "collectionName" }
+    },
+    {
+      "id": "CreateCollection.collectionType-enum",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.collectionType must be 0 (Value) or 1 (Reference).",
+      "message": "",
+      "machine": { "type": "enum", "key": "collectionType", "values": [0, 1] }
+    },
+    {
+      "id": "CreateCollection.collectionType-type",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.collectionType must be a JSON integer.",
+      "message": "",
+      "machine": { "type": "type", "key": "collectionType", "valueType": "integer" }
+    },
+    {
+      "id": "CreateCollection.tableNo-required-for-reference",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.tableNo must be a non-zero table number when collectionType = 1 (Reference).",
+      "message": "Please fill in the highlighted fields.",
+      "machine": { "type": "requiredIf", "key": "tableNo", "ifKey": "collectionType", "equals": 1 }
+    },
+    {
+      "id": "CreateCollection.tableNo-range",
+      "severity": "error",
+      "stage": "editor",
+      "check": "tableNo, when given, must be a non-negative integer that is an existing table in the target environment (the table picker only offers existing tables).",
+      "message": "",
+      "machine": { "type": "range", "key": "tableNo", "min": 0 }
+    }
+  ],
+  "notes": [
+    "The step does nothing at run time: an empty collection has no runtime representation. Entries appear only when an Add to Collection step appends to it, under the names <slug>_<collectionName>[0], [1], ...",
+    "Downstream steps that iterate or aggregate over the collection reference the declared output {{<slug>_<collectionName>}}. If no item was ever added, the collection does not exist at run time.",
+    "If the Create Collection step sits inside a loop/branch body, its runtime rows are cleaned up when that body is left (rows of steps inside a closed edge are removed). Place it at the level where the collection must stay readable, typically before the loop that fills it.",
+    "The editor seeds description 'Create <collectionName> Collection' and a PascalCase slug derived from it; both may be overridden."
+  ]
+}

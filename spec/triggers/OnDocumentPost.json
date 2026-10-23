@@ -1,0 +1,120 @@
+{
+  "kind": "trigger",
+  "name": "OnDocumentPost",
+  "id": 5564549,
+  "caption": "When a document is posted (interactive)",
+  "category": "Interactive",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "tableNo",
+      "type": "integer",
+      "required": true,
+      "default": 0,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Document table: Sales Header 36 or Purchase Header 38. Extensions can register more postable tables. Known supported values: 36, 38. Extensions can register more, so other values are not rejected by this reference."
+    },
+    {
+      "key": "guiOnly",
+      "type": "boolean",
+      "required": false,
+      "default": true,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Run only in interactive client sessions; postings from background or service sessions are left untouched."
+    },
+    {
+      "key": "timeoutSec",
+      "type": "integer",
+      "required": false,
+      "default": 30,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Maximum run time. The editor replaces values <= 0 with 30."
+    },
+    {
+      "key": "filters",
+      "type": "array",
+      "required": false,
+      "default": [],
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Field filters on the document header: [{ \"fieldNo\": <integer>, \"filter\": \"<BC filter expression>\" }]. Applied literally (max 250 chars, no placeholders)."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "Rec",
+      "type": "reference",
+      "tableNo": null,
+      "when": "always; tableNo = configuration.tableNo (declared as 'value' when tableNo is 0)"
+    }
+  ],
+  "rules": [
+    {
+      "id": "OnDocumentPost.table-required",
+      "severity": "error",
+      "stage": "publish",
+      "check": "configuration.tableNo must be > 0. Hard stop at publish.",
+      "message": "Pick the document table the flow should watch.",
+      "machine": {
+        "type": "range",
+        "key": "tableNo",
+        "min": 1
+      }
+    },
+    {
+      "id": "OnDocumentPost.table-supported",
+      "severity": "error",
+      "stage": "publish",
+      "check": "configuration.tableNo must be a supported postable document table. Hard stop at publish; also shown live in the canvas status line.",
+      "message": "Table %1 is not one of the supported postable document tables."
+    },
+    {
+      "id": "OnDocumentPost.guiOnly-type",
+      "severity": "error",
+      "stage": "editor",
+      "check": "guiOnly must be a boolean.",
+      "message": "(no message)",
+      "machine": {
+        "type": "type",
+        "key": "guiOnly",
+        "valueType": "boolean"
+      }
+    },
+    {
+      "id": "OnDocumentPost.timeout-positive",
+      "severity": "warning",
+      "stage": "editor",
+      "check": "timeoutSec should be > 0 (the editor writes 30 for values <= 0).",
+      "message": "(no message)",
+      "machine": {
+        "type": "range",
+        "key": "timeoutSec",
+        "min": 1
+      }
+    },
+    {
+      "id": "OnDocumentPost.flow-error-blocks",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "Any error in the flow (e.g. an Error step) prevents the posting and shows the flow's message.",
+      "message": "(the flow's own error message)"
+    }
+  ],
+  "notes": [
+    "Fires at the start of Sales/Purchase posting, before any posting work. Posting previews never fire it. With guiOnly (default), non-UI sessions (e.g. batch posting in the Job Queue) are skipped.",
+    "Synchronous and atomic: runs inline in the user's transaction, without commits. An error prevents the posting. A Set document field values step writes values onto the header before it is posted. 'Skip standard processing' has no effect for this trigger (posting cannot be taken over).",
+    "Because it runs outside a table event, a Confirm dialog step can ask the user; the posting waits for the answer.",
+    "Re-entrancy guard: a posting that the running flow itself performs does not start the flow again.",
+    "No recurring Job Queue entry; the registration is keyed by tableNo.",
+    "Picker filter: Set document field values is offered. Respond to Webhook, Return SubFlow Output, Return PDF, Set report file name and Prevent page close are hidden."
+  ]
+}

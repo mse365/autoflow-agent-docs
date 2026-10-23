@@ -1,0 +1,256 @@
+{
+  "kind": "action",
+  "name": "SendNotification",
+  "id": 5564557,
+  "caption": "Send Notification",
+  "category": "Utilities",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "Message",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": 2048,
+      "smart": "text",
+      "description": "The message text (note the capital M in the key). Supports SmartFields ({{..}}), SmartFormulas ([[..]]) and SmartControls ({#..#}). Shown text is truncated to 2048 characters. Empty = the step does nothing."
+    },
+    {
+      "key": "display",
+      "type": "integer",
+      "required": false,
+      "default": 0,
+      "enum": [0, 1],
+      "maxLength": null,
+      "smart": "none",
+      "description": "0 = Notification (bar at the top of the page, appears immediately, may carry actions); 1 = Dialog message (modal, must be acknowledged; Business Central shows it only when the flow has finished and control returns to the client). Absent = 0."
+    },
+    {
+      "key": "actions",
+      "type": "array",
+      "required": false,
+      "default": [],
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Up to 3 notification actions (buttons). Only used when display = 0. Row: {label, type, target, record, recordTableNo, filters, filterTableNo, filterDisplay}."
+    },
+    {
+      "key": "actions[].label",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": 100,
+      "smart": "text",
+      "description": "Button caption (SmartText; truncated to 100 characters)."
+    },
+    {
+      "key": "actions[].type",
+      "type": "string",
+      "required": true,
+      "default": "0",
+      "enum": ["1", "2", "3"],
+      "maxLength": null,
+      "smart": "none",
+      "description": "Action type as a string ordinal: \"1\" = Start flow, \"2\" = Open card, \"3\" = Open list. \"0\"/empty/other = none (invalid)."
+    },
+    {
+      "key": "actions[].target",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Start flow: the Code of an active (published) manual flow. Open card / Open list: the page ID as a decimal string."
+    },
+    {
+      "key": "actions[].record",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "record",
+      "description": "{{selector}} to a record reference. Required for Open card, and for Start flow when the target manual flow runs on a record. Cleared (\"\") for Open list and for record-less manual flows."
+    },
+    {
+      "key": "actions[].recordTableNo",
+      "type": "integer",
+      "required": false,
+      "default": 0,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Table no. the record selector points to, computed by the editor on save; 0 = unknown (skips the table-match check)."
+    },
+    {
+      "key": "actions[].filters",
+      "type": "array",
+      "required": false,
+      "default": [],
+      "enum": null,
+      "maxLength": null,
+      "smart": "filter",
+      "description": "Open list only: [{\"fieldNo\": <int>, \"filter\": <SmartText filter expression>}] on the list page's source table. Entries with fieldNo 0 or an empty filter are ignored. SmartFields in filter values are resolved and then act as filter syntax."
+    },
+    {
+      "key": "actions[].filterTableNo",
+      "type": "integer",
+      "required": false,
+      "default": 0,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Open list only: the table the filters were defined for; must equal the list page's source table (0 = unknown, no check)."
+    },
+    {
+      "key": "actions[].filterDisplay",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Display text only ('Caption: filter, ...'). Not read at run time."
+    }
+  ],
+  "outputs": [],
+  "rules": [
+    {
+      "id": "SendNotification.message-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.Message must be non-empty",
+      "message": "Enter the message to show as a notification.",
+      "machine": { "type": "required", "key": "Message" }
+    },
+    {
+      "id": "SendNotification.display-enum",
+      "severity": "error",
+      "stage": "editor",
+      "check": "display is 0 (Notification) or 1 (Dialog message)",
+      "message": "(option field in the dialog; no message text)",
+      "machine": { "type": "enum", "key": "display", "values": [0, 1] }
+    },
+    {
+      "id": "SendNotification.actions-type",
+      "severity": "error",
+      "stage": "editor",
+      "check": "actions, if present, must be an array",
+      "message": "(no message text)",
+      "machine": { "type": "type", "key": "actions", "valueType": "array" }
+    },
+    {
+      "id": "SendNotification.max-actions",
+      "severity": "warning",
+      "stage": "publish",
+      "check": "When display = 0: at most 3 rows in actions (also an editor error/status line). At run time only the first 3 valid rows are used.",
+      "message": "A notification can carry at most %1 actions. Remove the others."
+    },
+    {
+      "id": "SendNotification.action-label",
+      "severity": "warning",
+      "stage": "publish",
+      "check": "When display = 0: every action row needs a non-empty label (also an editor error). Publish wraps each row problem as \"Send notification '<stepId>': Action <n>: <problem>\".",
+      "message": "Enter a label."
+    },
+    {
+      "id": "SendNotification.action-type",
+      "severity": "warning",
+      "stage": "publish",
+      "check": "When display = 0: every action row's type must be \"1\", \"2\" or \"3\"",
+      "message": "Choose what the action does."
+    },
+    {
+      "id": "SendNotification.startflow-target",
+      "severity": "warning",
+      "stage": "publish",
+      "check": "Start flow rows: target must be non-empty",
+      "message": "Choose the flow to start."
+    },
+    {
+      "id": "SendNotification.startflow-active",
+      "severity": "warning",
+      "stage": "publish",
+      "check": "Start flow rows: target must be the Code of a published manual flow on this system",
+      "message": "The flow %1 is not an active manual flow on this system."
+    },
+    {
+      "id": "SendNotification.startflow-record",
+      "severity": "warning",
+      "stage": "publish",
+      "check": "Start flow rows: if the target manual flow runs on a record, record must be set",
+      "message": "The flow %1 runs on a record. Select the record to start it for."
+    },
+    {
+      "id": "SendNotification.page-required",
+      "severity": "warning",
+      "stage": "publish",
+      "check": "Open card / Open list rows: target must be a non-zero page ID",
+      "message": "Choose the page to open."
+    },
+    {
+      "id": "SendNotification.page-exists",
+      "severity": "warning",
+      "stage": "publish",
+      "check": "Open card / Open list rows: the page must exist",
+      "message": "The page %1 does not exist."
+    },
+    {
+      "id": "SendNotification.card-page-type",
+      "severity": "warning",
+      "stage": "publish",
+      "check": "Open card rows: page type must be Card, Document or ListPlus",
+      "message": "The page %1 is not a card page. Choose a card or document page."
+    },
+    {
+      "id": "SendNotification.list-page-type",
+      "severity": "warning",
+      "stage": "publish",
+      "check": "Open list rows: page type must be List or Worksheet",
+      "message": "The page %1 is not a list page. Choose a list or worksheet page."
+    },
+    {
+      "id": "SendNotification.page-source-table",
+      "severity": "warning",
+      "stage": "publish",
+      "check": "Open card / Open list rows: the page must have a (non-temporary) source table",
+      "message": "The page %1 shows no table, so it cannot be opened on a record."
+    },
+    {
+      "id": "SendNotification.card-record-required",
+      "severity": "warning",
+      "stage": "publish",
+      "check": "Open card rows: record must be set",
+      "message": "Select the record to open the card page on."
+    },
+    {
+      "id": "SendNotification.record-table-match",
+      "severity": "warning",
+      "stage": "publish",
+      "check": "Open card / Start flow rows: when recordTableNo and the expected table (page source table / manual flow table) are both known, they must be equal",
+      "message": "The record belongs to table %1, but table %2 is expected."
+    },
+    {
+      "id": "SendNotification.filter-table-match",
+      "severity": "warning",
+      "stage": "publish",
+      "check": "Open list rows: when filterTableNo is non-zero it must equal the page's source table",
+      "message": "The filters were set for table %1, but the page %2 shows table %3. Set the filters again."
+    }
+  ],
+  "notes": [
+    "Publish-time warnings are only raised when display = 0 (Notification). Each is prefixed: \"Send notification '<stepId>': Action <n>: <problem>\". Warnings ask for confirmation interactively; a headless publish (API) fails while any warning exists.",
+    "The same action rules are shown in the editor (status line and validation) — listed once here with stage publish.",
+    "No run-time errors: a row that cannot be resolved (unknown flow/page, unresolvable or missing record, record of the wrong table, filter that cannot be applied, filters longer than 2000 characters as a view) is left out and logged as 'Notification action \"%1\" left out: %2'; the notification still goes out.",
+    "Sessions without a user interface: a Job Queue run stores the message for the user who started the run and is following it in the wait dialog (shown once the run has finished; logged as 'No user interface – the message is shown to the user following the run once it has finished.'). Any other session without UI skips it ('No user interface – notification skipped.'). Actions are not offered in those cases.",
+    "The step is offered for every trigger (no trigger restriction).",
+    "Action clicks run later, outside the flow, in the clicking user's own transaction. Records are carried by table no. + SystemId and filters as a view; if the record, page or flow is gone by then the user gets a message instead of an error. Start flow runs the manual flow with a wait dialog.",
+    "Dialog text is passed as a parameter, so % and # characters in resolved SmartFields are shown literally."
+  ]
+}

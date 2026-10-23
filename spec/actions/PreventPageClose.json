@@ -1,0 +1,68 @@
+{
+  "kind": "action",
+  "name": "PreventPageClose",
+  "id": 5564419,
+  "caption": "Prevent page close",
+  "category": "Trigger Responses",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "showMessage",
+      "type": "boolean",
+      "required": false,
+      "default": true,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Whether to tell the user why the page stays open. false = keep the page open silently."
+    },
+    {
+      "key": "asDialog",
+      "type": "boolean",
+      "required": false,
+      "default": true,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "true = show the message as a dialog the user must acknowledge. false = show it as a notification bar on the page that stayed open. Only relevant when showMessage is true."
+    },
+    {
+      "key": "message",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "What the user is told. Required when showMessage is true (the default). Supports SmartFields {{..}}, SmartFormulas [[..]] and SmartControls {#..#}. An empty message means nothing is shown."
+    }
+  ],
+  "outputs": [],
+  "rules": [
+    {
+      "id": "PreventPageClose.message-required-if-shown",
+      "severity": "error",
+      "stage": "editor",
+      "check": "If showMessage is true (or absent, which defaults to true), configuration.message must be non-empty",
+      "message": "Enter the message to show, or turn off \"Tell the user why\".",
+      "machine": { "type": "requiredIf", "key": "message", "ifKey": "showMessage", "equals": true }
+    },
+    {
+      "id": "PreventPageClose.only-in-page-close-trigger",
+      "severity": "info",
+      "stage": "editor",
+      "check": "Only meaningful in a flow whose trigger is 'When a page is closed (interactive)' (trigger 5564408). The step picker hides it in all other flows. No publish check enforces this.",
+      "message": ""
+    }
+  ],
+  "notes": [
+    "Response step of the 'When a page is closed (interactive)' trigger (5564408). That trigger runs synchronously before the page closes. The step hands back a 'keep the page open' answer, and the flow ends there: no further steps run.",
+    "The step JSON carries terminating=false (the step does not set the terminating flag), yet in the page-close trigger it ends the run. Steps placed after it are not executed, and no publish warning flags them.",
+    "The machine requiredIf check only fires when showMessage is explicitly true. When showMessage is absent it also defaults to true, so a message is needed in that case as well.",
+    "If showMessage is false, any message is ignored and the page stays open silently.",
+    "Outside the page-close trigger the step is hidden from the picker. Its effect elsewhere is not defined by this step.",
+    "No outputs."
+  ]
+}

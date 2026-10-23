@@ -1,0 +1,62 @@
+{
+  "kind": "action",
+  "name": "PdfReturn",
+  "id": 5564414,
+  "caption": "Return PDF",
+  "category": "Trigger Responses",
+  "availability": "ga",
+  "terminating": true,
+  "group": false,
+  "configuration": [
+    {
+      "key": "documentBase64",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "The replacement PDF, base64-encoded. Normally a SmartField carrying base64 content from an earlier step or the trigger's DocumentStream output (e.g. {{trigger_DocumentStream}})."
+    }
+  ],
+  "outputs": [],
+  "rules": [
+    {
+      "id": "PdfReturn.document-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.documentBase64 must be non-empty (editor validation returns false, no message text)",
+      "message": "(no message text; the step is reported as invalid)",
+      "machine": { "type": "required", "key": "documentBase64" }
+    },
+    {
+      "id": "PdfReturn.terminating-no-successor",
+      "severity": "warning",
+      "stage": "publish",
+      "check": "A terminating step must be the last step of its path: no step may follow it in the same steps[] array and it must not carry edges",
+      "message": "Step \"%1\" is a terminating step but has a successor – terminating steps must end the path."
+    },
+    {
+      "id": "PdfReturn.trigger-pairing",
+      "severity": "info",
+      "stage": "editor",
+      "check": "The step is only offered in the step picker when the flow's trigger is 'When a PDF is printed' (trigger 5564405). This is a picker filter only; it is NOT enforced at publish or import.",
+      "message": "(not a message; the step is hidden from the picker)"
+    },
+    {
+      "id": "PdfReturn.subflow-yield",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The step must not run inside a SubFlow body",
+      "message": "Step %1 (%2) requested an HTTP yield, but it is running inside a SubFlow. Yield is only valid in the synchronous phase of a Webhook flow."
+    }
+  ],
+  "notes": [
+    "Only meaningful in a flow started by the 'When a PDF is printed' trigger (5564405). The step ends the flow and hands documentBase64 back to Business Central, which then uses it instead of the original PDF.",
+    "Pairing with the trigger is enforced only by the step picker (the step is hidden for other triggers). There is no publish-time check: a definition that uses this step under another trigger publishes without warning.",
+    "Used elsewhere: in a Webhook flow's synchronous phase the step behaves like a response (HTTP 200, content type application/pdf, body = the base64 text); in a SubFlow it fails at run time; in background flows the hand-back is not consumed by anything, so the step just ends the path. The latter behaviour is inferred from the engine (no consumer of the yield outside synchronous runs) and is not explicitly documented.",
+    "If the flow ends without reaching this step (e.g. on a branch without it), or documentBase64 resolves to an empty string, Business Central keeps the original PDF.",
+    "documentBase64 is decoded by the print pipeline; content that is not valid base64 makes the decode fail inside the print and produces a platform error.",
+    "Long description in the product: 'Must be the last step in a \"When a PDF is printed\" flow.'"
+  ]
+}

@@ -1,0 +1,122 @@
+{
+  "kind": "trigger",
+  "name": "GlobalModify",
+  "id": 5564450,
+  "caption": "When a record is modified",
+  "category": "Records",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "tableNo",
+      "type": "integer",
+      "required": true,
+      "default": 0,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Table whose modifications start the flow. Stored on the trigger registration at publish; 0 means the flow never fires."
+    },
+    {
+      "key": "filters",
+      "type": "array",
+      "required": false,
+      "default": [],
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Field filters the modified record (after-image) must match: [{ \"fieldNo\": <integer>, \"filter\": \"<BC filter expression>\" }]. Applied literally (max 250 chars, placeholders not resolved). Rows with fieldNo 0 are skipped; duplicate fieldNo: last wins."
+    },
+    {
+      "key": "watchFields",
+      "type": "array",
+      "required": false,
+      "default": [],
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Fields to watch: [{ \"fieldNo\": <integer> }]. When non-empty the flow fires only if at least one watched field differs from AutoFlow's stored snapshot. Empty = fire on every modify that passes the filters. fieldNo 0 and duplicates are ignored."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "Rec",
+      "type": "reference",
+      "tableNo": null,
+      "when": "always; type 'reference' with tableNo = configuration.tableNo when tableNo > 0, otherwise declared as type 'value'"
+    },
+    {
+      "name": "ChangedFields",
+      "type": "value",
+      "tableNo": null,
+      "when": "always; JSON array text [{\"fieldNo\":int,\"fieldName\":text,\"oldValue\":text,\"newValue\":text}] of the watched fields that changed, '[]' when no watch fields are configured"
+    }
+  ],
+  "rules": [
+    {
+      "id": "GlobalModify.tableNo-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.tableNo must be present and > 0 (editor ValidateConfiguration returns false otherwise). Not checked at publish: a flow without a table publishes and never fires.",
+      "message": "(no message)",
+      "machine": {
+        "type": "required",
+        "key": "tableNo"
+      }
+    },
+    {
+      "id": "GlobalModify.tableNo-positive",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.tableNo must be an integer > 0.",
+      "message": "(no message)",
+      "machine": {
+        "type": "range",
+        "key": "tableNo",
+        "min": 1
+      }
+    },
+    {
+      "id": "GlobalModify.filters-type",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.filters, if present, must be an array.",
+      "message": "(no message)",
+      "machine": {
+        "type": "type",
+        "key": "filters",
+        "valueType": "array"
+      }
+    },
+    {
+      "id": "GlobalModify.watchFields-type",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.watchFields, if present, must be an array.",
+      "message": "(no message)",
+      "machine": {
+        "type": "type",
+        "key": "watchFields",
+        "valueType": "array"
+      }
+    },
+    {
+      "id": "GlobalModify.filter-invalid",
+      "severity": "info",
+      "stage": "runtime",
+      "check": "An invalid filter expression makes the record count as not matching; the user's modify is never blocked.",
+      "message": "(no message)"
+    }
+  ],
+  "notes": [
+    "Fires on every modify of the table in any session, as long as the modify reaches Business Central's global database events.",
+    "Execution is asynchronous: the modify creates a pending execution inside the modifying transaction; a recurring Job Queue entry (every 5 minutes, created on publish) queues one Job Queue run per pending execution. Runs commit after every step.",
+    "Watch-field change detection compares against a snapshot table, not against xRec: values are formatted locale-invariantly and compared by SHA-256 hash. The snapshot is filled for all existing records when a version with watch fields is published, refreshed on every insert/modify of the table and removed on delete. The snapshot is shared per table and field across all GlobalModify flows on that table.",
+    "If no snapshot row exists for a record/field (e.g. inserted while no watch-field flow was published), oldValue is '' and any non-empty current value counts as a change.",
+    "ChangedFields oldValue/newValue are XML-formatted (locale-invariant) text, truncated to 2048 characters each.",
+    "Step-level rule imposed by this trigger: a Confirm dialog step gets the publish warning that it runs inside the record change that started the flow.",
+    "Picker filters: Respond to Webhook, Return SubFlow Output, Return PDF, Set report file name, Set document field values and Prevent page close are hidden.",
+    "A flow that modifies the same table again (e.g. a Modify Record step) triggers itself again when the write runs triggers; use filters or watch fields to avoid loops."
+  ]
+}

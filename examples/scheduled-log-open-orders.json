@@ -1,0 +1,92 @@
+{
+  "name": "Log open sales orders (scheduled)",
+  "code": "EXAMPLE.LOG_OPEN_ORDERS",
+  "steps": [
+    {
+      "id": "1A2B3C4D-5E6F-4A7B-8C9D-0E1F2A3B4C5D",
+      "type": "trigger",
+      "trigger": 101,
+      "description": "On a schedule",
+      "slug": "trigger",
+      "iconUrl": "https://statics.autoflow.mse365.de/icons/calendar-time.svg",
+      "configuration": {},
+      "outputs": [],
+      "level": 0
+    },
+    {
+      "id": "5E7A9C1B-3D5F-4B7A-9C1E-3F5A7B9D1E06",
+      "type": "action",
+      "action": 5564409,
+      "description": "Find open sales orders",
+      "slug": "FindOpenOrders",
+      "iconUrl": "https://statics.autoflow.mse365.de/icons/database-search.svg",
+      "terminating": false,
+      "configuration": {
+        "tableNo": 36,
+        "filters": [
+          { "fieldNo": 1, "filter": "Order" },
+          { "fieldNo": 120, "filter": "Open" }
+        ],
+        "limit": 50,
+        "errorOnEmpty": false
+      },
+      "outputs": [
+        { "name": "count", "type": "value" },
+        { "name": "results", "type": "reference", "tableNo": 36 }
+      ]
+    },
+    {
+      "id": "2C9F1E7B-5A44-4D2B-9C1E-3F6A7B8C9D01",
+      "type": "action",
+      "action": 101,
+      "description": "For each order",
+      "slug": "EachOrder",
+      "iconUrl": "https://statics.autoflow.mse365.de/icons/refresh.svg",
+      "terminating": false,
+      "configuration": {
+        "selector": "{{FindOpenOrders_results}}"
+      },
+      "outputs": [
+        { "name": "total", "type": "value" },
+        { "name": "iteration", "type": "value" },
+        { "name": "items", "type": "reference", "tableNo": 36 },
+        { "name": "currentItem", "type": "reference", "tableNo": 36 }
+      ],
+      "edges": [
+        {
+          "id": "2C9F1E7B-5A44-4D2B-9C1E-3F6A7B8C9D02",
+          "value": "for-each",
+          "description": "for each",
+          "steps": [
+            {
+              "id": "7B8C9D0E-1F2A-4B3C-8D4E-5F6A7B8C9D01",
+              "type": "action",
+              "action": 104,
+              "description": "Log order",
+              "slug": "LogOrder",
+              "iconUrl": "https://statics.autoflow.mse365.de/icons/log.svg",
+              "terminating": false,
+              "configuration": {
+                "Message": "Order {{EachOrder_currentItem.no}} ({{EachOrder_iteration}} of {{EachOrder_total}}) for customer {{EachOrder_currentItem.selltocustomerno}} is still open."
+              },
+              "outputs": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "7B8C9D0E-1F2A-4B3C-8D4E-5F6A7B8C9D02",
+      "type": "action",
+      "action": 104,
+      "description": "Log summary",
+      "slug": "LogSummary",
+      "iconUrl": "https://statics.autoflow.mse365.de/icons/log.svg",
+      "terminating": false,
+      "configuration": {
+        "Message": "{{FindOpenOrders_count}} open sales orders found."
+      },
+      "outputs": []
+    }
+  ]
+}

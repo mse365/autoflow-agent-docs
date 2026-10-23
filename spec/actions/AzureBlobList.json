@@ -1,0 +1,224 @@
+{
+  "kind": "action",
+  "name": "AzureBlobList",
+  "id": 5564420,
+  "caption": "Azure Blob: List files",
+  "category": "Documents",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "credentialCode",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": 20,
+      "smart": "none",
+      "description": "Code of an AutoFlow Credential (stored uppercase, max 20 chars). Its authentication type must be 'OAuth 2.0 client credentials' (Entra app, scope https://storage.azure.com/.default) or 'Azure Storage SAS token'. Credentials are company data and are NOT part of the flow definition – the code must exist in the target company."
+    },
+    {
+      "key": "storageAccount",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": 24,
+      "smart": "text",
+      "description": "Storage account name (3-24 lowercase letters/digits), e.g. contosodocs for https://contosodocs.blob.core.windows.net. Trimmed. May contain SmartFields; literal values are checked in the editor, resolved values at run time."
+    },
+    {
+      "key": "container",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": 63,
+      "smart": "text",
+      "description": "Blob container name (3-63 chars, lowercase letters, digits, single hyphens, starting/ending with letter or digit; $root and $web also accepted). Trimmed. SmartFields allowed."
+    },
+    {
+      "key": "path",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "Path prefix; lists files whose path starts with this text (e.g. invoices/2026/). Empty = whole container. Trimmed, backslashes become slashes, a leading slash is dropped."
+    },
+    {
+      "key": "folderLevelOnly",
+      "type": "boolean",
+      "required": false,
+      "default": false,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Only files directly inside the folder named by path (a trailing '/' is appended to a non-empty path), not files in sub-folders."
+    },
+    {
+      "key": "tagFilters",
+      "type": "array",
+      "required": false,
+      "default": [],
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "Index-tag conditions, AND-combined: array of {\"tag\": string, \"op\": \"=\"|\">\"|\">=\"|\"<\"|\"<=\", \"value\": string}. Rows with an empty tag are ignored; empty op means '='. value supports SmartText. When at least one filter is present the step uses Azure's find-by-tags query, which spans the whole storage account; hits are then narrowed to the configured container and to path (and directly inside it when folderLevelOnly)."
+    },
+    {
+      "key": "maxResults",
+      "type": "integer",
+      "required": false,
+      "default": 500,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Stop after this many files. <= 0 (or absent) means 500; values above 5000 are capped at 5000."
+    },
+    {
+      "key": "includeTags",
+      "type": "boolean",
+      "required": false,
+      "default": true,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Also return each file's index tags (needs Storage Blob Data Owner, or a SAS with the Tags permission). Ignored for tag-filter queries."
+    },
+    {
+      "key": "errorOnEmpty",
+      "type": "boolean",
+      "required": false,
+      "default": false,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Raise an error when no file is found."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "count",
+      "type": "value",
+      "tableNo": null,
+      "when": "always"
+    },
+    {
+      "name": "results",
+      "type": "reference",
+      "tableNo": 5564412,
+      "when": "always"
+    }
+  ],
+  "rules": [
+    {
+      "id": "AzureBlobList.credential-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.credentialCode must be non-empty",
+      "message": "Select a credential for the Azure Blob Storage connection.",
+      "machine": {
+        "type": "required",
+        "key": "credentialCode"
+      }
+    },
+    {
+      "id": "AzureBlobList.credential-exists",
+      "severity": "error",
+      "stage": "editor",
+      "check": "The credential must exist in the company (also checked at run time).",
+      "message": "Credential %1 does not exist."
+    },
+    {
+      "id": "AzureBlobList.credential-auth-type",
+      "severity": "error",
+      "stage": "editor",
+      "check": "The credential's authentication type must be 'OAuth 2.0 client credentials' or 'Azure Storage SAS token' (also checked at run time).",
+      "message": "Credential %1 uses the authentication type \"%2\". Azure Blob Storage steps accept \"%3\" (an Entra app) or \"%4\"."
+    },
+    {
+      "id": "AzureBlobList.credential-storage-scope",
+      "severity": "error",
+      "stage": "editor",
+      "check": "For an OAuth 2.0 client-credentials credential, its OAuth scope must contain 'storage.azure.com' (editor only; at run time a wrong scope surfaces as an Azure authentication error).",
+      "message": "Credential %1 requests the scope \"%2\". Azure Blob Storage needs a token for the scope https://storage.azure.com/.default."
+    },
+    {
+      "id": "AzureBlobList.storage-account-format",
+      "severity": "error",
+      "stage": "editor",
+      "check": "A literal storageAccount (no '{{') must be 3-24 chars of a-z and 0-9. Checked again at run time on the resolved value.",
+      "message": "The storage account name \"%1\" is not valid. It must be 3 to 24 characters long and contain only lowercase letters and digits.",
+      "machine": {
+        "type": "regex",
+        "key": "storageAccount",
+        "pattern": "(?:[a-z0-9]{3,24}|.*\\{\\{.*)"
+      }
+    },
+    {
+      "id": "AzureBlobList.container-format",
+      "severity": "error",
+      "stage": "editor",
+      "check": "A literal container (no '{{') must be $root, $web, or 3-63 chars of a-z, 0-9 and single hyphens, not starting or ending with a hyphen. Checked again at run time on the resolved value.",
+      "message": "The container name \"%1\" is not valid. It must be 3 to 63 characters long and contain only lowercase letters, digits and single hyphens, starting and ending with a letter or digit.",
+      "machine": {
+        "type": "regex",
+        "key": "container",
+        "pattern": "(?:\\$root|\\$web|(?=.{3,63}$)[a-z0-9](?:[a-z0-9]|-(?!-))*[a-z0-9]|.*\\{\\{.*)"
+      }
+    },
+    {
+      "id": "AzureBlobList.tag-filter-op",
+      "severity": "info",
+      "stage": "editor",
+      "check": "Each tagFilters[].op should be one of =, >, >=, <, <= (the editor only offers these; no code check exists – any other text is passed to Azure verbatim and Azure rejects it).",
+      "message": "(no message – enforced by the editor's option column)"
+    },
+    {
+      "id": "AzureBlobList.storage-account-runtime",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The resolved storageAccount must be valid (an empty value also fails here).",
+      "message": "The storage account name \"%1\" is not valid. It must be 3 to 24 characters long and contain only lowercase letters and digits."
+    },
+    {
+      "id": "AzureBlobList.container-runtime",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The resolved container must be valid (an empty value also fails here).",
+      "message": "The container name \"%1\" is not valid. It must be 3 to 63 characters long and contain only lowercase letters, digits and single hyphens, starting and ending with a letter or digit."
+    },
+    {
+      "id": "AzureBlobList.sas-missing",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "A SAS-token credential must have a token stored.",
+      "message": "Credential %1 has no SAS token stored."
+    },
+    {
+      "id": "AzureBlobList.credential-url-allow-list",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "If the credential has base URLs (an allow-list), https://<storageAccount>.blob.core.windows.net/<container> must start with one of them. Also shown on the editor status line for literal values.",
+      "message": "The URL \"%1\" is not allowed by credential \"%2\". Allowed prefixes: %3."
+    },
+    {
+      "id": "AzureBlobList.error-on-empty",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "errorOnEmpty = true and no file found.",
+      "message": "No files were found in container %1 under \"%2\"."
+    }
+  ],
+  "notes": [
+    "Each listed file is stored as an Azure Blob Entry row (table 5564412; fields include Name, Path, Parent Directory, Size, Content Type, Created At, Last Modified, ETag, Tags, Metadata, Storage Account, Container). results points at the first row; results[0], results[1], ... address each row individually; For Each over {{<slug>_results}} iterates them.",
+    "The rows belong to the top-level execution (also when listed inside a SubFlow) and are deleted when that execution succeeds or is deleted. A failed execution keeps them so a restart can reuse them. Rows created outside an execution (editor test run) are never cleaned up automatically.",
+    "Azure error codes are translated: BlobNotFound, ContainerNotFound ('The container %1 was not found in storage account %2.'), Authorization* ('Azure denied access to container %1 (%2). ...'), AuthenticationFailed/InvalidAuthenticationInfo/NoAuthenticationInformation ('Azure could not authenticate the request (%1). ...'); anything else becomes 'Listing files failed: <Azure text>'.",
+    "Required Azure roles: Storage Blob Data Reader to list; Storage Blob Data Owner to read index tags.",
+    "Editor-stage rules come from the step's own validation and live status line; core does not run them on publish. There is no publish-time check for this step.",
+    "Find-by-tags results carry only what Azure's find-by-tags response returns (name, matched tags); size, content type and dates may be empty for those rows."
+  ]
+}

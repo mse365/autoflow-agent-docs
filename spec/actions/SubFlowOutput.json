@@ -1,0 +1,85 @@
+{
+  "kind": "action",
+  "name": "SubFlowOutput",
+  "id": 5564412,
+  "caption": "Return SubFlow Output",
+  "category": "Trigger Responses",
+  "availability": "ga",
+  "terminating": true,
+  "group": false,
+  "configuration": [
+    {
+      "key": "outputs",
+      "type": "array",
+      "required": false,
+      "default": [],
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "The values returned to the calling Run SubFlow step: array of {\"name\": string, \"type\": \"Value\"|\"Reference\", \"tableNo\": integer, \"value\": string}. name = output name seen by the caller (truncated to 30 chars there); type defaults to Value; tableNo is only meaningful for Reference (the editor derives it from the selected reference and writes 0 for Value rows); value = SmartText for Value rows, a wrapped reference selector {{name}} for Reference rows. An empty array returns no outputs."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "<outputs[].name>",
+      "type": "value",
+      "tableNo": null,
+      "when": "one entry per outputs[] row; 'reference' with that row's tableNo when type = Reference. Shown for information only – the step terminates the SubFlow, the values surface on the caller's Run SubFlow step."
+    }
+  ],
+  "rules": [
+    {
+      "id": "SubFlowOutput.outputs-type",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.outputs, if present, is an array of objects.",
+      "message": "(no message – the step is reported as invalid)",
+      "machine": {
+        "type": "type",
+        "key": "outputs",
+        "valueType": "array"
+      }
+    },
+    {
+      "id": "SubFlowOutput.name-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "Every outputs[] entry has a non-empty name.",
+      "message": "(no message – the step is reported as invalid)"
+    },
+    {
+      "id": "SubFlowOutput.name-unique",
+      "severity": "error",
+      "stage": "editor",
+      "check": "outputs[].name values are unique (case-sensitive).",
+      "message": "(no message – the step is reported as invalid)"
+    },
+    {
+      "id": "SubFlowOutput.type-enum",
+      "severity": "info",
+      "stage": "editor",
+      "check": "outputs[].type is 'Value' or 'Reference' (exact case). Anything else is treated as Value.",
+      "message": "(no message)"
+    },
+    {
+      "id": "SubFlowOutput.terminating",
+      "severity": "warning",
+      "stage": "publish",
+      "check": "The step is terminating: it must be the last step of its path (no following sibling step, no edges).",
+      "message": "Step \"%1\" is a terminating step but has a successor – terminating steps must end the path."
+    },
+    {
+      "id": "SubFlowOutput.only-in-subflows",
+      "severity": "info",
+      "stage": "editor",
+      "check": "Only offered in the step picker of flows whose trigger is 'When invoked as a SubFlow' (trigger 5564404).",
+      "message": "(no message – the step is hidden in other flows)"
+    }
+  ],
+  "notes": [
+    "Contract with the caller: the calling Run SubFlow step's outputs[] are generated from THIS step's configuration.outputs (name/type/tableNo) of the SubFlow version it pins. If a SubFlow contains several Return SubFlow Output steps (e.g. in different branches), only the first one found (document order, depth-first into edges) defines the caller's declared outputs – keep all of them identical.",
+    "Runtime: SmartFields in each value are resolved, the step builds a JSON object {name: value} (all values as strings), stops the SubFlow immediately and hands the object to the caller, which adds one value output per key.",
+    "A SubFlow that ends without reaching this step returns no outputs (not an error).",
+    "Reference-typed returns: the value is a selector such as {{FindCustomer_Rec}}; Reference selectors are not substituted with scalar text by the engine, so what the caller receives is not established by the source. Prefer returning scalar values (No., SystemId) and re-finding the record in the caller."
+  ]
+}

@@ -1,0 +1,293 @@
+{
+  "kind": "action",
+  "name": "AzureBlobPut",
+  "id": 5564422,
+  "caption": "Azure Blob: Upload file",
+  "category": "Documents",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "credentialCode",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": 20,
+      "smart": "none",
+      "description": "Code of an AutoFlow Credential (stored uppercase, max 20 chars). Its authentication type must be 'OAuth 2.0 client credentials' (Entra app, scope https://storage.azure.com/.default) or 'Azure Storage SAS token'. Credentials are company data and are NOT part of the flow definition – the code must exist in the target company."
+    },
+    {
+      "key": "storageAccount",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": 24,
+      "smart": "text",
+      "description": "Storage account name (3-24 lowercase letters/digits), e.g. contosodocs for https://contosodocs.blob.core.windows.net. Trimmed. May contain SmartFields; literal values are checked in the editor, resolved values at run time."
+    },
+    {
+      "key": "container",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": 63,
+      "smart": "text",
+      "description": "Blob container name (3-63 chars, lowercase letters, digits, single hyphens, starting/ending with letter or digit; $root and $web also accepted). Trimmed. SmartFields allowed."
+    },
+    {
+      "key": "path",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "Target path inside the container, e.g. invoices/{{trigger_Rec.no}}.pdf. Folders are implicit. Trimmed, backslashes become slashes, a leading slash is dropped. Must not end with '/'."
+    },
+    {
+      "key": "content",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "What to upload. If the raw value is exactly one SmartField (e.g. {{CreatePdf_Document}}) that names an AutoFlow Document, that document's bytes are uploaded and its content type is used; if it names another binary source (BLOB/Media field, binary step output) its bytes are uploaded. Anything else is resolved as SmartText and uploaded as UTF-8 text."
+    },
+    {
+      "key": "contentType",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "MIME type stored with the blob. Empty = the source document's content type, else derived from the file extension of path."
+    },
+    {
+      "key": "overwrite",
+      "type": "boolean",
+      "required": false,
+      "default": true,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Replace an existing blob with the same path. When false the step first checks for an exact-path match and fails if it exists."
+    },
+    {
+      "key": "tags",
+      "type": "array",
+      "required": false,
+      "default": [],
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "Index tags written with the blob: array of {\"name\": string, \"value\": string} (max 10). value supports SmartText. Rows with an empty name are dropped by the editor and skipped when building the tag header."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "path",
+      "type": "value",
+      "tableNo": null,
+      "when": "always"
+    },
+    {
+      "name": "name",
+      "type": "value",
+      "tableNo": null,
+      "when": "always"
+    },
+    {
+      "name": "url",
+      "type": "value",
+      "tableNo": null,
+      "when": "always"
+    },
+    {
+      "name": "size",
+      "type": "value",
+      "tableNo": null,
+      "when": "always"
+    },
+    {
+      "name": "contentType",
+      "type": "value",
+      "tableNo": null,
+      "when": "always"
+    }
+  ],
+  "rules": [
+    {
+      "id": "AzureBlobPut.credential-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.credentialCode must be non-empty",
+      "message": "Select a credential for the Azure Blob Storage connection.",
+      "machine": {
+        "type": "required",
+        "key": "credentialCode"
+      }
+    },
+    {
+      "id": "AzureBlobPut.credential-exists",
+      "severity": "error",
+      "stage": "editor",
+      "check": "The credential must exist in the company (also checked at run time).",
+      "message": "Credential %1 does not exist."
+    },
+    {
+      "id": "AzureBlobPut.credential-auth-type",
+      "severity": "error",
+      "stage": "editor",
+      "check": "The credential's authentication type must be 'OAuth 2.0 client credentials' or 'Azure Storage SAS token' (also checked at run time).",
+      "message": "Credential %1 uses the authentication type \"%2\". Azure Blob Storage steps accept \"%3\" (an Entra app) or \"%4\"."
+    },
+    {
+      "id": "AzureBlobPut.credential-storage-scope",
+      "severity": "error",
+      "stage": "editor",
+      "check": "For an OAuth 2.0 client-credentials credential, its OAuth scope must contain 'storage.azure.com' (editor only; at run time a wrong scope surfaces as an Azure authentication error).",
+      "message": "Credential %1 requests the scope \"%2\". Azure Blob Storage needs a token for the scope https://storage.azure.com/.default."
+    },
+    {
+      "id": "AzureBlobPut.storage-account-format",
+      "severity": "error",
+      "stage": "editor",
+      "check": "A literal storageAccount (no '{{') must be 3-24 chars of a-z and 0-9. Checked again at run time on the resolved value.",
+      "message": "The storage account name \"%1\" is not valid. It must be 3 to 24 characters long and contain only lowercase letters and digits.",
+      "machine": {
+        "type": "regex",
+        "key": "storageAccount",
+        "pattern": "(?:[a-z0-9]{3,24}|.*\\{\\{.*)"
+      }
+    },
+    {
+      "id": "AzureBlobPut.container-format",
+      "severity": "error",
+      "stage": "editor",
+      "check": "A literal container (no '{{') must be $root, $web, or 3-63 chars of a-z, 0-9 and single hyphens, not starting or ending with a hyphen. Checked again at run time on the resolved value.",
+      "message": "The container name \"%1\" is not valid. It must be 3 to 63 characters long and contain only lowercase letters, digits and single hyphens, starting and ending with a letter or digit.",
+      "machine": {
+        "type": "regex",
+        "key": "container",
+        "pattern": "(?:\\$root|\\$web|(?=.{3,63}$)[a-z0-9](?:[a-z0-9]|-(?!-))*[a-z0-9]|.*\\{\\{.*)"
+      }
+    },
+    {
+      "id": "AzureBlobPut.storage-account-runtime",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The resolved storageAccount must be valid (an empty value also fails here).",
+      "message": "The storage account name \"%1\" is not valid. It must be 3 to 24 characters long and contain only lowercase letters and digits."
+    },
+    {
+      "id": "AzureBlobPut.container-runtime",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The resolved container must be valid (an empty value also fails here).",
+      "message": "The container name \"%1\" is not valid. It must be 3 to 63 characters long and contain only lowercase letters, digits and single hyphens, starting and ending with a letter or digit."
+    },
+    {
+      "id": "AzureBlobPut.sas-missing",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "A SAS-token credential must have a token stored.",
+      "message": "Credential %1 has no SAS token stored."
+    },
+    {
+      "id": "AzureBlobPut.credential-url-allow-list",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "If the credential has base URLs (an allow-list), https://<storageAccount>.blob.core.windows.net/<container> must start with one of them. Also shown on the editor status line for literal values.",
+      "message": "The URL \"%1\" is not allowed by credential \"%2\". Allowed prefixes: %3."
+    },
+    {
+      "id": "AzureBlobPut.path-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.path (after trimming, backslash->slash, leading slash removed) must be non-empty. Also enforced at run time on the resolved value.",
+      "message": "Enter the path of the file, for example invoices/2026/INV-1001.pdf.",
+      "machine": {
+        "type": "required",
+        "key": "path"
+      }
+    },
+    {
+      "id": "AzureBlobPut.path-not-folder",
+      "severity": "error",
+      "stage": "editor",
+      "check": "The normalized path must not end with '/'. Also enforced at run time.",
+      "message": "The path \"%1\" ends with a slash, so it names a folder. Enter the path of a file.",
+      "machine": {
+        "type": "regex",
+        "key": "path",
+        "pattern": "(?s).*[^/\\s]\\s*"
+      }
+    },
+    {
+      "id": "AzureBlobPut.tags-max-10",
+      "severity": "error",
+      "stage": "editor",
+      "check": "At most 10 entries in tags. Re-checked at run time.",
+      "message": "A file can have at most 10 index tags; %1 are configured."
+    },
+    {
+      "id": "AzureBlobPut.tag-duplicate",
+      "severity": "error",
+      "stage": "editor",
+      "check": "Tag names (trimmed) must be unique. Re-checked at run time.",
+      "message": "The index tag \"%1\" is configured more than once."
+    },
+    {
+      "id": "AzureBlobPut.tag-name-length",
+      "severity": "error",
+      "stage": "editor",
+      "check": "Each tag name (trimmed) must be 1-128 characters. Re-checked at run time.",
+      "message": "The index tag name \"%1\" is not valid. It must be 1 to 128 characters long."
+    },
+    {
+      "id": "AzureBlobPut.tag-value-length",
+      "severity": "error",
+      "stage": "editor",
+      "check": "A literal tag value (no '{{') must be at most 256 characters; SmartField values are checked at run time after resolution.",
+      "message": "The value of index tag \"%1\" is too long. Tag values can have at most 256 characters."
+    },
+    {
+      "id": "AzureBlobPut.tag-chars",
+      "severity": "error",
+      "stage": "editor",
+      "check": "Tag names and literal values may only contain letters a-z/A-Z, digits 0-9, space and + - . / : = _. SmartField values are checked at run time after resolution.",
+      "message": "The index tag \"%1\" contains the character \"%2\". Tag names and values may only contain letters, digits, spaces and the characters + - . / : = _"
+    },
+    {
+      "id": "AzureBlobPut.content-empty",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The resolved content must not be empty (zero bytes).",
+      "message": "The content of the file is empty. Check the Content field – a SmartField there may not have resolved.",
+      "machine": {
+        "type": "required",
+        "key": "content"
+      }
+    },
+    {
+      "id": "AzureBlobPut.file-exists",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "overwrite = false and a blob with exactly this path exists.",
+      "message": "The file %1 already exists in container %2. Turn on \"Overwrite existing file\" to replace it."
+    }
+  ],
+  "notes": [
+    "url is https://<storageAccount>.blob.core.windows.net/<container>/<path> (no SAS appended). size is the uploaded byte count. name is the last path segment.",
+    "Tags are sent URL-encoded as the blob's index tags in the same upload request. Writing tags needs Storage Blob Data Owner (or a SAS with the Tags permission); uploading needs Storage Blob Data Contributor. With overwrite = false the existence check also needs list permission.",
+    "Tag character check: only ASCII letters a-z/A-Z count as letters; umlauts and other non-ASCII letters are rejected.",
+    "Azure error codes are translated: BlobNotFound ('The file %1 was not found in container %2 of storage account %3.'), ContainerNotFound ('The container %1 was not found in storage account %2.'), Authorization* ('Azure denied access to container %1 (%2). The Entra app needs the role Storage Blob Data Reader to list and download, Storage Blob Data Contributor to upload, and Storage Blob Data Owner to read or write index tags; a SAS token needs the matching permissions. Azure answered: %3'), AuthenticationFailed/InvalidAuthenticationInfo/NoAuthenticationInformation ('Azure could not authenticate the request (%1). For an Entra app, check that the credential uses the scope https://storage.azure.com/.default; for a SAS token, check that it has not expired. Azure answered: %2'); anything else becomes 'Uploading the file failed: <Azure text>'.",
+    "There is no publish-time check for this step; editor-stage rules come from the step's own validation and status line."
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "kind": "action",
+  "name": "Log",
+  "id": 104,
+  "caption": "Log",
+  "category": "Utilities",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "Message",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "Text written to the execution log at Info level. The key is case-sensitive and capitalised ('Message'). Supports SmartFields {{..}}, SmartFormulas [[..]] and SmartControls {#..#}. If the key is missing, an empty Info entry is written."
+    }
+  ],
+  "outputs": [],
+  "rules": [
+    {
+      "id": "Log.message-type",
+      "severity": "info",
+      "stage": "editor",
+      "check": "configuration.Message, if present, should be a string",
+      "message": "",
+      "machine": { "type": "type", "key": "Message", "valueType": "string" }
+    }
+  ],
+  "notes": [
+    "No editor, publish or runtime checks exist for this step. It never fails on its own.",
+    "The entry goes to the run's execution log, not to a user-visible message. The flow continues normally.",
+    "No outputs."
+  ]
+}

@@ -1,0 +1,169 @@
+{
+  "kind": "action",
+  "name": "ElementSet",
+  "id": 203,
+  "caption": "Set Element",
+  "category": "Data",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "elementSelector",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "field",
+      "description": "A single SmartField placeholder pointing to the output of a Create Element step, e.g. \"{{CreateTotalElement_Total}}\". Must be wrapped in {{ }} and must not contain a dotted path. Read unresolved (raw) at run time."
+    },
+    {
+      "key": "value",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "New content of the slot. Value elements: any SmartText (resolved before storing); empty clears the slot. Reference elements: exactly one {{name}} placeholder resolving to an upstream Reference output of the same table."
+    },
+    {
+      "key": "derivedType",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": ["value", "reference", ""],
+      "maxLength": null,
+      "smart": "none",
+      "description": "The element's type, resolved from elementSelector by the editor and persisted. The run time trusts this key alone: \"reference\" stores a record reference, anything else (including missing or empty) stores text."
+    },
+    {
+      "key": "derivedTableNo",
+      "type": "integer",
+      "required": false,
+      "default": 0,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Table number of the target element (0 for Value elements or when unresolved). Written by the editor; informational at run time."
+    }
+  ],
+  "outputs": [],
+  "rules": [
+    {
+      "id": "ElementSet.elementSelector-required",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "configuration.elementSelector must be non-empty.",
+      "message": "Element selector is required.",
+      "machine": { "type": "required", "key": "elementSelector" }
+    },
+    {
+      "id": "ElementSet.elementSelector-placeholder",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "elementSelector must be a single wrapped SmartField placeholder ({{name}}).",
+      "message": "The Element selector '%1' must use the SmartField placeholder notation, e.g. '{{name}}'.",
+      "machine": { "type": "regex", "key": "elementSelector", "pattern": "\\s*\\{\\{\\s*[^{}\\s][^{}]*\\}\\}\\s*" }
+    },
+    {
+      "id": "ElementSet.elementSelector-not-dotted",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The name inside elementSelector must not contain '.'.",
+      "message": "The Element selector '%1' must point to a top-level output – dotted paths cannot be elements.",
+      "machine": { "type": "regex", "key": "elementSelector", "pattern": "[^.]*" }
+    },
+    {
+      "id": "ElementSet.derivedType-enum",
+      "severity": "warning",
+      "stage": "editor",
+      "check": "derivedType should be \"value\" or \"reference\" and match the Create Element output's type. Empty/missing makes the run time store text even into a Reference element.",
+      "message": "",
+      "machine": { "type": "enum", "key": "derivedType", "values": ["value", "reference"] }
+    },
+    {
+      "id": "ElementSet.status-pick-element",
+      "severity": "info",
+      "stage": "editor",
+      "check": "Live status: elementSelector is empty.",
+      "message": "Element: Pick an element from the SmartField picker."
+    },
+    {
+      "id": "ElementSet.status-element-not-placeholder",
+      "severity": "error",
+      "stage": "editor",
+      "check": "Live status: elementSelector is not a {{name}} placeholder.",
+      "message": "Element: The Element field must be a SmartField placeholder, e.g. {{elementName}}."
+    },
+    {
+      "id": "ElementSet.status-element-dotted",
+      "severity": "error",
+      "stage": "editor",
+      "check": "Live status: elementSelector contains a dotted path.",
+      "message": "Element: The Element placeholder must point to a top-level Create Element output – dotted paths are not elements."
+    },
+    {
+      "id": "ElementSet.status-element-unresolved",
+      "severity": "error",
+      "stage": "editor",
+      "check": "Live status: elementSelector does not resolve against upstream outputs.",
+      "message": "Element: Cannot resolve %1 against the available outputs of upstream steps."
+    },
+    {
+      "id": "ElementSet.status-reference-needs-placeholder",
+      "severity": "error",
+      "stage": "editor",
+      "check": "Live status: Reference element, value is not a single {{name}} placeholder.",
+      "message": "Value: A Reference element requires a single SmartField placeholder, e.g. {{find-records_results}}."
+    },
+    {
+      "id": "ElementSet.status-value-unresolved",
+      "severity": "error",
+      "stage": "editor",
+      "check": "Live status: the value placeholder (Reference elements) or any placeholder inside the value text (Value elements) does not resolve against upstream outputs.",
+      "message": "Value: Cannot resolve %1 against the available outputs of upstream steps."
+    },
+    {
+      "id": "ElementSet.status-value-is-value",
+      "severity": "error",
+      "stage": "editor",
+      "check": "Live status: Reference element, but the value placeholder resolves to a Value output.",
+      "message": "Value: %1 resolves to a Value SmartField but the element expects a Reference."
+    },
+    {
+      "id": "ElementSet.status-table-mismatch",
+      "severity": "error",
+      "stage": "editor",
+      "check": "Live status: Reference element, value references a different table.",
+      "message": "Value: %1 references table %2 but the element holds a reference to table %3."
+    },
+    {
+      "id": "ElementSet.reference-value-wrapper",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "When derivedType = \"reference\", the raw value must be a single wrapped {{name}} placeholder.",
+      "message": "Reference elements require a single SmartField placeholder for the Value, e.g. '{{name}}'. Got: %1"
+    },
+    {
+      "id": "ElementSet.reference-value-not-found",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "When derivedType = \"reference\", the placeholder name must exist in the run context as a Reference.",
+      "message": "Reference '%1' not found in context."
+    },
+    {
+      "id": "ElementSet.execution-missing",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The step must run inside a flow execution.",
+      "message": "Execution entry %1 not found."
+    }
+  ],
+  "notes": [
+    "Overwrites the element's single slot (keyed by the bare selector name, no [index]); it never appends.",
+    "The live status line and the step's validity check are editor-only; publishing does not re-check them. Only the generic dangling-reference warning applies at publish.",
+    "Status messages are shown with the field prefix 'Element: ' or 'Value: ' as listed. When valid the status reads '✓ Value' or '✓ Reference: <table caption> (<table no>)'."
+  ]
+}

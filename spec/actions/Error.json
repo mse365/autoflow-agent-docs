@@ -1,0 +1,56 @@
+{
+  "kind": "action",
+  "name": "Error",
+  "id": 102,
+  "caption": "Error",
+  "category": "Utilities",
+  "availability": "ga",
+  "terminating": true,
+  "group": false,
+  "configuration": [
+    {
+      "key": "Error",
+      "type": "string",
+      "required": true,
+      "default": null,
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "The error message raised when the flow reaches this step. The key is case-sensitive and capitalised ('Error'). Supports SmartFields {{..}}, SmartFormulas [[..]] and SmartControls {#..#}."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "Errormessage",
+      "type": "value",
+      "tableNo": null,
+      "when": "declared only; never populated because the step always fails"
+    }
+  ],
+  "rules": [
+    {
+      "id": "Error.message-key-required",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "configuration must contain the key 'Error'",
+      "message": "No error message configured.",
+      "machine": {
+        "type": "required",
+        "key": "Error"
+      }
+    },
+    {
+      "id": "Error.terminating-no-successor",
+      "severity": "warning",
+      "stage": "publish",
+      "check": "A step whose JSON has terminating=true must have no next step in its sequence and no edges",
+      "message": "Step \"%1\" is a terminating step but has a successor – terminating steps must end the path."
+    }
+  ],
+  "notes": [
+    "The step always fails the flow. With the key present, the error text is the resolved message. Without the key, it fails with 'No error message configured.'.",
+    "The machine 'required' check is stricter than the runtime: at runtime only the key's presence is checked, and an empty string still raises an error, but an empty message text is unhelpful. Treat a non-empty message as required.",
+    "The editor's configuration check always passes. There is no editor-side check of the message.",
+    "The publish-time terminating check reads the step's own 'terminating' flag from the JSON. Keep terminating=true so that misplaced successors are reported."
+  ]
+}

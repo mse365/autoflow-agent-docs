@@ -1,0 +1,152 @@
+{
+  "kind": "action",
+  "name": "HttpRequest",
+  "id": 5564402,
+  "caption": "HTTP Request",
+  "category": "Web",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "url",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "Request URL. SmartText: SmartFields/SmartFormulas are resolved before sending. When a credential with base URLs is selected, a relative URL (not starting with http:// or https://) is prefixed with the credential's first base URL."
+    },
+    {
+      "key": "method",
+      "type": "string",
+      "required": true,
+      "default": "GET",
+      "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"],
+      "maxLength": null,
+      "smart": "none",
+      "description": "HTTP method as upper-case text. The editor offers GET, POST, PUT, PATCH, DELETE and writes \"GET\" when nothing is chosen. The run time passes the text through as-is."
+    },
+    {
+      "key": "headers",
+      "type": "object",
+      "required": false,
+      "default": {},
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "Request headers as a flat object { \"<Header-Name>\": \"<value>\" }. Values are SmartText. Names are truncated to 50 characters, values to 4096. The key 'Content-Type' (exact spelling) is applied to the request content; all others go on the request."
+    },
+    {
+      "key": "body",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "Request body (SmartText; the editor shows it only for POST/PUT/PATCH but it is sent for any method if present). If the raw body is exactly one {{field}} placeholder (no format suffix) that resolves to binary data (BLOB/Media field or binary output), the bytes are sent unchanged. With a credential, the reserved tokens {{credential.username}} and {{credential.password}} are replaced (XML-escaped) at send time."
+    },
+    {
+      "key": "credentialCode",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": 20,
+      "smart": "none",
+      "description": "Code of an AutoFlow Credential record in the target company (environment-specific; secrets are never stored in the flow). Empty = no credential, authenticate via headers. An unknown code is silently ignored at run time (request is sent without the credential)."
+    }
+  ],
+  "outputs": [
+    { "name": "responseStatus", "type": "value", "tableNo": null, "when": "always" },
+    { "name": "responseHeaders", "type": "value", "tableNo": null, "when": "always" },
+    { "name": "responseBody", "type": "value", "tableNo": null, "when": "always" }
+  ],
+  "rules": [
+    {
+      "id": "HttpRequest.url-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.url must be non-empty (required field in the config canvas).",
+      "message": "Please fill in the highlighted fields.",
+      "machine": { "type": "required", "key": "url" }
+    },
+    {
+      "id": "HttpRequest.method-enum",
+      "severity": "warning",
+      "stage": "editor",
+      "check": "configuration.method should be one of GET, POST, PUT, PATCH, DELETE (upper case). Other text is sent as-is at run time but is shown as GET in the editor and overwritten with GET on the next save.",
+      "message": "",
+      "machine": { "type": "enum", "key": "method", "values": ["GET", "POST", "PUT", "PATCH", "DELETE"] }
+    },
+    {
+      "id": "HttpRequest.method-required",
+      "severity": "warning",
+      "stage": "editor",
+      "check": "configuration.method should be present; the editor always writes it. Behaviour with a missing/empty method is platform-defined.",
+      "message": "",
+      "machine": { "type": "required", "key": "method" }
+    },
+    {
+      "id": "HttpRequest.headers-type",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.headers must be a JSON object of name → string value (not an array of rows).",
+      "message": "",
+      "machine": { "type": "type", "key": "headers", "valueType": "object" }
+    },
+    {
+      "id": "HttpRequest.credentialCode-maxLength",
+      "severity": "error",
+      "stage": "editor",
+      "check": "credentialCode is at most 20 characters (a credential code).",
+      "message": "",
+      "machine": { "type": "maxLength", "key": "credentialCode", "max": 20 }
+    },
+    {
+      "id": "HttpRequest.url-allowed-by-credential-status",
+      "severity": "warning",
+      "stage": "editor",
+      "check": "Live status: when a credential with base URLs is selected, the (prefixed) URL must start with one of the credential's base URLs (path-boundary match, case-insensitive, query/fragment ignored).",
+      "message": "⚠ The URL \"%1\" is not allowed by credential \"%2\". Allowed prefixes: %3."
+    },
+    {
+      "id": "HttpRequest.url-allowed-by-credential",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "When the credential has base URLs, the final URL must match one of them; otherwise the request is not sent.",
+      "message": "The URL \"%1\" is not allowed by credential \"%2\". Allowed prefixes: %3."
+    },
+    {
+      "id": "HttpRequest.oauth-token-failed",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "OAuth 2.0 client-credentials credential: the token endpoint returned a non-success status.",
+      "message": "Failed to obtain OAuth token for credential %1: HTTP %2. Response: %3"
+    },
+    {
+      "id": "HttpRequest.oauth-token-invalid",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "OAuth 2.0 client-credentials credential: the token endpoint response could not be read.",
+      "message": "OAuth token endpoint for credential %1 returned an unexpected response."
+    },
+    {
+      "id": "HttpRequest.transport-failure",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "Invalid URL, DNS/connection failure, timeout or an outgoing HTTP call blocked by the environment raise the platform's error and fail the step. Non-2xx responses are NOT errors.",
+      "message": ""
+    }
+  ],
+  "notes": [
+    "responseStatus is the numeric status as text (e.g. \"200\"); responseHeaders is a JSON object text with the first value of each response header; responseBody is the body as text. If the response Content-Type is binary (PDF, image, octet-stream, ...), responseBody holds the raw bytes (usable as a whole {{slug_responseBody}} in a BLOB/Media field) and the log shows a placeholder.",
+    "The step does not fail on 4xx/5xx; branch on {{slug_responseStatus}} downstream.",
+    "Header precedence with a credential: credential default headers < step headers < authentication headers. Authentication headers are removed from the execution log; API-key-in-query secrets are added after the URL is logged.",
+    "Credentials, their base URLs, default headers and secrets live per company in Business Central, not in the flow JSON. Only the credential's code travels with the flow, so the same code must exist (with the right auth setup) in every target company/environment.",
+    "The editor's 'Send test request' button sends a real request; it is not part of the configuration (no key is stored).",
+    "The step validity check of this step always passes; no publish-time step check exists. Only the generic dangling-reference warning applies."
+  ]
+}

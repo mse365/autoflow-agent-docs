@@ -1,0 +1,118 @@
+{
+  "kind": "action",
+  "name": "WhileLoop",
+  "id": 106,
+  "caption": "While Loop",
+  "category": "Control",
+  "availability": "ga",
+  "terminating": false,
+  "group": true,
+  "edges": {
+    "fixed": [
+      {
+        "value": "loop",
+        "description": "while"
+      }
+    ],
+    "dynamic": false,
+    "rules": "Exactly one edge with value \"loop\". Its steps are the loop body. After every pass of the body, the While step is dispatched again and re-evaluates the condition. When the condition is false, the step emits an empty result, and the flow continues after the loop."
+  },
+  "configuration": [
+    {
+      "key": "condition",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "filter",
+      "description": "SmartFilter expression, same grammar as the Decision step's condition. It is re-substituted and re-evaluated on every pass, so it should reference values that the body changes. An empty or unparseable condition evaluates to false."
+    },
+    {
+      "key": "mode",
+      "type": "integer",
+      "required": false,
+      "default": 0,
+      "enum": [
+        0,
+        1
+      ],
+      "maxLength": null,
+      "smart": "none",
+      "description": "0 = While (check the condition before every pass, including the first), 1 = Do-While (run the body once without checking, then check before every further pass). A missing or unknown value is treated as 0."
+    },
+    {
+      "key": "maxIterations",
+      "type": "integer",
+      "required": true,
+      "default": 1000,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Runaway guard: the maximum number of body passes. The runtime uses 1000 when the value is missing or <= 0, but the editor requires >= 1."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "iteration",
+      "type": "value",
+      "tableNo": null,
+      "when": "always"
+    }
+  ],
+  "rules": [
+    {
+      "id": "WhileLoop.condition-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.condition must be non-empty",
+      "message": "",
+      "machine": {
+        "type": "required",
+        "key": "condition"
+      }
+    },
+    {
+      "id": "WhileLoop.maxIterations-min",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.maxIterations must be an integer >= 1 (a missing key reads as 0 and fails)",
+      "message": "",
+      "machine": {
+        "type": "range",
+        "key": "maxIterations",
+        "min": 1
+      }
+    },
+    {
+      "id": "WhileLoop.mode-enum",
+      "severity": "info",
+      "stage": "runtime",
+      "check": "configuration.mode should be 0 or 1 (anything else is treated as 0 = While)",
+      "message": "",
+      "machine": {
+        "type": "enum",
+        "key": "mode",
+        "values": [
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "id": "WhileLoop.max-iterations-exceeded",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "If the condition is still true on dispatch number maxIterations+1 (i.e. after maxIterations body passes), the step fails",
+      "message": "The While loop did not terminate within its configured maximum of %1 iterations. Review the condition or raise the limit on the step."
+    }
+  ],
+  "notes": [
+    "The 'iteration' output is the 1-based dispatch number of the While step. Inside the body, pass N has iteration = N.",
+    "Limit semantics: the body can run at most maxIterations times. If the condition becomes false on the dispatch right after the last allowed pass, the loop ends cleanly. Only a condition that is still true then raises the error.",
+    "Do-While: on the first dispatch the condition is not evaluated, so the body always runs at least once. With mode 0, a condition that is false at the start skips the body entirely.",
+    "The step emits a runtime-only 'result' ('loop' to enter the body, '' to exit) that the engine routes on. It is not declared in outputs[].",
+    "Outputs of steps INSIDE the body are deleted every time control returns to the While step, so a condition cannot read body-step outputs. Make the condition depend on data that persists, such as records the body modifies or variables/collections outside the loop.",
+    "The editor's configuration check returns pass/fail without message text. Nothing checks the condition or the limit at publish time."
+  ]
+}

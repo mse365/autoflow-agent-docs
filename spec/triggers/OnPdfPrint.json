@@ -1,0 +1,153 @@
+{
+  "kind": "trigger",
+  "name": "OnPdfPrint",
+  "id": 5564405,
+  "caption": "When a PDF is printed",
+  "category": "Reports",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "reports",
+      "type": "array",
+      "required": true,
+      "default": [],
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Report lines: [{ \"reportId\": <integer> }]. The flow runs only for these reports. At least one line, each report at most once. A 'tableNo' column is shown in the config canvas but is NOT stored or used by this trigger."
+    },
+    {
+      "key": "timeoutSec",
+      "type": "integer",
+      "required": false,
+      "default": 30,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "How long the flow may run before Business Central uses the original PDF."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "ObjectPayload",
+      "type": "value",
+      "tableNo": null,
+      "when": "always; the full report payload JSON from Business Central as text"
+    },
+    {
+      "name": "DocumentStream",
+      "type": "value",
+      "tableNo": null,
+      "when": "always; the original PDF as base64. Removed from the execution data after the run."
+    },
+    {
+      "name": "ReportId",
+      "type": "value",
+      "tableNo": null,
+      "when": "always; payload 'objectid' as text ('' if missing)"
+    },
+    {
+      "name": "DocumentType",
+      "type": "value",
+      "tableNo": null,
+      "when": "always; payload 'documenttype' (always 'application/pdf' because only PDFs fire)"
+    },
+    {
+      "name": "LayoutName",
+      "type": "value",
+      "tableNo": null,
+      "when": "always; payload 'layoutname' ('' if missing)"
+    },
+    {
+      "name": "Intent",
+      "type": "value",
+      "tableNo": null,
+      "when": "always; payload 'intent' (e.g. Print, Preview, Save, Download, Schedule; '' if missing)"
+    }
+  ],
+  "rules": [
+    {
+      "id": "OnPdfPrint.lines-required-publish",
+      "severity": "error",
+      "stage": "publish",
+      "check": "configuration.reports must contain at least one entry. Raised while registering the trigger (after licensing), aborting the publish.",
+      "message": "The \"When a PDF is printed\" trigger requires at least one report line."
+    },
+    {
+      "id": "OnPdfPrint.single-flow",
+      "severity": "error",
+      "stage": "publish",
+      "check": "Only one published flow per environment may use this trigger. Registrations of deleted or unpublished flows are cleaned up automatically.",
+      "message": "Only one published flow can use the \"When a PDF is printed\" trigger. It is already used by flow '%1'."
+    },
+    {
+      "id": "OnPdfPrint.reports-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.reports must be a non-empty array.",
+      "message": "Configure at least one report line.",
+      "machine": {
+        "type": "required",
+        "key": "reports"
+      }
+    },
+    {
+      "id": "OnPdfPrint.reports-type",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.reports must be an array of objects.",
+      "message": "Configure at least one report line.",
+      "machine": {
+        "type": "type",
+        "key": "reports",
+        "valueType": "array"
+      }
+    },
+    {
+      "id": "OnPdfPrint.timeout-positive",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.timeoutSec must be at least 1.",
+      "message": "The timeout must be at least 1 second.",
+      "machine": {
+        "type": "range",
+        "key": "timeoutSec",
+        "min": 1
+      }
+    },
+    {
+      "id": "OnPdfPrint.report-exists",
+      "severity": "error",
+      "stage": "editor",
+      "check": "Every reports[].reportId must be an existing report.",
+      "message": "Report %1 does not exist."
+    },
+    {
+      "id": "OnPdfPrint.report-unique",
+      "severity": "error",
+      "stage": "editor",
+      "check": "A reportId may appear on only one line.",
+      "message": "Report %1 is configured on more than one line."
+    },
+    {
+      "id": "OnPdfPrint.runner-failed",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "If the flow fails, the execution is marked Error and Business Central prints the original PDF (the print itself does not fail).",
+      "message": "PDF Print flow failed before any body step could complete: %1"
+    }
+  ],
+  "notes": [
+    "Fires from Business Central's 'document ready' report event for every intent (Print, Preview, Save, Download, Schedule), only for payloads with documenttype 'application/pdf' and only for reports listed in configuration.reports. If another extension already supplied a document, the flow is not started.",
+    "Synchronous: the flow runs inside the user's report request. The trigger output is committed first, then the flow runs until it yields (Return PDF), ends, fails or reaches timeoutSec. All step state is committed once at the end. Nothing continues in the background after the timeout.",
+    "End the flow with a Return PDF step to replace the document; otherwise the original PDF is used.",
+    "The DocumentStream output (base64 of the whole PDF) is deleted from the execution data after the run to keep the database small; it is not available when inspecting the execution afterwards.",
+    "Single catch-all flow: one published flow per environment handles all configured reports. Branch on {{trigger_ReportId}} for per-report logic.",
+    "The legacy single 'reportId' configuration key is no longer read; it is removed when the trigger is reconfigured.",
+    "The 'Source Table' column in the config canvas is not persisted for this trigger (only reportId is written). Use ObjectPayload to identify the printed records.",
+    "No recurring Job Queue entry is created on publish.",
+    "Picker filter: Return PDF is ONLY offered in this trigger's flows. Respond to Webhook, Return SubFlow Output, Set report file name, Set document field values and Prevent page close are hidden."
+  ]
+}

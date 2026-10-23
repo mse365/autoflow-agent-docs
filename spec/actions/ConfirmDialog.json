@@ -1,0 +1,118 @@
+{
+  "kind": "action",
+  "name": "ConfirmDialog",
+  "id": 5564418,
+  "caption": "Confirm dialog",
+  "category": "Control",
+  "availability": "ga",
+  "terminating": false,
+  "group": true,
+  "edges": {
+    "fixed": [
+      { "value": "true", "description": "Yes" },
+      { "value": "false", "description": "No" }
+    ],
+    "dynamic": false,
+    "rules": "Exactly two edges in this order: edges[0] value \"true\" (the answer was Yes) and edges[1] value \"false\" (the answer was No), the same as the Decision step. The editor's 'Yes label' / 'No label' fields are stored as edges[0].description / edges[1].description, not in configuration. An edge with no steps continues after the step."
+  },
+  "configuration": [
+    {
+      "key": "message",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": 2048,
+      "smart": "text",
+      "description": "The yes/no question. Supports SmartFields {{..}}, SmartFormulas [[..]] and SmartControls {#..#}. maxLength applies only to the copy kept for background answering, which is truncated to 2048 characters."
+    },
+    {
+      "key": "defaultYes",
+      "type": "boolean",
+      "required": false,
+      "default": false,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Preselects Yes in the dialog. Legacy: when 'noGuiAnswer' is absent but 'defaultYes' is present, defaultYes also decides the no-user-interface answer (true = Yes, false = No)."
+    },
+    {
+      "key": "noGuiAnswer",
+      "type": "integer",
+      "required": false,
+      "default": 0,
+      "enum": [0, 1, 2],
+      "maxLength": null,
+      "smart": "none",
+      "description": "What happens when nobody can be asked (session without a user interface, and no answer within the waiting time): 0 = raise an error, 1 = answer Yes, 2 = answer No. If both noGuiAnswer and defaultYes are absent, the answer is 0 (error). The editor always writes this key."
+    },
+    {
+      "key": "waitMinutes",
+      "type": "integer",
+      "required": false,
+      "default": 5,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Job queue runs only: how many minutes the question waits for an answer from a user who follows the run or opens its execution. 0 = do not wait. Valid range 0..15. At runtime, values outside the range are clamped."
+    }
+  ],
+  "outputs": [
+    { "name": "result", "type": "value", "tableNo": null, "when": "always" }
+  ],
+  "rules": [
+    {
+      "id": "ConfirmDialog.message-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.message must be non-empty",
+      "message": "Enter the question to ask the user.",
+      "machine": { "type": "required", "key": "message" }
+    },
+    {
+      "id": "ConfirmDialog.waitMinutes-range",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.waitMinutes (default 5 when absent) must be between 0 and 15",
+      "message": "The waiting time must be between 0 and %1 minutes.",
+      "machine": { "type": "range", "key": "waitMinutes", "min": 0, "max": 15 }
+    },
+    {
+      "id": "ConfirmDialog.noGuiAnswer-enum",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "configuration.noGuiAnswer must be 0, 1 or 2",
+      "message": "",
+      "machine": { "type": "enum", "key": "noGuiAnswer", "values": [0, 1, 2] }
+    },
+    {
+      "id": "ConfirmDialog.inside-record-change",
+      "severity": "warning",
+      "stage": "publish",
+      "check": "The flow's trigger runs inside the record change that started it: trigger 5564529 (document modified, interactive), 5564402 (global insert), 5564450 (global modify) or 5564451 (global delete)",
+      "message": "The confirm dialog '%1' runs inside the record change that started the flow. Business Central does not open dialogs there, so when a user triggers the flow it fails at this step. It only works when the flow runs in the background, where the answer under 'Without a user interface' applies."
+    },
+    {
+      "id": "ConfirmDialog.after-writing-step",
+      "severity": "warning",
+      "stage": "publish",
+      "check": "Walking the definition in document order (each step, then the steps nested in its edges, depth-first), a writing step appears before this step. Writing actions: 5564405 insert record, 5564406 modify record, 5564407 delete record, 5564408 rename record, 5564530 set document field values, 5564417 add item tracking, 5564558 set dimension values, 5564554 draw number from number series. Over-reports by design: it cannot tell whether that earlier step is on a branch that actually ran.",
+      "message": "The confirm dialog '%1' may run after a step that writes ('%2'). Business Central cannot open a dialog once a flow has written, so the flow would fail there. Move the confirm dialog ahead of the writing steps."
+    },
+    {
+      "id": "ConfirmDialog.no-gui-error",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "No user interface, nobody answered within waitMinutes (or waiting does not apply), and noGuiAnswer = 0",
+      "message": "The flow runs without a user interface, so nobody can answer the confirm dialog \"%1\". To let the flow continue, choose Answer Yes or Answer No under \"Without a user interface\" in the step."
+    }
+  ],
+  "notes": [
+    "With a user interface (interactive session), a standard Business Central confirm dialog is shown, with Yes preselected when defaultYes is true.",
+    "Job queue run (background session) and waitMinutes > 0: the question is parked and polled every 2 seconds until the deadline. It is put to whoever follows the run in the wait dialog or opens the execution card, and the first answer wins. If no answer arrives in time, noGuiAnswer applies. The job queue session stays occupied while it waits.",
+    "Other sessions without a user interface (e.g. web service calls) never wait. noGuiAnswer applies immediately.",
+    "In a loop, each pass asks again. A consumed question is closed.",
+    "The publish warnings use the step id as %1/%2.",
+    "The 'result' output is 'true' or 'false' and is what the engine routes on. The answer and the answering user are written to the execution log."
+  ]
+}

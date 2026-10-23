@@ -1,0 +1,192 @@
+{
+  "kind": "action",
+  "name": "PdfPrint",
+  "id": 5564410,
+  "caption": "Create PDF",
+  "category": "Documents",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "selector",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "record",
+      "description": "Record selector: a SmartField placeholder in {{name}} notation that points to a record reference (e.g. {{trigger_Rec}}). The report runs filtered to exactly that record (SetRecFilter). Leave empty for reports without a data-source record (e.g. financial reports). Bare names without braces are rejected."
+    },
+    {
+      "key": "report",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Report object ID, stored as a decimal integer in a JSON string (e.g. \"1306\"). Empty means no report picked."
+    },
+    {
+      "key": "parameters",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "Report request-page parameters as XML (the string Business Central's RunRequestPage produces). SmartField placeholders ({{...}}) inside the XML are resolved at run time. Legacy flows stored this value base64-encoded; a value that does not start with '<' (after leading whitespace) is treated as base64 and decoded. Empty = report defaults."
+    },
+    {
+      "key": "layout",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": 250,
+      "smart": "none",
+      "description": "Name of a report layout defined for the selected report (as listed in Report Layouts). Empty = the report's default layout. Only applies to this one render."
+    },
+    {
+      "key": "layoutAppId",
+      "type": "guid",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "ID of the app that owns the layout, as a GUID string without braces. Disambiguates layouts with the same name from different apps. Re-derived from (report, layout) every time the step is saved in the editor; empty or unparsable = match the layout by name only."
+    },
+    {
+      "key": "filenamePattern",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": 250,
+      "smart": "text",
+      "description": "File name for the generated document. Built-in tokens {ReportName}, {RecordNo}, {ReportId} are replaced; SmartFields ({{...}}) are resolved too. Include the .pdf extension yourself. Empty = 'Report_<reportId>.pdf'. The stored document name is truncated to 250 characters."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "Document",
+      "type": "reference",
+      "tableNo": 5564415,
+      "when": "always"
+    }
+  ],
+  "rules": [
+    {
+      "id": "PdfPrint.selector-wrapped",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.selector, when non-empty, must be a SmartField placeholder in {{name}} notation",
+      "message": "The selector '%1' must use the SmartField placeholder notation (e.g. '{{name}}'). Bare selector names are no longer accepted – open the SmartField picker on the PDF Print step config to insert a valid placeholder.",
+      "machine": {
+        "type": "regex",
+        "key": "selector",
+        "pattern": "\\s*(\\{\\{[^{}]+\\}\\})?\\s*"
+      }
+    },
+    {
+      "id": "PdfPrint.report-required-editor",
+      "severity": "error",
+      "stage": "editor",
+      "check": "The Report field is marked required in the configuration canvas",
+      "message": "(no dedicated message; the configuration dialog marks the Report field as required)",
+      "machine": {
+        "type": "required",
+        "key": "report"
+      }
+    },
+    {
+      "id": "PdfPrint.report-required",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "configuration.report must be non-empty",
+      "message": "A report must be selected.",
+      "machine": {
+        "type": "required",
+        "key": "report"
+      }
+    },
+    {
+      "id": "PdfPrint.report-integer",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "configuration.report must parse as an integer",
+      "message": "Invalid Report ID: %1. Report ID must be a valid integer.",
+      "machine": {
+        "type": "regex",
+        "key": "report",
+        "pattern": "[0-9]+"
+      }
+    },
+    {
+      "id": "PdfPrint.report-exists",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "A report object with that ID must exist in the environment",
+      "message": "Report ID %1 does not exist."
+    },
+    {
+      "id": "PdfPrint.layout-exists",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "If configuration.layout is non-empty, a layout with that name (and, when layoutAppId is a valid GUID, that owning app) must exist for the report",
+      "message": "The layout '%1' no longer exists for report %2. Open the PDF Print step and pick a layout again, or clear it to use the report default."
+    },
+    {
+      "id": "PdfPrint.selector-wrapped-runtime",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "A non-empty selector must be a {{name}} placeholder",
+      "message": "The selector '%1' must use the SmartField placeholder notation (e.g. '{{name}}'). Bare selector names are no longer accepted – open the SmartField picker on the PDF Print step config to insert a valid placeholder."
+    },
+    {
+      "id": "PdfPrint.selector-found",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The selector name must exist in the run's SmartField context",
+      "message": "Record selector '%1' could not be resolved. The selector was not found in the context buffer."
+    },
+    {
+      "id": "PdfPrint.selector-is-reference",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The selector must point to a record reference, not a value",
+      "message": "Record selector '%1' could not be resolved to a record reference. The field is not a reference type."
+    },
+    {
+      "id": "PdfPrint.record-exists",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The referenced record must still exist",
+      "message": "The record referenced by selector '%1' could not be found."
+    },
+    {
+      "id": "PdfPrint.render-ok",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "Rendering the report to PDF must succeed; the platform's error is re-raised, or this fallback when it gives none",
+      "message": "The report %1 could not be rendered."
+    },
+    {
+      "id": "PdfPrint.pdf-not-empty",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The rendered PDF must not be empty",
+      "message": "The report %1 produced an empty PDF document."
+    }
+  ],
+  "notes": [
+    "The enum caption is 'Create PDF Document'; the step picker shows 'Create PDF'. Default step description is 'Create <report caption> PDF'.",
+    "No publish-time (OnValidateFlowStep) check exists for this step; every report/layout/selector problem surfaces at run time.",
+    "The output 'Document' is a reference to an AutoFlow Document record (table 5564415: ID, Name, Content Type, Length, Data).",
+    "{RecordNo} is the primary-key value(s) of the selector record joined with '_' (empty when there is no selector).",
+    "The layout picker in the editor is read-only and lookup-only; on Business Central 24 no lookup page is available, so the layout can only be set by editing the JSON.",
+    "Word and RDLC layouts render to PDF directly; Excel/custom layouts may produce varying results."
+  ]
+}

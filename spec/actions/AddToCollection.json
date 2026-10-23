@@ -1,0 +1,162 @@
+{
+  "kind": "action",
+  "name": "AddToCollection",
+  "id": 201,
+  "caption": "Add to Collection",
+  "category": "Data",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "collectionSelector",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "field",
+      "description": "A single SmartField placeholder pointing to the output of a Create Collection step, e.g. \"{{CreateOrdersCollection_Orders}}\". Must be wrapped in {{ }} and must not contain a dotted path. Read unresolved (raw) at run time."
+    },
+    {
+      "key": "value",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "Item to append. Value collections: any SmartText (SmartFields {{..}}, SmartFormulas [[..]], SmartControls {#..#}); resolved before appending. Reference collections: exactly one SmartField placeholder {{name}} that resolves to an upstream Reference output of the same table."
+    },
+    {
+      "key": "derivedType",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": [
+        "value",
+        "reference",
+        ""
+      ],
+      "maxLength": null,
+      "smart": "none",
+      "description": "The collection's element type, resolved from collectionSelector by the editor and persisted. The run time trusts this key alone: \"reference\" appends a record reference, anything else (including missing or empty) appends text. Must match the target collection's type."
+    },
+    {
+      "key": "derivedTableNo",
+      "type": "integer",
+      "required": false,
+      "default": 0,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Table number of the target collection (0 for Value collections or when unresolved). Written by the editor; informational at run time."
+    }
+  ],
+  "outputs": [],
+  "rules": [
+    {
+      "id": "AddToCollection.collectionSelector-required",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "configuration.collectionSelector must be non-empty.",
+      "message": "Collection selector is required.",
+      "machine": {
+        "type": "required",
+        "key": "collectionSelector"
+      }
+    },
+    {
+      "id": "AddToCollection.collectionSelector-placeholder",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "collectionSelector must be a single wrapped SmartField placeholder: starts with {{ and ends with }} (after trimming) with a non-empty name inside.",
+      "message": "The Collection selector '%1' must use the SmartField placeholder notation, e.g. '{{name}}'.",
+      "machine": {
+        "type": "regex",
+        "key": "collectionSelector",
+        "pattern": "\\s*\\{\\{\\s*[^{}\\s][^{}]*\\}\\}\\s*"
+      }
+    },
+    {
+      "id": "AddToCollection.collectionSelector-not-dotted",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The name inside collectionSelector must not contain '.'; a collection must be a top-level output.",
+      "message": "The Collection selector '%1' must point to a top-level output – dotted paths cannot be collections.",
+      "machine": {
+        "type": "regex",
+        "key": "collectionSelector",
+        "pattern": "[^.]*"
+      }
+    },
+    {
+      "id": "AddToCollection.derivedType-enum",
+      "severity": "warning",
+      "stage": "editor",
+      "check": "derivedType should be \"value\" or \"reference\" and match the type of the Create Collection output named by collectionSelector. An empty or missing derivedType makes the run time append text even to a Reference collection.",
+      "message": "",
+      "machine": {
+        "type": "enum",
+        "key": "derivedType",
+        "values": [
+          "value",
+          "reference"
+        ]
+      }
+    },
+    {
+      "id": "AddToCollection.selector-resolves",
+      "severity": "error",
+      "stage": "editor",
+      "check": "collectionSelector must resolve against the outputs of upstream steps (step validity check; not enforced at publish).",
+      "message": ""
+    },
+    {
+      "id": "AddToCollection.value-required-for-value-collection",
+      "severity": "error",
+      "stage": "editor",
+      "check": "For Value collections, configuration.value must be non-empty (required field in the config canvas and the step's validity check).",
+      "message": "Please fill in the highlighted fields.",
+      "machine": {
+        "type": "requiredIf",
+        "key": "value",
+        "ifKey": "derivedType",
+        "equals": "value"
+      }
+    },
+    {
+      "id": "AddToCollection.reference-value-shape",
+      "severity": "error",
+      "stage": "editor",
+      "check": "For Reference collections, value must be a single {{name}} placeholder that resolves to a Reference output whose tableNo equals the collection's tableNo (step validity check; not enforced at publish).",
+      "message": ""
+    },
+    {
+      "id": "AddToCollection.reference-value-wrapper",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "When derivedType = \"reference\", the raw value must be a single wrapped {{name}} placeholder.",
+      "message": "Reference collections require a single SmartField placeholder for the Value, e.g. '{{name}}'. Got: %1"
+    },
+    {
+      "id": "AddToCollection.reference-value-not-found",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "When derivedType = \"reference\", the placeholder name must exist in the run context as a Reference.",
+      "message": "Reference '%1' not found in context."
+    },
+    {
+      "id": "AddToCollection.execution-missing",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The step must run inside a flow execution.",
+      "message": "Execution entry %1 not found."
+    }
+  ],
+  "notes": [
+    "No outputs of its own: it appends to the Create Collection step's output. Entries are written as <collectionOutputName>[0], [1], ... (first free index).",
+    "The editor's validity check (selector resolves, reference table matches) is NOT run when publishing; only the generic dangling-reference warning ('Step \"%1\" references unknown slug \"%2\".') applies. When writing JSON by hand, set derivedType/derivedTableNo yourself.",
+    "The selector is read unresolved, so {{...}} must name the full output, i.e. <CreateCollectionSlug>_<collectionName>."
+  ]
+}

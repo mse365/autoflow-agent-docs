@@ -1,0 +1,98 @@
+{
+  "kind": "trigger",
+  "name": "OnPageClose",
+  "id": 5564408,
+  "caption": "When a page is closed (interactive)",
+  "category": "Interactive",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "pageNo",
+      "type": "integer",
+      "required": true,
+      "default": 0,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Card page to watch (same 16 pages as 'When a page is opened'): Sales Quote 41, Sales Order 42, Sales Invoice 43, Sales Credit Memo 44, Sales Return Order 6630, Blanket Sales Order 507, Purchase Quote 49, Purchase Order 50, Purchase Invoice 51, Purchase Credit Memo 52, Purchase Return Order 6640, Blanket Purchase Order 509, Customer Card 21, Vendor Card 26, Contact Card 5050, Item Card 30. Extensions can register more pages. Known supported values: 41, 42, 43, 44, 6630, 507, 49, 50, 51, 52, 6640, 509, 21, 26, 5050, 30. Extensions can register more, so other values are not rejected by this reference."
+    },
+    {
+      "key": "timeoutSec",
+      "type": "integer",
+      "required": false,
+      "default": 10,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Maximum run time; values <= 0 are treated as 10."
+    },
+    {
+      "key": "filters",
+      "type": "array",
+      "required": false,
+      "default": [],
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Field filters on the page's record: [{ \"fieldNo\": <integer>, \"filter\": \"<BC filter expression>\" }]. Field numbers refer to the page's source table. Applied literally (max 250 chars, no placeholders)."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "Rec",
+      "type": "reference",
+      "tableNo": null,
+      "when": "always; tableNo = source table of configuration.pageNo (declared as 'value' if it cannot be resolved)"
+    },
+    {
+      "name": "PageNo",
+      "type": "value",
+      "tableNo": null,
+      "when": "always; the page number as text"
+    }
+  ],
+  "rules": [
+    {
+      "id": "OnPageClose.page-required",
+      "severity": "error",
+      "stage": "publish",
+      "check": "configuration.pageNo must be > 0. Hard stop at publish.",
+      "message": "Pick the page the flow should watch.",
+      "machine": {
+        "type": "range",
+        "key": "pageNo",
+        "min": 1
+      }
+    },
+    {
+      "id": "OnPageClose.page-supported",
+      "severity": "error",
+      "stage": "publish",
+      "check": "configuration.pageNo must be a supported page. Hard stop at publish; same text in the live canvas status line.",
+      "message": "Page %1 is not supported by this trigger, so the flow would never run."
+    },
+    {
+      "id": "OnPageClose.timeout-positive",
+      "severity": "info",
+      "stage": "editor",
+      "check": "timeoutSec should be > 0 (otherwise 10 is used).",
+      "message": "(no message)",
+      "machine": {
+        "type": "range",
+        "key": "timeoutSec",
+        "min": 1
+      }
+    }
+  ],
+  "notes": [
+    "Synchronous: runs in the user's session from the page's query-close event, before the page actually closes. The run commits its own execution entries, so a prevented close is still visible in the execution list.",
+    "To keep the page open, end the flow with a Prevent page close step (only offered for this trigger). Its message is shown either as a dialog or as a notification in the page's bar. The trigger only ever sets 'allow close' to false; it never overrules another extension that already keeps the page open.",
+    "Fires only in sessions with a UI and only for records that exist in the database: after a record is deleted, Business Central force-closes the card and the flow does not run; unsaved new records do not fire it either.",
+    "Registrations are keyed by page number.",
+    "Re-entrancy guard: a close raised while the flow itself is running does not start it again.",
+    "No recurring Job Queue entry.",
+    "Picker filter: Prevent page close is ONLY offered here. Respond to Webhook, Return SubFlow Output, Return PDF, Set report file name and Set document field values are hidden."
+  ]
+}

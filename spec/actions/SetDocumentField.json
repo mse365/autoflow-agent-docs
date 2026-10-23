@@ -1,0 +1,189 @@
+{
+  "kind": "action",
+  "name": "SetDocumentField",
+  "id": 5564530,
+  "caption": "Set document field values",
+  "category": "Trigger Responses",
+  "availability": "ga",
+  "terminating": true,
+  "group": false,
+  "configuration": [
+    {
+      "key": "tableNo",
+      "type": "integer",
+      "required": false,
+      "default": 0,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Table of the trigger's document record. Written by the editor (derived from the trigger output) and used only to scope the field lookup; the runtime applies the values to the trigger's record regardless."
+    },
+    {
+      "key": "skipStandard",
+      "type": "boolean",
+      "required": false,
+      "default": false,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Skip standard processing. Only honoured in 'When a document is released' and 'When a document is reopened' flows: Business Central does not release / reopen; AutoFlow saves the document with these values instead (e.g. Status = Pending Approval). Ignored by the other document triggers."
+    },
+    {
+      "key": "values",
+      "type": "array",
+      "required": true,
+      "default": [],
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Field assignments for the trigger's document record (same row shape as Modify Record). Non-primary-key fields only. Values are resolved to literal text inside the flow and applied by the trigger right before Business Central saves / releases / reopens / posts the document.",
+      "items": [
+        {
+          "key": "lineNo",
+          "type": "integer",
+          "required": true,
+          "default": 0,
+          "enum": null,
+          "maxLength": null,
+          "smart": "none",
+          "description": "Row key and application order. Rows are applied in ascending lineNo. Must be unique within the array: rows are loaded into a keyed buffer, so two rows with the same lineNo (including two rows that omit it -> both 0) fail at runtime with a duplicate-record error. The editor writes 10000, 20000, ... in display order."
+        },
+        {
+          "key": "fieldNo",
+          "type": "integer",
+          "required": true,
+          "default": 0,
+          "enum": null,
+          "maxLength": null,
+          "smart": "none",
+          "description": "Field NUMBER (not name) of the target field in the configured table. Rows with fieldNo 0 are skipped. A number that does not exist in the table fails at runtime."
+        },
+        {
+          "key": "value",
+          "type": "string",
+          "required": false,
+          "default": "",
+          "enum": null,
+          "maxLength": null,
+          "smart": "text",
+          "description": "Value text. SmartFields ({{slug_output}}), SmartFormulas ([[...]]) and SmartControls are resolved first, then the text is converted to the field type (see inputFormat). Values longer than 2048 characters are supported (e.g. base64 for Blob/Media fields)."
+        },
+        {
+          "key": "validate",
+          "type": "boolean",
+          "required": false,
+          "default": true,
+          "enum": null,
+          "maxLength": null,
+          "smart": "none",
+          "description": "true (default when the key is absent) = assign via Validate so the field's OnValidate trigger runs (as if typed on the page); false = assign directly without validation."
+        },
+        {
+          "key": "inputFormat",
+          "type": "string",
+          "required": false,
+          "default": "",
+          "enum": null,
+          "maxLength": 30,
+          "smart": "none",
+          "description": "How the value text is parsed into the field type. Empty/absent = the session's regional format (locale-sensitive). \"9\" or \"xml\" (case-insensitive) = invariant XML notation (1000.00, 2026-07-16, true). Otherwise a date/time pattern built from the fixed-width tokens yyyy, yy, MM, dd, HH, mm, ss (each at most once) plus non-alphanumeric separators, e.g. yyyyMMdd, dd.MM.yyyy, yyyy-MM-dd HH:mm:ss. Patterns need a complete date (yyyy|yy + MM + dd) or at least HH+mm; ss needs mm, mm needs HH. Patterns are only allowed for Date, Time and DateTime fields. Omitted by the editor when empty."
+        }
+      ]
+    }
+  ],
+  "outputs": [],
+  "rules": [
+    {
+      "id": "SetDocumentField.values-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.values must contain at least one entry.",
+      "message": "Add at least one field to set on the record.",
+      "machine": {
+        "type": "required",
+        "key": "values"
+      }
+    },
+    {
+      "id": "SetDocumentField.values-type",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "values must be a JSON array.",
+      "message": "",
+      "machine": {
+        "type": "type",
+        "key": "values",
+        "valueType": "array"
+      }
+    },
+    {
+      "id": "SetDocumentField.terminating-last",
+      "severity": "warning",
+      "stage": "publish",
+      "check": "Terminating step: it must be the last step of its path (no successor).",
+      "message": "Step \"%1\" is a terminating step but has a successor – terminating steps must end the path."
+    },
+    {
+      "id": "SetDocumentField.skipStandard-type",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "skipStandard should be a JSON boolean; other types fall back to false.",
+      "message": "",
+      "machine": {
+        "type": "type",
+        "key": "skipStandard",
+        "valueType": "boolean"
+      }
+    },
+    {
+      "id": "SetDocumentField.values-inputFormat-runtime",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "Same input-format check, repeated when the row is converted.",
+      "message": "\"%1\" is not a valid input format. Leave it empty for the regional format, enter 9 or xml for the invariant XML notation, or enter a date/time pattern such as yyyyMMdd (tokens yyyy, yy, MM, dd, HH, mm, ss plus separators)."
+    },
+    {
+      "id": "SetDocumentField.values-pattern-wrong-type",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "A date/time pattern inputFormat was used on a field that is not Date, Time or DateTime.",
+      "message": "Input format \"%1\" is a date/time pattern and can only be used for Date, Time, or DateTime fields. Field \"%2\" is of type %3."
+    },
+    {
+      "id": "SetDocumentField.values-conversion",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The resolved value text cannot be converted to the field type (Integer, BigInteger, Decimal, Boolean, Date, Time, DateTime, Duration, Option, Guid, RecordId). Without inputFormat the first message is used, with an inputFormat the second.",
+      "message": "Cannot convert value \"%1\" to %2 for field \"%3\". | Cannot convert value \"%1\" to %2 for field \"%3\" using input format \"%4\"."
+    },
+    {
+      "id": "SetDocumentField.values-lineNo-unique",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "values[].lineNo must be unique; duplicates (or several rows without lineNo) raise the platform's 'record already exists' error when the rows are loaded.",
+      "message": ""
+    },
+    {
+      "id": "SetDocumentField.values-field-exists",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "Every non-zero values[].fieldNo must exist in the target table.",
+      "message": "Field %1 does not exist in table %2."
+    },
+    {
+      "id": "SetDocumentField.values-no-pk",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "values[] must not contain primary-key fields (the editor only offers non-key fields).",
+      "message": "Field \"%1\" is part of the primary key and cannot be modified. Use a Rename Record step instead."
+    }
+  ],
+  "notes": [
+    "Only meaningful in flows started by an interactive document trigger: When a document is modified / released / posted / reopened (interactive). The step picker offers it only there; in any other flow it has no effect.",
+    "The record is NOT written by this step: it resolves the values and hands them back to the waiting trigger, which applies them (with Validate or direct assignment per row) to the live record before Business Central's own save/release/reopen/post continues.",
+    "This step has no input-format check at save time (unlike Insert/Modify/Rename); invalid input formats only fail when the trigger applies the values.",
+    "To prevent the document action instead, end the flow with an Error step.",
+    "terminating must be true in the step JSON.",
+    "Writing step: a Confirm dialog placed after this step (in document order) produces a publish warning, because Business Central cannot open a dialog once the flow has written to the database."
+  ]
+}

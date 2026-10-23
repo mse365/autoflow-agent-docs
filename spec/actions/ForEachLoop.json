@@ -1,0 +1,108 @@
+{
+  "kind": "action",
+  "name": "ForEachLoop",
+  "id": 101,
+  "caption": "Loop Over Elements",
+  "category": "Control",
+  "availability": "ga",
+  "terminating": false,
+  "group": true,
+  "edges": {
+    "fixed": [
+      {
+        "value": "for-each",
+        "description": "for each"
+      }
+    ],
+    "dynamic": false,
+    "rules": "Exactly one edge with value \"for-each\". Its steps are the loop body and run once per item. When the collection is empty, the body is skipped and the flow continues after the loop."
+  },
+  "configuration": [
+    {
+      "key": "selector",
+      "type": "string",
+      "required": true,
+      "default": null,
+      "enum": null,
+      "maxLength": null,
+      "smart": "field",
+      "description": "Exactly one SmartField placeholder, written '{{name}}', that points to an array output (for example a find-records step's '{{<slug>_results}}'), a collection, or a record reference/iterator such as a dotted relation '{{trigger_Rec.SalesLines}}' (SalesLines must be a reference definition in the flow's smartFieldDefs). Bare names without braces are rejected. Surrounding whitespace is trimmed. The selector is read in its raw, unsubstituted form at runtime."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "total",
+      "type": "value",
+      "tableNo": null,
+      "when": "always"
+    },
+    {
+      "name": "iteration",
+      "type": "value",
+      "tableNo": null,
+      "when": "always"
+    },
+    {
+      "name": "items",
+      "type": "value",
+      "tableNo": null,
+      "when": "always; emitted as {type:'reference', tableNo:<table of the records>} instead when the selector resolves to a record reference"
+    },
+    {
+      "name": "currentItem",
+      "type": "value",
+      "tableNo": null,
+      "when": "always; emitted as {type:'reference', tableNo:<table of the records>} instead when the selector resolves to a record reference"
+    }
+  ],
+  "rules": [
+    {
+      "id": "ForEachLoop.selector-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.selector must be present and a string",
+      "message": "",
+      "machine": {
+        "type": "required",
+        "key": "selector"
+      }
+    },
+    {
+      "id": "ForEachLoop.selector-placeholder",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.selector, trimmed, must start with '{{', end with '}}' and contain a non-empty name",
+      "message": "",
+      "machine": {
+        "type": "regex",
+        "key": "selector",
+        "pattern": "\\s*\\{\\{\\s*\\S.*\\}\\}\\s*"
+      }
+    },
+    {
+      "id": "ForEachLoop.selector-placeholder-runtime",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "Same placeholder check at runtime: fails the step if the raw selector is not '{{name}}'",
+      "message": "The selector '%1' must use the SmartField placeholder notation (e.g. '{{name}}'). Bare selector names are no longer accepted – open the SmartField picker on the For Each step config to insert a valid placeholder."
+    },
+    {
+      "id": "ForEachLoop.not-iterable",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The selector must resolve to an array (indexed entries name[0], name[1], ...), an iterable record reference, or a present-but-blank value (treated as an empty collection). A scalar with content fails.",
+      "message": "The provided selector '%1' does not resolve to an array or iterable reference."
+    }
+  ],
+  "notes": [
+    "Iteration is 1-based. 'iteration' = current pass (1..total), 'total' = number of items, 'currentItem' = items[iteration-1]. 'items' is stored as zero-based entries items[0..total-1].",
+    "The items are collected once, on the first pass, so changes the loop body makes to the source do not change the set being iterated.",
+    "There is no iteration cap on this step. The loop runs exactly 'total' times.",
+    "An empty collection (no indexed entries, or a blank value) is not an error. The body is skipped and the flow continues after the loop.",
+    "When an array output is also a record reference (e.g. find-records results), the array path is preferred, so each array entry becomes one item.",
+    "For a record reference that is not an array, all records in the reference's current filter view are iterated.",
+    "outputs[]: the editor emits items/currentItem as {type:'reference', tableNo:N} when the selector resolves to a record reference, otherwise as {type:'value'}. Hand-written JSON should do the same so downstream steps can bind record fields of currentItem.",
+    "The step also emits a runtime-only 'result' value ('for-each' while there are items). This is what the engine routes on. It is not declared in outputs[].",
+    "Outputs of steps INSIDE the loop body are deleted each time control returns to the loop step and after the loop finishes. Reference them only inside the body; collect results into a collection step if you need them later."
+  ]
+}

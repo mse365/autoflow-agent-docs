@@ -1,0 +1,146 @@
+{
+  "kind": "action",
+  "name": "StartManualFlow",
+  "id": 5564424,
+  "caption": "Start flow",
+  "category": "SubFlows",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "flowCode",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": 60,
+      "smart": "none",
+      "description": "Code of the flow to start (the flow's Code field, [NAMESPACE.]CODE). The target must be a published flow whose trigger is 'When manually started' and must not be a SubFlow. Identified by Code only – the flow No. is never stored."
+    },
+    {
+      "key": "record",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "record",
+      "description": "Only for targets whose Manual trigger runs on a table: a wrapped Reference SmartField (e.g. {{trigger_Rec}}) pointing at a record of exactly that table. Must be empty for standalone targets (the editor clears it)."
+    },
+    {
+      "key": "customIconUrl",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": 250,
+      "smart": "none",
+      "description": "Cosmetic: the target flow's icon URL, mirrored to the step's top-level customIconUrl. Not used at run time."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "ExecutionNo",
+      "type": "value",
+      "tableNo": null,
+      "when": "always"
+    }
+  ],
+  "rules": [
+    {
+      "id": "StartManualFlow.flow-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.flowCode must be non-empty.",
+      "message": "Choose the flow to start.",
+      "machine": {
+        "type": "required",
+        "key": "flowCode"
+      }
+    },
+    {
+      "id": "StartManualFlow.flowcode-format",
+      "severity": "error",
+      "stage": "editor",
+      "check": "flowCode should be a valid flow Code ([NAMESPACE.]CODE, A-Z 0-9 _ -, at most one '.'; max 60 chars).",
+      "message": "Code must be empty or match <NAMESPACE.>CODE – letters A–Z, digits, \"_\" and \"-\" only, with at most one \".\" separator and no empty halves.",
+      "machine": {
+        "type": "regex",
+        "key": "flowCode",
+        "pattern": "[A-Za-z0-9_-]+(?:\\.[A-Za-z0-9_-]+)?"
+      }
+    },
+    {
+      "id": "StartManualFlow.record-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "When the target flow runs on a table, record must be set.",
+      "message": "The flow %1 runs on a record. Select the record to start it for."
+    },
+    {
+      "id": "StartManualFlow.target-active",
+      "severity": "error",
+      "stage": "editor",
+      "check": "Live status line: the target must exist and be a published manual flow.",
+      "message": "The flow %1 is not an active manual flow on this system. Publish it, then reopen this step."
+    },
+    {
+      "id": "StartManualFlow.record-table",
+      "severity": "error",
+      "stage": "editor",
+      "check": "Live status line: the record selector must point at the target's table.",
+      "message": "The flow runs on records of table %1, but the selected reference points at table %2."
+    },
+    {
+      "id": "StartManualFlow.runtime-not-found",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "No flow with this Code exists.",
+      "message": "There is no flow with the code %1 to start."
+    },
+    {
+      "id": "StartManualFlow.runtime-record-unresolved",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "Target runs on a table and the record selector cannot be resolved to a record reference.",
+      "message": "The record \"%1\" to start the flow for cannot be resolved."
+    },
+    {
+      "id": "StartManualFlow.runtime-not-published",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "Target has no published version.",
+      "message": "The flow %1 is not active. Publish it before starting it."
+    },
+    {
+      "id": "StartManualFlow.runtime-not-manual",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "Target's published trigger is not 'When manually started'.",
+      "message": "The flow %1 cannot be started this way, because it is not started by the trigger \"When manually started\"."
+    },
+    {
+      "id": "StartManualFlow.runtime-needs-record",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "Target runs on a table but no record was passed.",
+      "message": "The flow %1 runs on a record of the table %2. Pass a record to start it."
+    },
+    {
+      "id": "StartManualFlow.runtime-wrong-table",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The passed record is from another table than the target's.",
+      "message": "The flow %1 runs on records of the table %2, not of the table %3."
+    }
+  ],
+  "notes": [
+    "Fire-and-forget: creates a new execution of the target flow plus a Job Queue entry and continues immediately; it does not wait and receives nothing back. ExecutionNo is the started execution's entry number.",
+    "The started execution and its job are written in the caller's transaction. In normal background flows the engine commits after each step, so the start is committed right after this step; in interactive trigger flows, SubFlow bodies and 'Run atomically' flows it is only committed when the caller's run commits (and is rolled back with it).",
+    "Whether the queued job starts automatically depends on the AutoFlow Setup option for manually starting flows (job created as Ready unless that option is set).",
+    "The step is hidden from the generic step picker; every published manual flow that has a Code (except the flow being edited and SubFlows) is offered as its own tile, which creates this step.",
+    "Cross-environment: the target is resolved by Code at run time; no re-mapping happens on import. Make sure a flow with the same Code is published in the target company.",
+    "For a standalone target the record key is ignored at run time; a non-empty value is cleared by the editor."
+  ]
+}

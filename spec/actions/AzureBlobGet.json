@@ -1,0 +1,258 @@
+{
+  "kind": "action",
+  "name": "AzureBlobGet",
+  "id": 5564421,
+  "caption": "Azure Blob: Get file",
+  "category": "Documents",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "credentialCode",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": 20,
+      "smart": "none",
+      "description": "Code of an AutoFlow Credential (stored uppercase, max 20 chars). Its authentication type must be 'OAuth 2.0 client credentials' (Entra app, scope https://storage.azure.com/.default) or 'Azure Storage SAS token'. Credentials are company data and are NOT part of the flow definition – the code must exist in the target company."
+    },
+    {
+      "key": "storageAccount",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": 24,
+      "smart": "text",
+      "description": "Storage account name (3-24 lowercase letters/digits), e.g. contosodocs for https://contosodocs.blob.core.windows.net. Trimmed. May contain SmartFields; literal values are checked in the editor, resolved values at run time."
+    },
+    {
+      "key": "container",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": 63,
+      "smart": "text",
+      "description": "Blob container name (3-63 chars, lowercase letters, digits, single hyphens, starting/ending with letter or digit; $root and $web also accepted). Trimmed. SmartFields allowed."
+    },
+    {
+      "key": "path",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "Path of the file inside the container, e.g. invoices/2026/INV-1001.pdf. Trimmed, backslashes become slashes, a leading slash is dropped. Must not end with '/'."
+    },
+    {
+      "key": "includeTags",
+      "type": "boolean",
+      "required": false,
+      "default": true,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Also read the file's index tags (needs Storage Blob Data Owner or a SAS with the Tags permission). When true, failing to read the file's properties is an error; when false it is tolerated and the content type falls back to the file extension."
+    },
+    {
+      "key": "errorIfMissing",
+      "type": "boolean",
+      "required": false,
+      "default": true,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Raise an error when the file does not exist. When false, a missing file sets found = false and the step succeeds (only for Azure's BlobNotFound; other errors still fail)."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "found",
+      "type": "value",
+      "tableNo": null,
+      "when": "always"
+    },
+    {
+      "name": "Document",
+      "type": "reference",
+      "tableNo": 5564415,
+      "when": "when found"
+    },
+    {
+      "name": "name",
+      "type": "value",
+      "tableNo": null,
+      "when": "when found"
+    },
+    {
+      "name": "path",
+      "type": "value",
+      "tableNo": null,
+      "when": "when found"
+    },
+    {
+      "name": "contentType",
+      "type": "value",
+      "tableNo": null,
+      "when": "when found"
+    },
+    {
+      "name": "size",
+      "type": "value",
+      "tableNo": null,
+      "when": "when found"
+    },
+    {
+      "name": "lastModified",
+      "type": "value",
+      "tableNo": null,
+      "when": "when found"
+    },
+    {
+      "name": "etag",
+      "type": "value",
+      "tableNo": null,
+      "when": "when found"
+    },
+    {
+      "name": "tags",
+      "type": "value",
+      "tableNo": null,
+      "when": "when found"
+    },
+    {
+      "name": "metadata",
+      "type": "value",
+      "tableNo": null,
+      "when": "when found"
+    }
+  ],
+  "rules": [
+    {
+      "id": "AzureBlobGet.credential-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.credentialCode must be non-empty",
+      "message": "Select a credential for the Azure Blob Storage connection.",
+      "machine": {
+        "type": "required",
+        "key": "credentialCode"
+      }
+    },
+    {
+      "id": "AzureBlobGet.credential-exists",
+      "severity": "error",
+      "stage": "editor",
+      "check": "The credential must exist in the company (also checked at run time).",
+      "message": "Credential %1 does not exist."
+    },
+    {
+      "id": "AzureBlobGet.credential-auth-type",
+      "severity": "error",
+      "stage": "editor",
+      "check": "The credential's authentication type must be 'OAuth 2.0 client credentials' or 'Azure Storage SAS token' (also checked at run time).",
+      "message": "Credential %1 uses the authentication type \"%2\". Azure Blob Storage steps accept \"%3\" (an Entra app) or \"%4\"."
+    },
+    {
+      "id": "AzureBlobGet.credential-storage-scope",
+      "severity": "error",
+      "stage": "editor",
+      "check": "For an OAuth 2.0 client-credentials credential, its OAuth scope must contain 'storage.azure.com' (editor only; at run time a wrong scope surfaces as an Azure authentication error).",
+      "message": "Credential %1 requests the scope \"%2\". Azure Blob Storage needs a token for the scope https://storage.azure.com/.default."
+    },
+    {
+      "id": "AzureBlobGet.storage-account-format",
+      "severity": "error",
+      "stage": "editor",
+      "check": "A literal storageAccount (no '{{') must be 3-24 chars of a-z and 0-9. Checked again at run time on the resolved value.",
+      "message": "The storage account name \"%1\" is not valid. It must be 3 to 24 characters long and contain only lowercase letters and digits.",
+      "machine": {
+        "type": "regex",
+        "key": "storageAccount",
+        "pattern": "(?:[a-z0-9]{3,24}|.*\\{\\{.*)"
+      }
+    },
+    {
+      "id": "AzureBlobGet.container-format",
+      "severity": "error",
+      "stage": "editor",
+      "check": "A literal container (no '{{') must be $root, $web, or 3-63 chars of a-z, 0-9 and single hyphens, not starting or ending with a hyphen. Checked again at run time on the resolved value.",
+      "message": "The container name \"%1\" is not valid. It must be 3 to 63 characters long and contain only lowercase letters, digits and single hyphens, starting and ending with a letter or digit.",
+      "machine": {
+        "type": "regex",
+        "key": "container",
+        "pattern": "(?:\\$root|\\$web|(?=.{3,63}$)[a-z0-9](?:[a-z0-9]|-(?!-))*[a-z0-9]|.*\\{\\{.*)"
+      }
+    },
+    {
+      "id": "AzureBlobGet.storage-account-runtime",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The resolved storageAccount must be valid (an empty value also fails here).",
+      "message": "The storage account name \"%1\" is not valid. It must be 3 to 24 characters long and contain only lowercase letters and digits."
+    },
+    {
+      "id": "AzureBlobGet.container-runtime",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The resolved container must be valid (an empty value also fails here).",
+      "message": "The container name \"%1\" is not valid. It must be 3 to 63 characters long and contain only lowercase letters, digits and single hyphens, starting and ending with a letter or digit."
+    },
+    {
+      "id": "AzureBlobGet.sas-missing",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "A SAS-token credential must have a token stored.",
+      "message": "Credential %1 has no SAS token stored."
+    },
+    {
+      "id": "AzureBlobGet.credential-url-allow-list",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "If the credential has base URLs (an allow-list), https://<storageAccount>.blob.core.windows.net/<container> must start with one of them. Also shown on the editor status line for literal values.",
+      "message": "The URL \"%1\" is not allowed by credential \"%2\". Allowed prefixes: %3."
+    },
+    {
+      "id": "AzureBlobGet.path-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.path (after trimming, backslash->slash, leading slash removed) must be non-empty. Also enforced at run time on the resolved value.",
+      "message": "Enter the path of the file, for example invoices/2026/INV-1001.pdf.",
+      "machine": {
+        "type": "required",
+        "key": "path"
+      }
+    },
+    {
+      "id": "AzureBlobGet.path-not-folder",
+      "severity": "error",
+      "stage": "editor",
+      "check": "The normalized path must not end with '/'. Also enforced at run time.",
+      "message": "The path \"%1\" ends with a slash, so it names a folder. Enter the path of a file.",
+      "machine": {
+        "type": "regex",
+        "key": "path",
+        "pattern": "(?s).*[^/\\s]\\s*"
+      }
+    },
+    {
+      "id": "AzureBlobGet.file-missing",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "File does not exist and errorIfMissing is true (default).",
+      "message": "The file %1 was not found in container %2 of storage account %3."
+    }
+  ],
+  "notes": [
+    "Document references an AutoFlow Document record (table 5564415, the AutoFlow document library).",
+    "The downloaded bytes are stored as a new AutoFlow Document (name = file name, Content Type = the blob's content type, else derived from the extension: pdf, xml, json, txt, csv, htm/html, png, jpg/jpeg, gif, zip, docx, xlsx, otherwise application/octet-stream). Use {{<slug>_Document}} as an e-mail attachment, HTTP binary body or Azure Blob upload content.",
+    "found is 'true'/'false'. lastModified is ISO-8601 (empty if unknown). size is the byte count. tags and metadata are JSON object strings ('{}' when none).",
+    "When the file is missing and errorIfMissing = false, only found is produced; the other outputs are not set.",
+    "Azure error codes are translated: BlobNotFound ('The file %1 was not found in container %2 of storage account %3.'), ContainerNotFound ('The container %1 was not found in storage account %2.'), Authorization* ('Azure denied access to container %1 (%2). The Entra app needs the role Storage Blob Data Reader to list and download, Storage Blob Data Contributor to upload, and Storage Blob Data Owner to read or write index tags; a SAS token needs the matching permissions. Azure answered: %3'), AuthenticationFailed/InvalidAuthenticationInfo/NoAuthenticationInformation ('Azure could not authenticate the request (%1). For an Entra app, check that the credential uses the scope https://storage.azure.com/.default; for a SAS token, check that it has not expired. Azure answered: %2'); anything else becomes 'Downloading the file failed: <Azure text>'.",
+    "There is no publish-time check for this step; editor-stage rules come from the step's own validation and status line."
+  ]
+}

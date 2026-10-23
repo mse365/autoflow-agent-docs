@@ -1,0 +1,217 @@
+{
+  "kind": "trigger",
+  "name": "Webhook",
+  "id": 5564403,
+  "caption": "When a webhook is received",
+  "category": "Web",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "allowedMethods",
+      "type": "array",
+      "required": false,
+      "default": [
+        "POST"
+      ],
+      "enum": [
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE"
+      ],
+      "maxLength": null,
+      "smart": "none",
+      "description": "HTTP methods the AutoFlow webhook proxy accepts for this flow (array of strings). Upper-cased and de-duplicated on read; an absent or empty array means ['POST']. Enforced by the proxy, not by Business Central. Sent to the portal on registration."
+    },
+    {
+      "key": "responseMode",
+      "type": "string",
+      "required": false,
+      "default": "InstantReturn",
+      "enum": [
+        "InstantReturn",
+        "WaitForResponse"
+      ],
+      "maxLength": null,
+      "smart": "none",
+      "description": "InstantReturn: the caller immediately gets responseStatusCode / responseContentType with an empty body and the flow runs in the background. WaitForResponse: the flow runs synchronously until a Respond to Webhook step answers, the flow ends, or timeoutSec elapses. Any other value (including integers) is treated as InstantReturn."
+    },
+    {
+      "key": "timeoutSec",
+      "type": "integer",
+      "required": false,
+      "default": 30,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "WaitForResponse only: how long the synchronous phase may run before the caller gets the default response and the flow continues in the background."
+    },
+    {
+      "key": "responseStatusCode",
+      "type": "integer",
+      "required": false,
+      "default": 200,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Status code of the default response (InstantReturn always; WaitForResponse when the flow completes or times out without a Respond to Webhook step)."
+    },
+    {
+      "key": "responseContentType",
+      "type": "string",
+      "required": false,
+      "default": "application/json",
+      "enum": null,
+      "maxLength": 100,
+      "smart": "none",
+      "description": "Content-Type of the default response."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "Payload",
+      "type": "value",
+      "tableNo": null,
+      "when": "always; request body as JSON object text. A body that is not a JSON object becomes '{}'."
+    },
+    {
+      "name": "Method",
+      "type": "value",
+      "tableNo": null,
+      "when": "always; the HTTP method forwarded by the proxy"
+    },
+    {
+      "name": "Headers",
+      "type": "value",
+      "tableNo": null,
+      "when": "always; request headers as forwarded by the proxy (text)"
+    },
+    {
+      "name": "Query",
+      "type": "value",
+      "tableNo": null,
+      "when": "always; query string as forwarded by the proxy (text)"
+    }
+  ],
+  "rules": [
+    {
+      "id": "Webhook.allowedMethods-type",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.allowedMethods, if present, must be an array of method strings.",
+      "message": "(no message; a non-array falls back to ['POST'])",
+      "machine": {
+        "type": "type",
+        "key": "allowedMethods",
+        "valueType": "array"
+      }
+    },
+    {
+      "id": "Webhook.responseMode-enum",
+      "severity": "warning",
+      "stage": "editor",
+      "check": "configuration.responseMode must be the string 'InstantReturn' or 'WaitForResponse'. Anything else silently behaves like InstantReturn.",
+      "message": "(no message)",
+      "machine": {
+        "type": "enum",
+        "key": "responseMode",
+        "values": [
+          "InstantReturn",
+          "WaitForResponse"
+        ]
+      }
+    },
+    {
+      "id": "Webhook.timeout-positive",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.timeoutSec must be > 0 (editor ValidateConfiguration returns false otherwise).",
+      "message": "(no message)",
+      "machine": {
+        "type": "range",
+        "key": "timeoutSec",
+        "min": 1
+      }
+    },
+    {
+      "id": "Webhook.responseStatusCode-range",
+      "severity": "info",
+      "stage": "editor",
+      "check": "responseStatusCode should be a valid HTTP status code. Not enforced by AutoFlow.",
+      "message": "(no message)",
+      "machine": {
+        "type": "range",
+        "key": "responseStatusCode",
+        "min": 100,
+        "max": 599
+      }
+    },
+    {
+      "id": "Webhook.responseContentType-length",
+      "severity": "info",
+      "stage": "editor",
+      "check": "responseContentType is truncated to 100 characters.",
+      "message": "(no message)",
+      "machine": {
+        "type": "maxLength",
+        "key": "responseContentType",
+        "max": 100
+      }
+    },
+    {
+      "id": "Webhook.cloud-only",
+      "severity": "error",
+      "stage": "editor",
+      "check": "The trigger can only be configured on Business Central online (SaaS).",
+      "message": "The webhook trigger is only available on Business Central online (SaaS). It cannot be configured on-premises."
+    },
+    {
+      "id": "Webhook.registration-pending-no-key",
+      "severity": "warning",
+      "stage": "publish",
+      "check": "Publish registers the flow with the AutoFlow portal. Without a portal API key the publish still succeeds but the registration stays Pending and no URL is minted (shown on the flow card).",
+      "message": "No AutoFlow portal API key on this environment. Connect it to the AutoFlow portal (AutoFlow Setup) before publishing a webhook flow."
+    },
+    {
+      "id": "Webhook.registration-failed",
+      "severity": "warning",
+      "stage": "publish",
+      "check": "A portal error does not fail the publish; the registration is marked Pending with this note and can be retried from the flow card.",
+      "message": "Registration failed (HTTP %1): %2"
+    },
+    {
+      "id": "Webhook.premium-required",
+      "severity": "warning",
+      "stage": "publish",
+      "check": "The portal refuses registration when the environment has no paid AutoFlow license; the flow is published but the webhook is not live.",
+      "message": "The webhook trigger requires a paid AutoFlow license; the free tier does not include it. License AutoFlow in the AutoFlow portal, then republish this flow."
+    },
+    {
+      "id": "Webhook.proxy-not-enabled",
+      "severity": "warning",
+      "stage": "publish",
+      "check": "Publishing tries to enable the webhook proxy's application in the environment (needs admin rights). If that fails the flow card shows a note.",
+      "message": "The webhook is registered, but an administrator must enable the AutoFlow webhook proxy in this environment – use the \"Enable webhook proxy\" action."
+    },
+    {
+      "id": "Webhook.unknown-id",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "An incoming call whose unique id matches no published webhook flow is rejected.",
+      "message": "No webhook flow is registered for unique id '%1'."
+    }
+  ],
+  "notes": [
+    "Cloud-only (Business Central online). Requires the environment to be connected to the AutoFlow portal and a paid AutoFlow license (the portal refuses registration otherwise).",
+    "The endpoint URL is minted by the AutoFlow portal on first publish and shown on the flow card; it is not part of the flow definition. Copying a flow, or restoring it into another tenant/environment/company, re-registers automatically on publish and yields a new URL.",
+    "Authentication: callers call the proxy URL; the proxy authenticates to Business Central with its own application identity and enforces allowedMethods. The application user of the proxy needs the permissions the flow's steps require.",
+    "InstantReturn: the trigger records the execution, queues it as its own Job Queue entry and answers immediately. The flow runs asynchronously and commits after every step.",
+    "WaitForResponse: the flow runs synchronously in the web-service call until the first Respond to Webhook step (its status/content type/body become the HTTP response), until it finishes (default response), or until timeoutSec (default response, remainder continues in the background via the Job Queue). If the synchronous phase fails the caller gets HTTP 500, content type text/plain, body = the error text, and the execution is marked Error. Step state of the synchronous phase is committed once at the end of the call.",
+    "No recurring Job Queue entry is created on publish.",
+    "Picker filter: Respond to Webhook is ONLY offered in Webhook flows. Return SubFlow Output, Return PDF, Set report file name, Set document field values and Prevent page close are hidden.",
+    "Payload is always a JSON object text; arrays or non-JSON bodies are not passed through (they become '{}')."
+  ]
+}

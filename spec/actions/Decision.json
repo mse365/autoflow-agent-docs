@@ -1,0 +1,52 @@
+{
+  "kind": "action",
+  "name": "Decision",
+  "id": 100,
+  "caption": "Decision",
+  "category": "Control",
+  "availability": "ga",
+  "terminating": false,
+  "group": true,
+  "edges": {
+    "fixed": [
+      { "value": "true", "description": "Yes" },
+      { "value": "false", "description": "No" }
+    ],
+    "dynamic": false,
+    "rules": "Exactly two edges, in this order: edges[0] value \"true\" (taken when the condition evaluates to true) and edges[1] value \"false\". The edge 'description' is the branch label shown on the canvas (the editor's 'True label' / 'False label' fields write to edges[0].description / edges[1].description, not to configuration). The editor addresses the labels by position (index 0 = true, 1 = false), so keep that order. An edge with an empty 'steps' array is legal: the flow simply continues after the Decision step."
+  },
+  "configuration": [
+    {
+      "key": "condition",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "filter",
+      "description": "SmartFilter expression evaluated at runtime after {{slug_output}} placeholders are substituted. Grammar: comparison '<left> <op> <right>' with op one of = != > < >= <= ~ (contains) ^= (starts with) $= (ends with); negation '!(<expr>)'; combination '(<expr>) & (<expr>)' or '(<expr>) | (<expr>)' (exactly two parenthesised operands per combinator; nest for more). Literal true/false allowed. '' (two single quotes) denotes the empty string. An empty or unparseable condition evaluates to false."
+    }
+  ],
+  "outputs": [
+    { "name": "result", "type": "value", "tableNo": null, "when": "always" }
+  ],
+  "rules": [
+    {
+      "id": "Decision.edges-true-false",
+      "severity": "info",
+      "stage": "runtime",
+      "check": "step.edges must contain exactly one edge with value \"true\" and one with value \"false\" (index 0 = true, index 1 = false). A missing edge is not an error at runtime: the flow just continues after the Decision step, which silently skips the branch.",
+      "message": ""
+    }
+  ],
+  "notes": [
+    "No editor or publish validation exists for this step: the editor's configuration check always passes, and nothing checks the condition syntax. A malformed condition evaluates to false at runtime (no error).",
+    "The condition is evaluated on the RESOLVED text (placeholders already replaced by values). If a resolved value itself contains operator characters (= < > ~ & | ! ( ) ^ $), the evaluation can be wrong. Prefer comparing values that cannot contain those characters.",
+    "Operator detection is by fixed priority, not by position: ^= $= >= <= != ~ = > < & |. The first operator in that list that appears anywhere in a single comparison is used, and the text is split at its first occurrence.",
+    "Numeric comparison is used when BOTH operands parse as decimals; otherwise the operands are compared as text (case-sensitive, ordinal). Quotes are NOT stripped from operands except the special empty literal '' - write text literals bare: {{trigger_Rec.status}} = Released.",
+    "Leading and trailing spaces around operands are trimmed.",
+    "A combination without parentheses around its operands (e.g. 'a = 1 & b = 2') does not work: it is parsed as a single comparison. Always write '(a = 1) & (b = 2)'. Three or more terms must be nested: '((A) & (B)) & (C)'.",
+    "A leading '!' on a non-boolean operand (e.g. '!abc') evaluates to true - always negate a parenthesised expression: '!(<expr>)'.",
+    "The 'result' output holds the text 'true' or 'false' and is what the engine matches against the edge values."
+  ]
+}

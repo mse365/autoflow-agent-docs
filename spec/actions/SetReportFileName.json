@@ -1,0 +1,62 @@
+{
+  "kind": "action",
+  "name": "SetReportFileName",
+  "id": 5564416,
+  "caption": "Set File Name",
+  "category": "Trigger Responses",
+  "availability": "ga",
+  "terminating": true,
+  "group": false,
+  "configuration": [
+    {
+      "key": "fileName",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "The file name handed back to Business Central for the generated report output, including the extension (e.g. 'Invoice_{{trigger_ProposedFileName}}' or 'Invoice.pdf'). Supports SmartFields ({{..}}), SmartFormulas ([[..]]) and SmartControls ({#..#})."
+    }
+  ],
+  "outputs": [],
+  "rules": [
+    {
+      "id": "SetReportFileName.fileName-required-editor",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.fileName must be non-empty (required field in the dialog; editor validation returns false, no message text)",
+      "message": "(no message text; the step is reported as invalid)",
+      "machine": { "type": "required", "key": "fileName" }
+    },
+    {
+      "id": "SetReportFileName.terminating-no-successor",
+      "severity": "warning",
+      "stage": "publish",
+      "check": "A terminating step must be the last step of its path: no step may follow it in the same steps[] array and it must not carry edges",
+      "message": "Step \"%1\" is a terminating step but has a successor – terminating steps must end the path."
+    },
+    {
+      "id": "SetReportFileName.trigger-pairing",
+      "severity": "info",
+      "stage": "editor",
+      "check": "The step is only offered in the step picker when the flow's trigger is 'When a report file name is generated' (trigger 5564406). This is a picker filter only; it is NOT enforced at publish or import.",
+      "message": "(not a message; the step is hidden from the picker)"
+    },
+    {
+      "id": "SetReportFileName.subflow-yield",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The step must not run inside a SubFlow body",
+      "message": "Step %1 (%2) requested an HTTP yield, but it is running inside a SubFlow. Yield is only valid in the synchronous phase of a Webhook flow."
+    }
+  ],
+  "notes": [
+    "The enum caption is 'Set report file name'; the step picker shows 'Set File Name'.",
+    "Only meaningful in a flow started by the 'When a report file name is generated' trigger (5564406). The step ends the flow and the resolved text becomes the report's file name.",
+    "Pairing with the trigger is enforced only by the step picker. There is no publish-time check: a definition that uses this step under another trigger publishes without warning.",
+    "Used elsewhere: in a Webhook flow's synchronous phase it behaves like a response (HTTP 200, text/plain, body = the file name); in a SubFlow it fails at run time; in background flows nothing consumes the hand-back, so the step just ends the path (inferred from the engine).",
+    "The extension is not added for you. The original extension is available as the trigger output {{trigger_Extension}}; the proposed name as {{trigger_ProposedFileName}}.",
+    "If the resolved name is empty, or the flow ends without reaching this step, Business Central keeps its own file name. Business Central strips characters that are not allowed in file names after the hand-back."
+  ]
+}

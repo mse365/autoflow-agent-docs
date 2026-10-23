@@ -1,0 +1,89 @@
+{
+  "kind": "action",
+  "name": "DeleteRecord",
+  "id": 5564407,
+  "caption": "Delete Record",
+  "category": "Records",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "reference",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "record",
+      "description": "SmartField reference to the record, written as exactly one placeholder in double braces, e.g. \"{{FindCustomers_results}}\" or \"{{trigger_Rec}}\". It must resolve to a Reference (RecordId) in the flow context: an undotted name is looked up directly (an array reference such as {{FindX_results}} resolves to its first element, results[0]); a dotted path (e.g. {{trigger_Rec.Customer}}) is walked through the SmartField definitions. Surrounding whitespace is ignored. Bare names without braces are rejected."
+    },
+    {
+      "key": "triggers",
+      "type": "boolean",
+      "required": false,
+      "default": true,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Run Triggers. true (default when absent) = BC standard OnDelete(true): the table's OnDelete trigger and its subscribers run; false = OnDelete(false). Non-boolean values fall back to the default."
+    }
+  ],
+  "outputs": [],
+  "rules": [
+    {
+      "id": "DeleteRecord.reference-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.reference must be present and non-empty.",
+      "message": "",
+      "machine": {
+        "type": "required",
+        "key": "reference"
+      }
+    },
+    {
+      "id": "DeleteRecord.reference-placeholder",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.reference must be a single SmartField placeholder: after trimming it starts with '{{', ends with '}}' and has a non-empty name inside.",
+      "message": "",
+      "machine": {
+        "type": "regex",
+        "key": "reference",
+        "pattern": "\\s*\\{\\{\\s*[^{}]*\\S[^{}]*\\s*\\}\\}\\s*"
+      }
+    },
+    {
+      "id": "DeleteRecord.reference-resolvable",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The reference must resolve to an existing record reference in the flow context at run time.",
+      "message": "Reference \"%1\" cannot be resolved to a record."
+    },
+    {
+      "id": "DeleteRecord.record-exists",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The referenced record must still exist when the step runs (it is re-read before deletion).",
+      "message": ""
+    },
+    {
+      "id": "DeleteRecord.triggers-type",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "triggers should be a JSON boolean; other types fall back to true.",
+      "message": "",
+      "machine": {
+        "type": "type",
+        "key": "triggers",
+        "valueType": "boolean"
+      }
+    }
+  ],
+  "notes": [
+    "Unlike the other record steps, Delete Record stores no tableNo: the table comes from the resolved reference, and any table is accepted.",
+    "No outputs. Do not reference the deleted record afterwards.",
+    "Writing step: a Confirm dialog placed after this step (in document order) produces a publish warning, because Business Central cannot open a dialog once the flow has written to the database."
+  ]
+}

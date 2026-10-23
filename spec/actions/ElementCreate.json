@@ -1,0 +1,118 @@
+{
+  "kind": "action",
+  "name": "ElementCreate",
+  "id": 202,
+  "caption": "Create Element",
+  "category": "Data",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "elementName",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": 30,
+      "smart": "none",
+      "description": "Name of the element (a single-slot variable). Becomes the step's single output name: {{<slug>_<elementName>}}. Plain text. The run time truncates it to 30 characters, so keep it at most 30 characters or the declared output and the runtime value will not match."
+    },
+    {
+      "key": "elementType",
+      "type": "integer",
+      "required": true,
+      "default": 0,
+      "enum": [0, 1],
+      "maxLength": null,
+      "smart": "none",
+      "description": "0 = Value (holds text), 1 = Reference (holds one record reference). Missing/unknown is treated as 0."
+    },
+    {
+      "key": "tableNo",
+      "type": "integer",
+      "required": false,
+      "default": 0,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Table the reference points to. Required when elementType = 1; the editor writes 0 for Value elements. Copied into the output's tableNo."
+    },
+    {
+      "key": "initialValue",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "Value elements: optional SmartText (SmartFields, SmartFormulas, SmartControls) resolved at run time; empty initialises the slot with ''. Reference elements: optional single {{name}} placeholder resolving to an upstream Reference output of the same table; empty leaves the slot unset until a Set Element step runs."
+    }
+  ],
+  "outputs": [
+    { "name": "<elementName>", "type": "value", "tableNo": null, "when": "elementType = 0 and elementName non-empty" },
+    { "name": "<elementName>", "type": "reference", "tableNo": "<tableNo>", "when": "elementType = 1 and elementName non-empty" }
+  ],
+  "rules": [
+    {
+      "id": "ElementCreate.elementName-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.elementName must be non-empty (required field in the config canvas and the step's validity check). Without a name the step produces no output and does nothing at run time.",
+      "message": "Please fill in the highlighted fields.",
+      "machine": { "type": "required", "key": "elementName" }
+    },
+    {
+      "id": "ElementCreate.elementName-maxLength",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "elementName longer than 30 characters is silently truncated at run time, so {{<slug>_<elementName>}} would not resolve.",
+      "message": "",
+      "machine": { "type": "maxLength", "key": "elementName", "max": 30 }
+    },
+    {
+      "id": "ElementCreate.elementType-enum",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.elementType must be 0 (Value) or 1 (Reference).",
+      "message": "",
+      "machine": { "type": "enum", "key": "elementType", "values": [0, 1] }
+    },
+    {
+      "id": "ElementCreate.elementType-type",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.elementType must be a JSON integer.",
+      "message": "",
+      "machine": { "type": "type", "key": "elementType", "valueType": "integer" }
+    },
+    {
+      "id": "ElementCreate.tableNo-required-for-reference",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.tableNo must be non-zero when elementType = 1.",
+      "message": "Please fill in the highlighted fields.",
+      "machine": { "type": "requiredIf", "key": "tableNo", "ifKey": "elementType", "equals": 1 }
+    },
+    {
+      "id": "ElementCreate.reference-initial-wrapper",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "For Reference elements a non-empty initialValue must be a single wrapped {{name}} placeholder.",
+      "message": "Reference elements require a single SmartField placeholder for the initial value, e.g. '{{name}}'. Got: %1"
+    },
+    {
+      "id": "ElementCreate.reference-initial-not-found",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "For Reference elements the initialValue placeholder must exist in the run context as a Reference.",
+      "message": "Reference '%1' not found in context."
+    }
+  ],
+  "notes": [
+    "Value elements always write their slot at run time (empty when no initialValue), so downstream references resolve even before any Set Element step runs. Reference elements write the slot only when initialValue is given.",
+    "The editor offers the reference picker for Reference elements but does not check that the initial reference's table matches tableNo; the run time does not check it either.",
+    "If the step sits inside a loop/branch body, its slot is removed when that body is left. Create elements at the level where they must stay readable.",
+    "The editor seeds description 'Create <elementName> Element' and a slug derived from it."
+  ]
+}

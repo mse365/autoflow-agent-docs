@@ -1,0 +1,184 @@
+{
+  "kind": "action",
+  "name": "RunCodeunit",
+  "id": 5564415,
+  "caption": "Run Codeunit / Report",
+  "category": "Utilities",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "objectType",
+      "type": "string",
+      "required": false,
+      "default": "Codeunit",
+      "enum": ["Codeunit", "Report"],
+      "maxLength": null,
+      "smart": "none",
+      "description": "What to run. Absent or empty means Codeunit. Case-sensitive in the editor validation ('Codeunit' / 'Report'); at run time anything whose lowercase is not 'report' is run as a codeunit."
+    },
+    {
+      "key": "objectId",
+      "type": "integer",
+      "required": true,
+      "default": 0,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "ID of the codeunit or report. Must be a JSON number (a string value fails to read)."
+    },
+    {
+      "key": "objectCaption",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": 249,
+      "smart": "none",
+      "description": "Display caption of the object, written by the editor (looked up from the object list). Informational only; never read at run time."
+    },
+    {
+      "key": "sourceRecordSelector",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "record",
+      "description": "Optional record to pass: a wrapped flat Reference SmartField, e.g. {{trigger_Rec}}. Read from the raw (unsubstituted) configuration. For a codeunit the record is passed to OnRun (the codeunit's TableNo must match); for a report it is passed as the report's data record."
+    },
+    {
+      "key": "reportParameters",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "Report request-page parameters as XML (the format BC saves for a report request page). SmartFields inside the XML are resolved before the run. Only used for objectType = Report; empty means a minimal '<ReportParameters />' envelope so the request page is never shown."
+    }
+  ],
+  "outputs": [
+    { "name": "success", "type": "value", "tableNo": null, "when": "always" }
+  ],
+  "rules": [
+    {
+      "id": "RunCodeunit.object-type",
+      "severity": "error",
+      "stage": "editor",
+      "check": "objectType must be 'Codeunit' or 'Report' (empty = Codeunit).",
+      "message": "Unknown objectType: %1. Expected Codeunit or Report.",
+      "machine": { "type": "enum", "key": "objectType", "values": ["Codeunit", "Report"] }
+    },
+    {
+      "id": "RunCodeunit.object-id-type",
+      "severity": "error",
+      "stage": "editor",
+      "check": "objectId must be an integer.",
+      "message": "(no message – a non-integer value fails while reading the configuration)",
+      "machine": { "type": "type", "key": "objectId", "valueType": "integer" }
+    },
+    {
+      "id": "RunCodeunit.object-id-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "objectId must be non-zero. Message is 'Codeunit is required.' or 'Report is required.' depending on objectType.",
+      "message": "Codeunit is required.",
+      "machine": { "type": "range", "key": "objectId", "min": 1 }
+    },
+    {
+      "id": "RunCodeunit.codeunit-blocked",
+      "severity": "error",
+      "stage": "editor",
+      "check": "objectType = Codeunit and objectId is on the block-list: 1, 2, 40, 357, 358 (extensions can add more). Also enforced at run time with 'This codeunit is blocked for AutoFlow. %1'.",
+      "message": "Codeunit %1: %2"
+    },
+    {
+      "id": "RunCodeunit.codeunit-exists",
+      "severity": "error",
+      "stage": "editor",
+      "check": "The codeunit must exist in the environment.",
+      "message": "Codeunit %1 does not exist."
+    },
+    {
+      "id": "RunCodeunit.codeunit-subtype",
+      "severity": "error",
+      "stage": "editor",
+      "check": "The codeunit's subtype must be Normal (not Test, TestRunner, Install, Upgrade, ...). Not re-checked at run time.",
+      "message": "Codeunit %1 (%2) has subtype %3; only Normal codeunits are allowed."
+    },
+    {
+      "id": "RunCodeunit.report-exists",
+      "severity": "error",
+      "stage": "editor",
+      "check": "The report must exist in the environment.",
+      "message": "Report %1 does not exist."
+    },
+    {
+      "id": "RunCodeunit.selector-wrapped",
+      "severity": "error",
+      "stage": "editor",
+      "check": "A non-empty sourceRecordSelector must be a wrapped SmartField placeholder {{name}}. Also enforced at run time ('Source record reference must be a wrapped SmartField placeholder. Got: %1').",
+      "message": "Source record reference must be a wrapped SmartField placeholder, e.g. {{customer}}. Got: %1",
+      "machine": { "type": "regex", "key": "sourceRecordSelector", "pattern": "(?:|\\s*\\{\\{[^{}]+\\}\\}\\s*)" }
+    },
+    {
+      "id": "RunCodeunit.selector-resolvable",
+      "severity": "error",
+      "stage": "editor",
+      "check": "The selector must resolve to a known field in the flow.",
+      "message": "Source record reference %1 cannot be resolved to a known field."
+    },
+    {
+      "id": "RunCodeunit.selector-is-reference",
+      "severity": "error",
+      "stage": "editor",
+      "check": "The selector must point at a Reference-typed output, not a Value.",
+      "message": "Source record reference %1 must point at a Reference-typed field, not a Value."
+    },
+    {
+      "id": "RunCodeunit.selector-runtime",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The selector's name must exist as a Reference in the run's SmartField context.",
+      "message": "Source record reference '%1' could not be resolved at runtime."
+    },
+    {
+      "id": "RunCodeunit.record-missing",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The passed record must still exist when the worker session starts (looked up by SystemId). Surfaces as the codeunit/report failure message.",
+      "message": "Source record %1 in table %2 could not be found."
+    },
+    {
+      "id": "RunCodeunit.codeunit-failed",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The codeunit raised an error (or returned false without a message: 'Codeunit %1 failed without a usable error message. Try invoking the same operation manually from the BC UI to see the underlying validation error.').",
+      "message": "Codeunit %1 failed: %2"
+    },
+    {
+      "id": "RunCodeunit.report-failed",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The report raised an error (without a message: 'Report %1 failed without a usable error message. Try invoking the same report manually from the BC UI to see the underlying validation error.').",
+      "message": "Report %1 failed: %2"
+    },
+    {
+      "id": "RunCodeunit.timeout",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The codeunit/report did not finish within 600 seconds.",
+      "message": "Codeunit/report did not complete within %1 seconds. Job %2 is still Pending."
+    }
+  ],
+  "notes": [
+    "Runs the object in a separate background session (its own transaction) and waits for it (polling, max 10 minutes). The step COMMITS the flow's open transaction before starting the session, also inside SubFlows and synchronous/interactive flows.",
+    "The object's own changes are committed by the worker session independently of the flow: a later failure of the flow does not roll them back.",
+    "Reports run via saved request-page parameters and never show a request page; rendered output is discarded – only side effects matter (use processing-only reports).",
+    "The editor validates on OK and refuses to save an invalid configuration; core does not re-run these checks on publish (an imported definition is not validated until the step is opened). The block-list check is repeated at run time; subtype and existence are not.",
+    "success is always 'true' when the step completes; failures raise an error instead.",
+    "Error messages from the object are truncated to 1024 characters."
+  ]
+}

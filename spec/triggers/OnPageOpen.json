@@ -1,0 +1,105 @@
+{
+  "kind": "trigger",
+  "name": "OnPageOpen",
+  "id": 5564407,
+  "caption": "When a page is opened (interactive)",
+  "category": "Interactive",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "pageNo",
+      "type": "integer",
+      "required": true,
+      "default": 0,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Card page to watch: Sales Quote 41, Sales Order 42, Sales Invoice 43, Sales Credit Memo 44, Sales Return Order 6630, Blanket Sales Order 507, Purchase Quote 49, Purchase Order 50, Purchase Invoice 51, Purchase Credit Memo 52, Purchase Return Order 6640, Blanket Purchase Order 509, Customer Card 21, Vendor Card 26, Contact Card 5050, Item Card 30. Extensions can register more pages. The page's source table is derived from the page and never stored. Known supported values: 41, 42, 43, 44, 6630, 507, 49, 50, 51, 52, 6640, 509, 21, 26, 5050, 30. Extensions can register more, so other values are not rejected by this reference."
+    },
+    {
+      "key": "timeoutSec",
+      "type": "integer",
+      "required": false,
+      "default": 10,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Maximum run time; values <= 0 are treated as 10."
+    },
+    {
+      "key": "filters",
+      "type": "array",
+      "required": false,
+      "default": [],
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Field filters on the page's record: [{ \"fieldNo\": <integer>, \"filter\": \"<BC filter expression>\" }]. Field numbers refer to the page's source table. Applied literally (max 250 chars, no placeholders)."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "Rec",
+      "type": "reference",
+      "tableNo": null,
+      "when": "always; tableNo = source table of configuration.pageNo (declared as 'value' if it cannot be resolved)"
+    },
+    {
+      "name": "PageNo",
+      "type": "value",
+      "tableNo": null,
+      "when": "always; the page number as text"
+    }
+  ],
+  "rules": [
+    {
+      "id": "OnPageOpen.page-required",
+      "severity": "error",
+      "stage": "publish",
+      "check": "configuration.pageNo must be > 0. Hard stop at publish.",
+      "message": "Pick the page the flow should watch.",
+      "machine": {
+        "type": "range",
+        "key": "pageNo",
+        "min": 1
+      }
+    },
+    {
+      "id": "OnPageOpen.page-supported",
+      "severity": "error",
+      "stage": "publish",
+      "check": "configuration.pageNo must be a supported page (built-in list or registered by an extension). Hard stop at publish; same text in the live canvas status line.",
+      "message": "Page %1 is not supported by this trigger, so the flow would never run."
+    },
+    {
+      "id": "OnPageOpen.timeout-positive",
+      "severity": "info",
+      "stage": "editor",
+      "check": "timeoutSec should be > 0 (otherwise 10 is used).",
+      "message": "(no message)",
+      "machine": {
+        "type": "range",
+        "key": "timeoutSec",
+        "min": 1
+      }
+    },
+    {
+      "id": "OnPageOpen.flow-error-blocks",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "An error raised by the flow (e.g. an Error step) stops the page from opening and shows the flow's message.",
+      "message": "(the flow's own error message)"
+    }
+  ],
+  "notes": [
+    "Synchronous: runs in the user's session from the page's open event, before the user sees the page. Unlike the document triggers, the run commits its own execution entries (there is no user write to stay atomic with).",
+    "Fires only in sessions with a UI, and only for records that exist in the database (a new, unsaved record does not fire it).",
+    "Registrations are keyed by page number, so two flows on Sales Order and Sales Quote are independent even though both pages show table 36.",
+    "Re-entrancy guard: a page the running flow itself opens does not start the flow again.",
+    "No recurring Job Queue entry.",
+    "Typical use: a Send Notification step with a hint about the record, or an Error step to keep users out.",
+    "Picker filter: Respond to Webhook, Return SubFlow Output, Return PDF, Set report file name, Set document field values and Prevent page close are hidden."
+  ]
+}

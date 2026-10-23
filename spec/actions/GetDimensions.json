@@ -1,0 +1,177 @@
+{
+  "kind": "action",
+  "name": "GetDimensions",
+  "id": 5564559,
+  "caption": "Get Dimensions",
+  "category": "Records",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "reference",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "record",
+      "description": "SmartField reference to the record, written as exactly one placeholder in double braces, e.g. \"{{FindCustomers_results}}\" or \"{{trigger_Rec}}\". It must resolve to a Reference (RecordId) in the flow context: an undotted name is looked up directly (an array reference such as {{FindX_results}} resolves to its first element, results[0]); a dotted path (e.g. {{trigger_Rec.Customer}}) is walked through the SmartField definitions. Surrounding whitespace is ignored. Bare names without braces are rejected. The table must have a 'Dimension Set ID' field."
+    },
+    {
+      "key": "tableNo",
+      "type": "integer",
+      "required": true,
+      "default": 0,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Table number of the referenced record (derived from the reference by the editor); must match at runtime."
+    },
+    {
+      "key": "dimensions",
+      "type": "array",
+      "required": false,
+      "default": [],
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Dimensions to read. Each distinct code produces two value outputs.",
+      "items": [
+        {
+          "key": "dimensionCode",
+          "type": "string",
+          "required": true,
+          "default": "",
+          "enum": null,
+          "maxLength": 20,
+          "smart": "none",
+          "description": "Dimension code to read. Trimmed and upper-cased; duplicates and empty codes are ignored."
+        },
+        {
+          "key": "lineNo",
+          "type": "integer",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "maxLength": null,
+          "smart": "none",
+          "description": "Written by the editor on repeater rows; ignored by this step."
+        }
+      ]
+    }
+  ],
+  "outputs": [
+    {
+      "name": "<DIMENSIONCODE>",
+      "type": "value",
+      "tableNo": null,
+      "when": "one per configured dimension code (upper-cased): the dimension value code, '' if the record has no value for it"
+    },
+    {
+      "name": "<DIMENSIONCODE>_Name",
+      "type": "value",
+      "tableNo": null,
+      "when": "one per configured code: the dimension value name, '' if none"
+    }
+  ],
+  "rules": [
+    {
+      "id": "GetDimensions.tableNo-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.tableNo must be present and a non-zero integer.",
+      "message": "",
+      "machine": {
+        "type": "required",
+        "key": "tableNo"
+      }
+    },
+    {
+      "id": "GetDimensions.tableNo-runtime",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "configuration.tableNo is read as an integer (missing, null, non-integer -> 0); 0 fails the step.",
+      "message": "Table No. is required for a Get Dimensions step.",
+      "machine": {
+        "type": "range",
+        "key": "tableNo",
+        "min": 1
+      }
+    },
+    {
+      "id": "GetDimensions.tableNo-type",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "tableNo must be a JSON number (integer); other JSON types are not reliably converted and are treated as 0.",
+      "message": "Table No. is required for a Get Dimensions step.",
+      "machine": {
+        "type": "type",
+        "key": "tableNo",
+        "valueType": "integer"
+      }
+    },
+    {
+      "id": "GetDimensions.reference-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.reference must be present and non-empty.",
+      "message": "",
+      "machine": {
+        "type": "required",
+        "key": "reference"
+      }
+    },
+    {
+      "id": "GetDimensions.reference-placeholder",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.reference must be a single SmartField placeholder: after trimming it starts with '{{', ends with '}}' and has a non-empty name inside.",
+      "message": "",
+      "machine": {
+        "type": "regex",
+        "key": "reference",
+        "pattern": "\\s*\\{\\{\\s*[^{}]*\\S[^{}]*\\s*\\}\\}\\s*"
+      }
+    },
+    {
+      "id": "GetDimensions.reference-resolvable",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The reference must resolve to an existing record reference in the flow context at run time.",
+      "message": "Reference \"%1\" cannot be resolved to a record."
+    },
+    {
+      "id": "GetDimensions.reference-table-match",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The table of the resolved record must equal configuration.tableNo.",
+      "message": "Reference resolves to table %1 but the step is configured for table %2."
+    },
+    {
+      "id": "GetDimensions.dim-set-field",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The table must have a field named 'Dimension Set ID'.",
+      "message": "Table \"%1\" has no \"Dimension Set ID\" field, so dimensions cannot be set on it."
+    },
+    {
+      "id": "GetDimensions.dimensions-type",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "dimensions should be a JSON array; other types produce no outputs.",
+      "message": "",
+      "machine": {
+        "type": "type",
+        "key": "dimensions",
+        "valueType": "array"
+      }
+    }
+  ],
+  "notes": [
+    "Output names are the upper-cased dimension codes, so outputs[] must list e.g. {\"name\":\"DEPARTMENT\",\"type\":\"value\"} and {\"name\":\"DEPARTMENT_Name\",\"type\":\"value\"} for each code, in configuration order; reference them as {{slug_DEPARTMENT}} / {{slug_DEPARTMENT_Name}}.",
+    "A dimension code that does not exist, or is not on the record, simply yields empty outputs (no error).",
+    "The step has no 'rec' output.",
+    "The table-missing error message mentions 'set' because it is shared with Set Dimension Values."
+  ]
+}

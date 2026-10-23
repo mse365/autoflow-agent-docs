@@ -1,0 +1,225 @@
+{
+  "kind": "action",
+  "name": "SetDimensionValues",
+  "id": 5564558,
+  "caption": "Set Dimension Values",
+  "category": "Records",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "reference",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "record",
+      "description": "SmartField reference to the record, written as exactly one placeholder in double braces, e.g. \"{{FindCustomers_results}}\" or \"{{trigger_Rec}}\". It must resolve to a Reference (RecordId) in the flow context: an undotted name is looked up directly (an array reference such as {{FindX_results}} resolves to its first element, results[0]); a dotted path (e.g. {{trigger_Rec.Customer}}) is walked through the SmartField definitions. Surrounding whitespace is ignored. Bare names without braces are rejected. The table must have a 'Dimension Set ID' field."
+    },
+    {
+      "key": "tableNo",
+      "type": "integer",
+      "required": true,
+      "default": 0,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Table number of the referenced record (derived from the reference by the editor); must match at runtime."
+    },
+    {
+      "key": "triggers",
+      "type": "boolean",
+      "required": false,
+      "default": true,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Run Triggers. true (default when absent) = BC standard OnModify(true): the table's OnModify trigger and its subscribers run; false = OnModify(false). Non-boolean values fall back to the default."
+    },
+    {
+      "key": "dimensions",
+      "type": "array",
+      "required": false,
+      "default": [],
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "One row per dimension to change. Listed dimensions are added or updated, a row with an empty value removes that dimension, unlisted dimensions are kept. Rows are processed in array order.",
+      "items": [
+        {
+          "key": "dimensionCode",
+          "type": "string",
+          "required": true,
+          "default": "",
+          "enum": null,
+          "maxLength": 20,
+          "smart": "none",
+          "description": "Dimension code (e.g. 'DEPARTMENT'). Trimmed and upper-cased; rows with an empty code are skipped."
+        },
+        {
+          "key": "value",
+          "type": "string",
+          "required": false,
+          "default": "",
+          "enum": null,
+          "maxLength": 20,
+          "smart": "text",
+          "description": "Dimension value code, a literal or a SmartField. Resolved, then trimmed. Empty = remove the dimension from the set."
+        },
+        {
+          "key": "lineNo",
+          "type": "integer",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "maxLength": null,
+          "smart": "none",
+          "description": "Written by the editor on repeater rows; ignored by this step."
+        }
+      ]
+    }
+  ],
+  "outputs": [
+    {
+      "name": "rec",
+      "type": "reference",
+      "tableNo": "<configuration.tableNo>",
+      "when": "always (after a successful modify)"
+    },
+    {
+      "name": "dimensionSetId",
+      "type": "value",
+      "tableNo": null,
+      "when": "always - the new Dimension Set ID as text"
+    }
+  ],
+  "rules": [
+    {
+      "id": "SetDimensionValues.tableNo-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.tableNo must be present and a non-zero integer.",
+      "message": "",
+      "machine": {
+        "type": "required",
+        "key": "tableNo"
+      }
+    },
+    {
+      "id": "SetDimensionValues.tableNo-runtime",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "configuration.tableNo is read as an integer (missing, null, non-integer -> 0); 0 fails the step.",
+      "message": "Table No. is required for a Set Dimension Values step.",
+      "machine": {
+        "type": "range",
+        "key": "tableNo",
+        "min": 1
+      }
+    },
+    {
+      "id": "SetDimensionValues.tableNo-type",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "tableNo must be a JSON number (integer); other JSON types are not reliably converted and are treated as 0.",
+      "message": "Table No. is required for a Set Dimension Values step.",
+      "machine": {
+        "type": "type",
+        "key": "tableNo",
+        "valueType": "integer"
+      }
+    },
+    {
+      "id": "SetDimensionValues.reference-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.reference must be present and non-empty.",
+      "message": "",
+      "machine": {
+        "type": "required",
+        "key": "reference"
+      }
+    },
+    {
+      "id": "SetDimensionValues.reference-placeholder",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.reference must be a single SmartField placeholder: after trimming it starts with '{{', ends with '}}' and has a non-empty name inside.",
+      "message": "",
+      "machine": {
+        "type": "regex",
+        "key": "reference",
+        "pattern": "\\s*\\{\\{\\s*[^{}]*\\S[^{}]*\\s*\\}\\}\\s*"
+      }
+    },
+    {
+      "id": "SetDimensionValues.reference-resolvable",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The reference must resolve to an existing record reference in the flow context at run time.",
+      "message": "Reference \"%1\" cannot be resolved to a record."
+    },
+    {
+      "id": "SetDimensionValues.reference-table-match",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The table of the resolved record must equal configuration.tableNo.",
+      "message": "Reference resolves to table %1 but the step is configured for table %2."
+    },
+    {
+      "id": "SetDimensionValues.dim-set-field",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The table must have a field named 'Dimension Set ID'.",
+      "message": "Table \"%1\" has no \"Dimension Set ID\" field, so dimensions cannot be set on it."
+    },
+    {
+      "id": "SetDimensionValues.dimension-exists",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "Each dimensionCode must exist.",
+      "message": "Dimension \"%1\" does not exist."
+    },
+    {
+      "id": "SetDimensionValues.value-exists",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "Each non-empty value must be an existing value of that dimension.",
+      "message": "Dimension value \"%1\" does not exist for dimension \"%2\"."
+    },
+    {
+      "id": "SetDimensionValues.value-not-blocked",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The dimension value must not be blocked.",
+      "message": "Dimension value \"%1\" for dimension \"%2\" is blocked and cannot be used."
+    },
+    {
+      "id": "SetDimensionValues.value-standard",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The dimension value must be of type Standard (not Heading, Total, Begin-Total, End-Total).",
+      "message": "Dimension value \"%1\" for dimension \"%2\" is not a standard value and cannot be used in a dimension set."
+    },
+    {
+      "id": "SetDimensionValues.dimensions-type",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "dimensions should be a JSON array; other types are ignored (set unchanged).",
+      "message": "",
+      "machine": {
+        "type": "type",
+        "key": "dimensions",
+        "valueType": "array"
+      }
+    }
+  ],
+  "notes": [
+    "Global/Shortcut Dimension 1 and 2 code fields on the record are kept in sync with the new set (assigned directly, without validation).",
+    "The record is saved with Modify(triggers). Line dimensions of documents are not propagated when you change a header - the step only writes the referenced record.",
+    "Dimension value codes are matched as codes; use the exact code (upper case) to be safe.",
+    "Writing step: a Confirm dialog placed after this step (in document order) produces a publish warning, because Business Central cannot open a dialog once the flow has written to the database."
+  ]
+}

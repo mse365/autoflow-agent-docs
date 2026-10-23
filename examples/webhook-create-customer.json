@@ -1,0 +1,88 @@
+{
+  "name": "Create customer from webhook",
+  "code": "EXAMPLE.WEBHOOK_CUSTOMER",
+  "steps": [
+    {
+      "id": "5F6A7B8C-9D0E-4F1A-8B2C-3D4E5F6A7B8C",
+      "type": "trigger",
+      "trigger": 5564403,
+      "description": "When a webhook is received",
+      "slug": "trigger",
+      "iconUrl": "https://statics.autoflow.mse365.de/icons/webhook.svg",
+      "configuration": {
+        "allowedMethods": ["POST"],
+        "responseMode": "WaitForResponse",
+        "timeoutSec": 20,
+        "responseStatusCode": 202,
+        "responseContentType": "application/json"
+      },
+      "outputs": [
+        { "name": "Payload", "type": "value" },
+        { "name": "Method", "type": "value" },
+        { "name": "Headers", "type": "value" },
+        { "name": "Query", "type": "value" }
+      ],
+      "level": 0
+    },
+    {
+      "id": "1F2E3D4C-5B6A-4798-8877-665544332211",
+      "type": "action",
+      "action": 5564403,
+      "description": "Parse payload",
+      "slug": "ParsePayload",
+      "iconUrl": "https://statics.autoflow.mse365.de/icons/braces.svg",
+      "terminating": false,
+      "configuration": {
+        "type": "JsonPath",
+        "input": "{{trigger_Payload}}",
+        "lines": {
+          "name": "$.name",
+          "email": "$.email"
+        },
+        "namespaces": {},
+        "rawXmlLines": {},
+        "previewSample": ""
+      },
+      "outputs": [
+        { "name": "name", "type": "value" },
+        { "name": "email", "type": "value" }
+      ]
+    },
+    {
+      "id": "6C1A2E3F-4B5D-4E6F-8A7B-9C0D1E2F3A41",
+      "type": "action",
+      "action": 5564405,
+      "description": "Insert customer",
+      "slug": "InsertCustomer",
+      "iconUrl": "https://statics.autoflow.mse365.de/icons/database-plus.svg",
+      "terminating": false,
+      "configuration": {
+        "tableNo": 18,
+        "triggers": true,
+        "templateCode": "",
+        "values": [
+          { "lineNo": 10000, "fieldNo": 2, "value": "{{ParsePayload_name}}", "validate": true },
+          { "lineNo": 20000, "fieldNo": 102, "value": "{{ParsePayload_email}}", "validate": true }
+        ]
+      },
+      "outputs": [
+        { "name": "rec", "type": "reference", "tableNo": 18 }
+      ]
+    },
+    {
+      "id": "0A1B2C3D-4E5F-4061-8273-8495A6B7C8D9",
+      "type": "action",
+      "action": 5564404,
+      "description": "Respond with customer no.",
+      "slug": "Reply",
+      "iconUrl": "https://statics.autoflow.mse365.de/icons/arrow-back-up.svg",
+      "terminating": false,
+      "configuration": {
+        "statusCode": "201",
+        "contentType": "application/json",
+        "body": "{\"customerNo\":\"{{InsertCustomer_rec.no}}\"}"
+      },
+      "outputs": []
+    }
+  ]
+}

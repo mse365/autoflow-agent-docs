@@ -1,0 +1,453 @@
+{
+  "actions": [
+    {
+      "name": "AddItemTracking",
+      "id": 5564417,
+      "caption": "Add Item Tracking",
+      "category": "Records",
+      "terminating": false,
+      "group": false,
+      "availability": "ga"
+    },
+    {
+      "name": "AddToCollection",
+      "id": 201,
+      "caption": "Add to Collection",
+      "category": "Data",
+      "terminating": false,
+      "group": false,
+      "availability": "ga"
+    },
+    {
+      "name": "AzureBlobGet",
+      "id": 5564421,
+      "caption": "Azure Blob: Get file",
+      "category": "Documents",
+      "terminating": false,
+      "group": false,
+      "availability": "ga"
+    },
+    {
+      "name": "AzureBlobList",
+      "id": 5564420,
+      "caption": "Azure Blob: List files",
+      "category": "Documents",
+      "terminating": false,
+      "group": false,
+      "availability": "ga"
+    },
+    {
+      "name": "AzureBlobPut",
+      "id": 5564422,
+      "caption": "Azure Blob: Upload file",
+      "category": "Documents",
+      "terminating": false,
+      "group": false,
+      "availability": "ga"
+    },
+    {
+      "name": "CaseStep",
+      "id": 105,
+      "caption": "Case",
+      "category": "Control",
+      "terminating": false,
+      "group": true,
+      "availability": "ga"
+    },
+    {
+      "name": "ConfirmDialog",
+      "id": 5564418,
+      "caption": "Confirm dialog",
+      "category": "Control",
+      "terminating": false,
+      "group": true,
+      "availability": "ga"
+    },
+    {
+      "name": "CreateCollection",
+      "id": 200,
+      "caption": "Create Collection",
+      "category": "Data",
+      "terminating": false,
+      "group": false,
+      "availability": "ga"
+    },
+    {
+      "name": "Decision",
+      "id": 100,
+      "caption": "Decision",
+      "category": "Control",
+      "terminating": false,
+      "group": true,
+      "availability": "ga"
+    },
+    {
+      "name": "DeleteRecord",
+      "id": 5564407,
+      "caption": "Delete Record",
+      "category": "Records",
+      "terminating": false,
+      "group": false,
+      "availability": "ga"
+    },
+    {
+      "name": "ElementCreate",
+      "id": 202,
+      "caption": "Create Element",
+      "category": "Data",
+      "terminating": false,
+      "group": false,
+      "availability": "ga"
+    },
+    {
+      "name": "ElementSet",
+      "id": 203,
+      "caption": "Set Element",
+      "category": "Data",
+      "terminating": false,
+      "group": false,
+      "availability": "ga"
+    },
+    {
+      "name": "Error",
+      "id": 102,
+      "caption": "Error",
+      "category": "Utilities",
+      "terminating": true,
+      "group": false,
+      "availability": "ga"
+    },
+    {
+      "name": "FindRecords",
+      "id": 5564409,
+      "caption": "Find Records",
+      "category": "Records",
+      "terminating": false,
+      "group": false,
+      "availability": "ga"
+    },
+    {
+      "name": "ForEachLoop",
+      "id": 101,
+      "caption": "Loop Over Elements",
+      "category": "Control",
+      "terminating": false,
+      "group": true,
+      "availability": "ga"
+    },
+    {
+      "name": "GetDimensions",
+      "id": 5564559,
+      "caption": "Get Dimensions",
+      "category": "Records",
+      "terminating": false,
+      "group": false,
+      "availability": "ga"
+    },
+    {
+      "name": "HttpRequest",
+      "id": 5564402,
+      "caption": "HTTP Request",
+      "category": "Web",
+      "terminating": false,
+      "group": false,
+      "availability": "ga"
+    },
+    {
+      "name": "InsertRecord",
+      "id": 5564405,
+      "caption": "Insert Record",
+      "category": "Records",
+      "terminating": false,
+      "group": false,
+      "availability": "ga"
+    },
+    {
+      "name": "Log",
+      "id": 104,
+      "caption": "Log",
+      "category": "Utilities",
+      "terminating": false,
+      "group": false,
+      "availability": "ga"
+    },
+    {
+      "name": "ModifyRecord",
+      "id": 5564406,
+      "caption": "Modify Record",
+      "category": "Records",
+      "terminating": false,
+      "group": false,
+      "availability": "ga"
+    },
+    {
+      "name": "NoSeriesDraw",
+      "id": 5564554,
+      "caption": "Draw number from number series",
+      "category": "Records",
+      "terminating": false,
+      "group": false,
+      "availability": "ga"
+    },
+    {
+      "name": "Parser",
+      "id": 5564403,
+      "caption": "Parser",
+      "category": "Data",
+      "terminating": false,
+      "group": false,
+      "availability": "ga"
+    },
+    {
+      "name": "PdfPrint",
+      "id": 5564410,
+      "caption": "Create PDF",
+      "category": "Documents",
+      "terminating": false,
+      "group": false,
+      "availability": "ga"
+    },
+    {
+      "name": "PdfReturn",
+      "id": 5564414,
+      "caption": "Return PDF",
+      "category": "Trigger Responses",
+      "terminating": true,
+      "group": false,
+      "availability": "ga"
+    },
+    {
+      "name": "PreventPageClose",
+      "id": 5564419,
+      "caption": "Prevent page close",
+      "category": "Trigger Responses",
+      "terminating": false,
+      "group": false,
+      "availability": "ga"
+    },
+    {
+      "name": "RenameRecord",
+      "id": 5564408,
+      "caption": "Rename Record",
+      "category": "Records",
+      "terminating": false,
+      "group": false,
+      "availability": "ga"
+    },
+    {
+      "name": "RespondToWebhook",
+      "id": 5564404,
+      "caption": "Respond to Webhook",
+      "category": "Trigger Responses",
+      "terminating": false,
+      "group": false,
+      "availability": "ga"
+    },
+    {
+      "name": "RunCodeunit",
+      "id": 5564415,
+      "caption": "Run Codeunit / Report",
+      "category": "Utilities",
+      "terminating": false,
+      "group": false,
+      "availability": "ga"
+    },
+    {
+      "name": "RunSubFlow",
+      "id": 5564411,
+      "caption": "Run SubFlow",
+      "category": "SubFlows",
+      "terminating": false,
+      "group": false,
+      "availability": "ga"
+    },
+    {
+      "name": "SendEmail",
+      "id": 5564413,
+      "caption": "Send Email",
+      "category": "Web",
+      "terminating": false,
+      "group": false,
+      "availability": "ga"
+    },
+    {
+      "name": "SendNotification",
+      "id": 5564557,
+      "caption": "Send Notification",
+      "category": "Utilities",
+      "terminating": false,
+      "group": false,
+      "availability": "ga"
+    },
+    {
+      "name": "SetDimensionValues",
+      "id": 5564558,
+      "caption": "Set Dimension Values",
+      "category": "Records",
+      "terminating": false,
+      "group": false,
+      "availability": "ga"
+    },
+    {
+      "name": "SetDocumentField",
+      "id": 5564530,
+      "caption": "Set document field values",
+      "category": "Trigger Responses",
+      "terminating": true,
+      "group": false,
+      "availability": "ga"
+    },
+    {
+      "name": "SetReportFileName",
+      "id": 5564416,
+      "caption": "Set File Name",
+      "category": "Trigger Responses",
+      "terminating": true,
+      "group": false,
+      "availability": "ga"
+    },
+    {
+      "name": "Sleep",
+      "id": 103,
+      "caption": "Sleep",
+      "category": "Utilities",
+      "terminating": false,
+      "group": false,
+      "availability": "ga"
+    },
+    {
+      "name": "StartManualFlow",
+      "id": 5564424,
+      "caption": "Start flow",
+      "category": "SubFlows",
+      "terminating": false,
+      "group": false,
+      "availability": "ga"
+    },
+    {
+      "name": "SubFlowOutput",
+      "id": 5564412,
+      "caption": "Return SubFlow Output",
+      "category": "Trigger Responses",
+      "terminating": true,
+      "group": false,
+      "availability": "ga"
+    },
+    {
+      "name": "WhileLoop",
+      "id": 106,
+      "caption": "While Loop",
+      "category": "Control",
+      "terminating": false,
+      "group": true,
+      "availability": "ga"
+    }
+  ],
+  "triggers": [
+    {
+      "name": "GlobalDelete",
+      "id": 5564451,
+      "caption": "When a record is deleted",
+      "category": "Records",
+      "availability": "ga"
+    },
+    {
+      "name": "GlobalInsert",
+      "id": 5564402,
+      "caption": "When a record is inserted",
+      "category": "Records",
+      "availability": "ga"
+    },
+    {
+      "name": "GlobalModify",
+      "id": 5564450,
+      "caption": "When a record is modified",
+      "category": "Records",
+      "availability": "ga"
+    },
+    {
+      "name": "Manual",
+      "id": 100,
+      "caption": "When manually started",
+      "category": "Base",
+      "availability": "ga"
+    },
+    {
+      "name": "OnDocumentModify",
+      "id": 5564529,
+      "caption": "When a record is created or modified (interactive)",
+      "category": "Interactive",
+      "availability": "ga"
+    },
+    {
+      "name": "OnDocumentPost",
+      "id": 5564549,
+      "caption": "When a document is posted (interactive)",
+      "category": "Interactive",
+      "availability": "ga"
+    },
+    {
+      "name": "OnDocumentRelease",
+      "id": 5564543,
+      "caption": "When a document is released (interactive)",
+      "category": "Interactive",
+      "availability": "ga"
+    },
+    {
+      "name": "OnDocumentReopen",
+      "id": 5564409,
+      "caption": "When a document is reopened (interactive)",
+      "category": "Interactive",
+      "availability": "ga"
+    },
+    {
+      "name": "OnPageClose",
+      "id": 5564408,
+      "caption": "When a page is closed (interactive)",
+      "category": "Interactive",
+      "availability": "ga"
+    },
+    {
+      "name": "OnPageOpen",
+      "id": 5564407,
+      "caption": "When a page is opened (interactive)",
+      "category": "Interactive",
+      "availability": "ga"
+    },
+    {
+      "name": "OnPdfPrint",
+      "id": 5564405,
+      "caption": "When a PDF is printed",
+      "category": "Reports",
+      "availability": "ga"
+    },
+    {
+      "name": "OnReportFileName",
+      "id": 5564406,
+      "caption": "When a report file name is generated",
+      "category": "Reports",
+      "availability": "ga"
+    },
+    {
+      "name": "Scheduled",
+      "id": 101,
+      "caption": "On a schedule",
+      "category": "Base",
+      "availability": "ga"
+    },
+    {
+      "name": "SubFlow",
+      "id": 5564404,
+      "caption": "When invoked as a SubFlow",
+      "category": "Base",
+      "availability": "ga"
+    },
+    {
+      "name": "Webhook",
+      "id": 5564403,
+      "caption": "When a webhook is received",
+      "category": "Web",
+      "availability": "ga"
+    }
+  ]
+}
