@@ -43,7 +43,7 @@ Reference them as `{{trigger_ProposedFileName}}`, `{{trigger_Rec_1306}}` and so 
 | publish | error | at least one report line | The "When a report file name is generated" trigger requires at least one report line. |
 | publish | error | no other published flow uses this trigger | Only one published flow can use the "When a report file name is generated" trigger. It is already used by flow '%1'. |
 
-Both are raised while the trigger is registered, after the licensing call, and undo the whole publish. The trigger also has checks for the timeout, unknown reports or tables and duplicate lines, but 27.0.39 runs none of them. Use existing report and table numbers anyway: a line for a report that doesn't exist never fires.
+Both are raised while the trigger is registered, after the licensing call, and undo the whole publish. The trigger also has checks for the timeout, unknown reports or tables and duplicate lines, but 27.0.40 runs none of them. Use existing report and table numbers anyway: a line for a report that doesn't exist never fires.
 
 ## Runtime errors
 

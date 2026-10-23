@@ -186,8 +186,8 @@
       "id": "Webhook.premium-required",
       "severity": "info",
       "stage": "publish",
-      "check": "The portal refuses the registration when the environment's AutoFlow package is below Premium. The publish still succeeds, but the webhook is not live; the flow card shows this message.",
-      "message": "The webhook trigger requires at least AutoFlow Premium. Upgrade your package in the AutoFlow portal, then republish this flow."
+      "check": "The portal refuses the registration when the production environment has no paid AutoFlow license (free tier; before 27.0.40: a package below Premium). Sandboxes are exempt. The publish still succeeds, but the webhook is not live; the flow card shows registration status 'License Required' and this message.",
+      "message": "The webhook trigger requires a paid AutoFlow license; the free tier does not include it. License AutoFlow in the AutoFlow portal, then republish this flow."
     },
     {
       "id": "Webhook.needs-consent",
@@ -219,7 +219,7 @@
     }
   ],
   "notes": [
-    "Cloud-only (Business Central online). Requires the environment to be connected to the AutoFlow portal and an AutoFlow Premium (or higher) package; the portal refuses the registration otherwise. Next release (not in 27.0.39): any paid AutoFlow license is enough.",
+    "Cloud-only (Business Central online). Requires the environment to be connected to the AutoFlow portal and, in production, a paid AutoFlow license of any model (per user, per company or per tenant); the portal refuses the registration otherwise. Sandboxes need no license. Before 27.0.40: AutoFlow Premium or higher.",
     "The endpoint URL is minted by the AutoFlow portal on first publish and shown on the flow card; it is not part of the flow definition. A copied or imported flow, or one restored into another tenant, environment or company, registers again on publish and gets a new URL.",
     "Authentication: callers call the proxy URL; the proxy authenticates to Business Central with its own application identity and enforces allowedMethods. The proxy's application user needs the permissions the flow's steps require.",
     "InstantReturn: the trigger records the execution, queues it as its own Job Queue entry and answers at once with the default response. The flow runs in the background and commits after every step.",

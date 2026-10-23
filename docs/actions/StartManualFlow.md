@@ -87,7 +87,7 @@ An empty `flowCode`, or an empty `record` for a target that runs on a table, is 
 ## Gotchas
 
 - Cross-environment: nothing is re-mapped on import. A flow with the same Code must be published as a manual flow in the target company before this step runs.
-- The target needs a **Code**. In 27.0.39 a manual flow can be published without one, and then it can't be started by this step; set the Code on the flow card. (Next release, not in 27.0.39: every flow needs a Code.)
+- The target is found by its **Code**. Every flow needs one to be published; a flow published before 27.0.40 may still run without one and can't be started by this step until a Code is set on the flow card. If the target's Code is changed later, update `flowCode` in every caller.
 - The target must not be a SubFlow. To call a SubFlow and get results back, use [Run SubFlow](RunSubFlow.md).
 - Whether the job starts on its own depends on the AutoFlow Setup option **Manually start flows**: when it is on, the job is created **On Hold**.
 - The step only reads `record` when the target runs on a table; for a standalone target it is ignored.

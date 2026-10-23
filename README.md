@@ -32,12 +32,12 @@ Round trip in Business Central:
 
 1. **Export current version** on an existing flow to get its JSON, or let the agent write a new one.
 2. Let the agent edit it, then run the validator.
-3. Choose **Create from file** to import it as a new draft flow, review it in the editor, then **Publish changes**.
+3. Choose **Create from file** to import it as a draft: a new flow, or a new draft version of the flow that already has the file's `code` (after a confirmation). Review it in the editor, then **Publish changes**.
 
 ## Scope and versioning
 
-- Verified against **AutoFlow 27.0.39**, released 14 October 2026. To see your version, open *Extension Management* in Business Central and look at the AutoFlow entry.
-- Behaviour that changes in the next release is marked **Next release**. When you write JSON today, follow the 27.0.39 rules; those notes tell you what to keep forward-compatible.
+- Verified against **AutoFlow 27.0.40**, released 23 October 2026. To see your version, open *Extension Management* in Business Central and look at the AutoFlow entry.
+- Where older releases behave differently in a way that matters for writing JSON, the page has a short **Before 27.0.40** note.
 - Only generally available steps are included. Steps that are dark-launched or in preview are added once they ship.
 - The docs describe behaviour, not internals. Where behaviour was inferred rather than confirmed, the step page says so.
 - The flow definition JSON is AutoFlow's own storage format, not a public API with compatibility guarantees. Always validate against the docs for your AutoFlow version.

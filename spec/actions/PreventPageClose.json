@@ -52,7 +52,7 @@
   "notes": [
     "Response step of the 'When a page is closed (interactive)' trigger (5564408). That trigger runs synchronously before the page closes. The step hands back a 'keep the page open' answer, and the flow ends there: no further steps run.",
     "The step JSON carries terminating=false (the step does not set the terminating flag), yet it ends the run. Steps placed after it are not executed, and no publish warning flags them.",
-    "showMessage defaults to true. Write a message whenever showMessage is true or absent: the step has a check for this ('Enter the message to show, or turn off \"Tell the user why\".'), but 27.0.39 runs it neither in the editor nor at publish, and an empty message simply keeps the page open silently.",
+    "showMessage defaults to true. Write a message whenever showMessage is true or absent: the step has a check for this ('Enter the message to show, or turn off \"Tell the user why\".'), but 27.0.40 runs it neither in the editor nor at publish, and an empty message simply keeps the page open silently.",
     "If showMessage is false, any message is ignored and the page stays open silently. asDialog is only used when a message is shown.",
     "Outside the page-close trigger the step is hidden from the picker. Its effect elsewhere is not defined by this step.",
     "No outputs."

@@ -1,6 +1,6 @@
 # AutoFlow flow definitions: instructions for AI agents
 
-You are working with **AutoFlow** flow definitions: the JSON documents that *Export current version* produces and *Create from file* imports into Microsoft Dynamics 365 Business Central. This repository is your reference, verified against AutoFlow 27.0.39. Use it in place of guessing. If the user's AutoFlow is older or newer, say so, and treat notes marked **Next release** accordingly.
+You are working with **AutoFlow** flow definitions: the JSON documents that *Export current version* produces and *Create from file* imports into Microsoft Dynamics 365 Business Central. This repository is your reference, verified against AutoFlow 27.0.40. Use it in place of guessing. If the user's AutoFlow is older, follow the **Before 27.0.40** notes; if it is newer, say that these docs may be out of date.
 
 ## Workflow
 
@@ -16,6 +16,7 @@ You are working with **AutoFlow** flow definitions: the JSON documents that *Exp
 
 ## Rules that are easy to get wrong
 
+- Every flow needs a root `code` (`NAMESPACE.NAME`, e.g. `ACME.BLOCKED-CUSTOMER`) before it can be published. Importing a file whose `code` already exists in the company adds a new draft version to that flow instead of creating a new one, so pick a new `code` for a new flow and keep the existing one when you change a flow.
 - `steps[0]` is the trigger, and its slug is always `trigger`.
 - Ids are upper-case GUIDs without braces, unique across **steps and edges**. Generate new ones for every new or copied step.
 - Slugs match `^[A-Za-z][A-Za-z0-9-]{0,19}$`: no underscore, unique case-insensitively. Renaming a slug means rewriting every `{{oldSlug_…}}` yourself.

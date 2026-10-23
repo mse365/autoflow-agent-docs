@@ -77,8 +77,8 @@
       "id": "Manual.code-required",
       "severity": "error",
       "stage": "publish",
-      "check": "The flow header must have a Code (not part of the definition JSON). Checked before the licensing call.",
-      "message": "Enter a Code on the flow card before publishing this flow. Manual flows are started from other flows and from extensions by their Code."
+      "check": "The flow must have a Code (not part of the step JSON; set it with the root 'code' on import). AutoFlow checks this for every flow before all other publish checks. Before 27.0.40 this trigger's own message was: Enter a Code on the flow card before publishing this flow. Manual flows are started from other flows and from extensions by their Code.",
+      "message": "Flow %1 (%2) has no Code. Enter a Code on the flow card before activating it – for example YOURCOMPANY.FLOW-NAME. The Code identifies the flow across companies and environments."
     },
     {
       "id": "Manual.openExecution-enum",

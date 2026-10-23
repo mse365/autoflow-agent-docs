@@ -80,8 +80,8 @@
       "id": "SubFlow.code-required",
       "severity": "error",
       "stage": "publish",
-      "check": "The flow header must have a Code (not part of the definition JSON; set it with the root 'code' on import). Checked while registering the trigger, after licensing (which SubFlows skip).",
-      "message": "A Code must be set on the Flow Card before this SubFlow can be published. Run-SubFlow steps and templates reference SubFlows by Code, not by No."
+      "check": "The flow must have a Code (not part of the step JSON; set it with the root 'code' on import). AutoFlow checks this for every flow before all other publish checks. Before 27.0.40 this trigger's own message was: A Code must be set on the Flow Card before this SubFlow can be published. Run-SubFlow steps and templates reference SubFlows by Code, not by No.",
+      "message": "Flow %1 (%2) has no Code. Enter a Code on the flow card before activating it – for example YOURCOMPANY.FLOW-NAME. The Code identifies the flow across companies and environments."
     },
     {
       "id": "SubFlow.no-direct-run",
@@ -108,7 +108,7 @@
   "notes": [
     "Runs synchronously inside the calling flow's Run SubFlow step, in the caller's session. The SubFlow gets its own child execution (with its own step log), linked from the caller's log entry \"SubFlow '%1' was executed.\". A SubFlow never starts on its own and has no Job Queue entry.",
     "The SubFlow body does not commit step by step: it runs as part of the calling step, so it is committed (or rolled back) with that step, as the caller's trigger does it.",
-    "SubFlows do not count against the licensed-flow limit; publishing skips the licensing registration.",
+    "SubFlows do not count against the free-tier flow limit; publishing skips the licensing registration.",
     "Publishing marks the flow as a SubFlow. No trigger registration is written; callers find the SubFlow by its Code.",
     "Return values are set with the Return SubFlow Output step, which is ONLY offered in SubFlow flows.",
     "Steps that answer a caller (Respond to Webhook, Return PDF, Set report file name, Set document field values, Prevent page close) and Sleep fail at run time inside a SubFlow.",

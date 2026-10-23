@@ -120,7 +120,7 @@
     "Re-entrancy guard: if the flow itself renders a report, that nested file-name event does not start the flow again.",
     "Matched records: on the platform path the trigger reads the report's request-page filter for the line's tableNo and returns every matching record, up to 1000 references; RecordCount reports the true total. On the legacy path, or when no filter is available, only the record Business Central passes is used.",
     "Single catch-all flow: one published flow per environment handles all configured reports. Branch on {{trigger_ReportId}}.",
-    "The trigger has its own configuration checks (at least one line, timeout of at least 1 second, report exists, table exists, report listed once), but 27.0.39 runs none of them in the editor or at publish. Only the publish-time 'at least one report line' check above is enforced. Use existing report and table numbers anyway: a line for a report that does not exist never fires.",
+    "The trigger has its own configuration checks (at least one line, timeout of at least 1 second, report exists, table exists, report listed once), but 27.0.40 runs none of them in the editor or at publish. Only the publish-time 'at least one report line' check above is enforced. Use existing report and table numbers anyway: a line for a report that does not exist never fires.",
     "No recurring Job Queue entry is created on publish.",
     "Picker filter: Set report file name is ONLY offered in this trigger's flows. Respond to Webhook, Return SubFlow Output, Return PDF, Set document field values and Prevent page close are hidden."
   ]

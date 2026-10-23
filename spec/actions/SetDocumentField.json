@@ -97,7 +97,7 @@
       "id": "SetDocumentField.values-required",
       "severity": "warning",
       "stage": "runtime",
-      "check": "configuration.values should contain at least one row. With no rows nothing is written (in release/reopen flows with skipStandard the document is still saved and the release/reopen skipped). The step's own check ('Add at least one field to set on the record.') is not run in 27.0.39, and the editor does not require a row.",
+      "check": "configuration.values should contain at least one row. With no rows nothing is written (in release/reopen flows with skipStandard the document is still saved and the release/reopen skipped). The step's own check ('Add at least one field to set on the record.') is not run (27.0.40), and the editor does not require a row.",
       "message": "(no message)",
       "machine": {
         "type": "required",

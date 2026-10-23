@@ -166,6 +166,7 @@
     }
   ],
   "notes": [
+    "Unlike a binary HTTP Request responseBody (base64 text in later steps), this step yields an AutoFlow Document, usable as a byte-exact Send Email Reference attachment or Azure Blob: Upload file content.",
     "Document references an AutoFlow Document record (table 5564415, the AutoFlow document library).",
     "The downloaded bytes are stored as a new AutoFlow Document (name = file name, Content Type = the blob's content type, else derived from the extension: pdf, xml, json, txt, csv, htm/html, png, jpg/jpeg, gif, zip, docx, xlsx, otherwise application/octet-stream). Use {{<slug>_Document}} as an e-mail attachment or as the content of an Azure Blob: Upload file step.",
     "found is 'true'/'false'. lastModified is ISO-8601 (empty if unknown). size is the byte count. tags and metadata are JSON object strings ('{}' when none).",

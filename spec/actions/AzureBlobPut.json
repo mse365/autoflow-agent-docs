@@ -56,7 +56,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "text",
-      "description": "What to upload. If the raw value is exactly one SmartField (e.g. {{CreatePdf_Document}}) that names an AutoFlow Document reference, that document's bytes are uploaded and its content type is used; if it is one field of a record reference (e.g. {{trigger_Rec.picture}}) that is a BLOB, Media or MediaSet field, its bytes are uploaded. Anything else is resolved as SmartText and uploaded as UTF-8 text."
+      "description": "What to upload. If the raw value is exactly one SmartField (e.g. {{CreatePdf_Document}}) that names an AutoFlow Document reference, that document's bytes are uploaded and its content type is used; if it is one field of a record reference (e.g. {{trigger_Rec.picture}}) that is a BLOB, Media or MediaSet field, its bytes are uploaded. Anything else is resolved as SmartText and uploaded as UTF-8 text, including a binary HTTP Request responseBody (its base64 text is uploaded, not the bytes)."
     },
     {
       "key": "contentType",
@@ -224,6 +224,7 @@
     }
   ],
   "notes": [
+    "A binary HTTP Request responseBody reaches this step as base64 text, so {{<slug>_responseBody}} uploads the base64, not the file. To upload the file, store it in a BLOB or Media field with Insert/Modify Record first and use that field.",
     "url is https://<storageAccount>.blob.core.windows.net/<container>/<path> (no SAS appended). size is the uploaded byte count. name is the last path segment.",
     "Tags are sent URL-encoded as the blob's index tags in the same upload request. Writing tags needs Storage Blob Data Owner (or a SAS with the Tags permission); uploading needs Storage Blob Data Contributor. With overwrite = false the existence check also needs list permission.",
     "Tag character check: only ASCII letters a-z/A-Z count as letters; umlauts and other non-ASCII letters are rejected.",

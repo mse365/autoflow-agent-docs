@@ -110,6 +110,6 @@ The account values above are placeholders. Use the ID and connector of a real ac
 
 - `accountId` and `accountConnector` differ in every environment. After importing a flow, pick the account again or the step fails with "The configured email account is no longer registered or active."
 - Reference attachments must point to **AutoFlow Document** records, such as Create PDF's `Document` output or Azure Blob: Get file's output. A reference to any other table (e.g. a Sales Invoice record) is rejected.
-- Inline content is decoded to text before it is written, so binary files are not byte-exact. Use Inline only for text files; use a Reference row for PDFs and images.
+- Inline content is decoded to text before it is written, so binary files are not byte-exact. Use Inline only for text files; use a Reference row for PDFs and images. This also applies to a file downloaded with HTTP Request: `{{<slug>_responseBody}}` is accepted as `contentBase64`, but a PDF or image arrives damaged.
 - When AutoFlow test mode is active with test recipients, every email goes only to those test addresses, and CC/BCC are dropped.
 - Subject and body are not checked at run time. An empty subject is sent as-is.

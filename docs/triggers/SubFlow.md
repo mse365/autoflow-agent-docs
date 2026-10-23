@@ -11,7 +11,7 @@ Makes the flow a reusable building block. Another flow calls it with a **Run Sub
 | Category | Base |
 | Terminating | n/a (trigger) |
 | Group / edges | no |
-| Availability | GA. Publishing requires a **Code** on the flow card. Does not count against the licensed-flow limit. |
+| Availability | GA. Publishing requires a **Code** on the flow card, as for every flow. Does not count against the free-tier flow limit. |
 
 ## What it does
 
@@ -37,7 +37,9 @@ Inside the SubFlow, reference them as `{{trigger_<name>}}`, for example `{{trigg
 
 | stage | severity | rule | message |
 |---|---|---|---|
-| publish | error | the flow header needs a Code (root `code` on import) | A Code must be set on the Flow Card before this SubFlow can be published. Run-SubFlow steps and templates reference SubFlows by Code, not by No. |
+| publish | error | the flow needs a Code (root `code` on import); checked for every flow, before the other publish checks | Flow %1 (%2) has no Code. Enter a Code on the flow card before activating it – for example YOURCOMPANY.FLOW-NAME. The Code identifies the flow across companies and environments. |
+
+Before 27.0.40 the missing Code was reported as "A Code must be set on the Flow Card before this SubFlow can be published. Run-SubFlow steps and templates reference SubFlows by Code, not by No."
 
 The input names are not checked anywhere. Keep them to letters, digits and `_`, and unique.
 

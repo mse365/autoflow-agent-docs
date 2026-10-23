@@ -46,7 +46,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "code",
-      "description": "Request body (SmartText; the editor shows it only for POST/PUT/PATCH but it is sent for any method if present). If the raw body is exactly one {{slug_output.field}} placeholder (no format suffix, one level into a record reference) and that field is a BLOB, Media or MediaSet field, the bytes are sent unchanged. With a credential, the reserved tokens {{credential.username}} and {{credential.password}} are replaced (XML-escaped) at send time."
+      "description": "Request body (SmartText; the editor shows it only for POST/PUT/PATCH but it is sent for any method if present). If the raw body is exactly one {{slug_output.field}} placeholder (no format suffix, one level into a record reference) and that field is a BLOB, Media or MediaSet field, the bytes are sent unchanged. A binary responseBody of another HTTP Request step is sent as its base64 text, not as bytes. With a credential, the reserved tokens {{credential.username}} and {{credential.password}} are replaced (XML-escaped) at send time."
     },
     {
       "key": "credentialCode",
@@ -142,13 +142,15 @@
     }
   ],
   "notes": [
-    "responseStatus is the numeric status as text (e.g. \"200\"); responseHeaders is a JSON object text with the first value of each response header (content headers such as Content-Type and Content-Length are not included); responseBody is always the body read as text, also for binary Content-Types.",
+    "responseStatus is the numeric status as text (e.g. \"200\"); responseHeaders is a JSON object text with the first value of each response header (content headers such as Content-Type and Content-Length are not included); responseBody is the body as text, or the unchanged bytes for a binary Content-Type (see the next note).",
+    "Binary detection: the response Content-Type (case-insensitive, parameters after ';' ignored) is text when it is missing/empty, text/*, application/json, application/xml, application/javascript, application/x-javascript, application/ecmascript, application/x-yaml, application/yaml, application/sql, application/graphql, application/x-sh, application/x-www-form-urlencoded, application/csv, application/x-ndjson, application/xhtml+xml, application/ld+json, or contains +json or +xml. Every other type (application/pdf, image/*, application/zip, application/octet-stream, application/vnd.*, ...) keeps the bytes. Logs and 'Send test request' then show '<binary response, %1 bytes, %2>' (size, Content-Type); the end-of-step output dump shows '<binary>'. An empty binary response gives ''.",
+    "A binary responseBody reaches later steps as base64 text (no line breaks). An Insert/Modify Record value of exactly {{slug_responseBody}} for a BLOB or Media field decodes it and stores the file byte for byte (MediaSet not supported). Everywhere else it is the base64 text: in text, in Parser input (JSON/XML parsing fails), in another HTTP Request body and in Azure Blob: Upload file content. The ;utf8, ;utf16 and ;xmlEscape suffixes do not decode it. Send Email Inline contentBase64 accepts it but decodes to text, so only text files arrive unchanged.",
+    "Before 27.0.40 responseBody was always read as text, which corrupts binary files.",
     "The step does not fail on 4xx/5xx; branch on {{slug_responseStatus}} downstream.",
     "Header precedence with a credential: credential default headers < step headers < authentication headers. Authentication headers are removed from the execution log; API-key-in-query secrets are added after the URL is logged.",
     "Credentials, their base URLs, default headers and secrets live per company in Business Central, not in the flow JSON. Only the credential's code travels with the flow, so the same code must exist (with the right auth setup) in every target company/environment.",
     "The editor's 'Send test request' button sends a real request; it is not part of the configuration (no key is stored).",
     "No publish-time step check exists; only the generic dangling-reference warning applies. The editor's URL allow-list status line is advisory and does not block saving.",
-    "The resolved configuration (url, headers, body) is written to the execution log at debug level; only credential secrets are kept out of it.",
-    "Next release (not in 27.0.39): responses with a binary Content-Type will be kept as raw bytes in responseBody, so a bare {{slug_responseBody}} can be written to a BLOB or Media field."
+    "The resolved configuration (url, headers, body) is written to the execution log at debug level; only credential secrets are kept out of it."
   ]
 }

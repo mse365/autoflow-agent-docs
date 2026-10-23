@@ -40,7 +40,7 @@ None.
 | runtime | warning | `values` is empty: nothing is written | (no message) |
 | publish | warning | the step has a successor (terminating steps must end their path) | `Step "%1" is a terminating step but has a successor – terminating steps must end the path.` |
 
-The step's own check for an empty `values` list (`Add at least one field to set on the record.`) is not run in 27.0.39, and the editor does not require a row. Always set at least one field.
+The step's own check for an empty `values` list (`Add at least one field to set on the record.`) is not run (27.0.40), and the editor does not require a row. Always set at least one field.
 
 ## Runtime errors
 

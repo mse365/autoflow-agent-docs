@@ -11,7 +11,7 @@ Starts the flow on demand: from the flow itself, from another flow (Start flow s
 | Category | Base |
 | Terminating | n/a (trigger) |
 | Group / edges | no |
-| Availability | GA. Publishing requires a **Code** on the flow card. |
+| Availability | GA. Publishing requires a **Code** on the flow card, as for every flow. |
 
 ## What it does
 
@@ -44,10 +44,12 @@ Reference it as `{{trigger_Rec}}`. Fields of the record are read like any other 
 | publish | error (hard stop) | `tableNo`, if set, must be an existing table (not checked in the editor) | The table %1 the flow runs on does not exist. |
 | publish | error (hard stop) | each page in `pages` must carry the Start Flow action | The page %1 cannot show the "Start Flow" action. |
 | publish | error (hard stop) | for a record-based flow, each page must show `tableNo` records | The page %1 shows records of the table %2, but the flow runs on the table %3. |
-| publish | error | the flow header needs a Code (not part of the JSON) | Enter a Code on the flow card before publishing this flow. Manual flows are started from other flows and from extensions by their Code. |
+| publish | error | the flow needs a Code (root `code` on import); checked for every flow, before the other publish checks | Flow %1 (%2) has no Code. Enter a Code on the flow card before activating it – for example YOURCOMPANY.FLOW-NAME. The Code identifies the flow across companies and environments. |
 | editor | error | the two page rules, shown live in the config status line | (same texts) |
 
 Trigger errors are reported as `This flow's trigger cannot be published:` followed by the list.
+
+Before 27.0.40 the missing Code was reported as "Enter a Code on the flow card before publishing this flow. Manual flows are started from other flows and from extensions by their Code."
 
 ## Runtime errors
 

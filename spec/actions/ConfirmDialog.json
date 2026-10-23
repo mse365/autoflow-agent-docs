@@ -80,7 +80,7 @@
       "id": "ConfirmDialog.message-required",
       "severity": "error",
       "stage": "editor",
-      "check": "The configuration dialog refuses to save while the question is empty. (The step's own check 'Enter the question to ask the user.' is not run in 27.0.39.) At runtime an empty question shows an empty dialog.",
+      "check": "The configuration dialog refuses to save while the question is empty. (The step's own check 'Enter the question to ask the user.' is not run in 27.0.40.) At runtime an empty question shows an empty dialog.",
       "message": "Please fill in the highlighted fields.",
       "machine": {
         "type": "required",
@@ -91,7 +91,7 @@
       "id": "ConfirmDialog.waitMinutes-range",
       "severity": "info",
       "stage": "runtime",
-      "check": "waitMinutes outside 0..15 is clamped at runtime (below 0 -> 0, above 15 -> 15). The step's own range check ('The waiting time must be between 0 and %1 minutes.') is not run in 27.0.39.",
+      "check": "waitMinutes outside 0..15 is clamped at runtime (below 0 -> 0, above 15 -> 15). The step's own range check ('The waiting time must be between 0 and %1 minutes.') is not run in 27.0.40.",
       "message": "(no message)"
     },
     {

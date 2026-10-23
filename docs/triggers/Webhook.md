@@ -11,7 +11,7 @@ Starts the flow when the AutoFlow webhook proxy forwards an HTTP call to this fl
 | Category | Web |
 | Terminating | n/a (trigger) |
 | Group / edges | no |
-| Availability | GA, **Business Central online only**. Needs the environment connected to the AutoFlow portal and an AutoFlow Premium (or higher) package. Next release (not in 27.0.39): any paid AutoFlow license. |
+| Availability | GA, **Business Central online only**. Needs the environment connected to the AutoFlow portal and, in production, a paid AutoFlow license (any license model; not the free tier). Sandboxes need no license. Before 27.0.40: AutoFlow Premium or higher. |
 
 ## What it does
 
@@ -50,7 +50,7 @@ Reference them as `{{trigger_Payload}}`, `{{trigger_Method}}` and so on. Parse `
 | editor | info | the configure dialog only opens on Business Central online | The webhook trigger is only available on Business Central online (SaaS). It cannot be configured on-premises. |
 | publish | info (flow card note) | no portal API key | No AutoFlow portal API key on this environment. Connect it to the AutoFlow portal (AutoFlow Setup) before publishing a webhook flow. |
 | publish | info (flow card note) | portal registration failed | Registration failed (HTTP %1): %2 |
-| publish | info (flow card status) | package below Premium | The webhook trigger requires at least AutoFlow Premium. Upgrade your package in the AutoFlow portal, then republish this flow. |
+| publish | info (flow card status "License Required") | production environment on the free tier | The webhook trigger requires a paid AutoFlow license; the free tier does not include it. License AutoFlow in the AutoFlow portal, then republish this flow. |
 | publish | info (flow card status) | admin consent missing | Administrator consent required - click to grant. |
 | publish | info (flow card note) | proxy app could not be enabled (needs admin) | The webhook is registered, but an administrator must enable the AutoFlow webhook proxy in this environment – use the "Enable webhook proxy" action. |
 

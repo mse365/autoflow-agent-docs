@@ -60,7 +60,7 @@ def main():
                 if not isinstance(obj, dict) or obj.get("type") not in ("trigger", "action"):
                     continue  # configuration fragment
                 steps = [obj, STUB_ACTION] if obj["type"] == "trigger" else [STUB_TRIGGER, obj]
-                rep = vf.validate({"name": "example", "steps": steps}, specs)
+                rep = vf.validate({"name": "example", "code": "EXAMPLE.CHECK", "steps": steps}, specs)
                 for i in rep.items:
                     if i["severity"] == "error":
                         problems.append(f"{md.relative_to(ROOT)}: {i['rule']} {i['where']}: {i['message']}")

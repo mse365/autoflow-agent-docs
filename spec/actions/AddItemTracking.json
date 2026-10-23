@@ -145,7 +145,7 @@
     }
   ],
   "notes": [
-    "KEY MISMATCH in 27.0.39: the visual editor stores the tracking number under 'trackingValue', but the runtime reads 'value'. A step configured only in the editor therefore fails with 'Enter the serial number to assign.' (or lot/package). In hand-written JSON always set 'value'; also set 'trackingValue' to the same text so the editor shows it.",
+    "KEY MISMATCH (still in 27.0.40): the visual editor stores the tracking number under 'trackingValue', but the runtime reads 'value'. A step configured only in the editor therefore fails with 'Enter the serial number to assign.' (or lot/package). In hand-written JSON always set 'value'; also set 'trackingValue' to the same text so the editor shows it.",
     "Direction is derived from the line: sales return orders and sales credit memos are inbound, all other sales documents outbound; purchase documents are inbound except purchase return orders and purchase credit memos. Item, variant, location, qty. per unit of measure and shipment date (sales) / expected receipt date (purchase) are taken from the line.",
     "If the line has an existing reservation entry without serial number, the tracking is attached to it; otherwise a surplus entry is created, and for a drop-shipment purchase line linked to a sales order the new tracking is mirrored to the linked sales line.",
     "If the line's No. is not an existing item (e.g. a G/L account line), the step does nothing and succeeds silently.",

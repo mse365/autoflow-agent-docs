@@ -31,9 +31,7 @@ No trigger-specific checks, at any stage. The general flow checks still apply, f
 
 ## Runtime errors
 
-None specific to this trigger. If the license check fails when the Job Queue entry runs, that run fails with "AutoFlow license validation failed for flow %1 – open Subscription Management to resolve." The run shows up in the Job Queue log, not as an execution.
-
-Next release (not in 27.0.39): the text becomes "Flow %1 was not started because AutoFlow is not activated in this company or its license has expired. Open AutoFlow Setup to check the activation."
+None specific to this trigger. If the license check fails when the Job Queue entry runs, that run fails with "Flow %1 was not started because AutoFlow is not activated in this company or its license has expired. Open AutoFlow Setup to check the activation." The run shows up in the Job Queue log, not as an execution. (Before 27.0.40: "AutoFlow license validation failed for flow %1 – open Subscription Management to resolve.")
 
 ## Example
 

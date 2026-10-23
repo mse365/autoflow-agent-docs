@@ -139,4 +139,5 @@ Add `"rawXmlLines": { "lineXml": true }` to get each `<Line>` element as XML.
 - The `outputs` array lists plain line names. Indexed names (`name[0]`) appear only at run time.
 - With XPath, even a single match is `name[0]`. `{{slug_name}}` still works because of the first-element fallback.
 - A non-empty `namespaces` object switches off auto-discovery completely. List every prefix your selectors use.
+- An HTTP Request `responseBody` is text only if the response had a text Content-Type (JSON, XML, `text/*`, `+json`, `+xml`, …). For any other type, such as JSON sent as `application/octet-stream`, the input is base64 and parsing fails with `Failed to parse input as JSON.` or `Failed to parse input as XML.`
 - `previewSample` can contain sensitive sample data and is exported with the flow. Leave it empty in shared definitions.

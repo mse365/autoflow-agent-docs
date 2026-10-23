@@ -59,7 +59,7 @@ Keep the order `true` then `false`.
 
 `%1` and `%2` are step **ids**. The "writes before" check walks the JSON in document order: each step, then the steps nested in its edges, depth-first. It can therefore flag a writing step on a branch that would not actually run before the dialog.
 
-The step also has checks for an empty question (`Enter the question to ask the user.`) and for `waitMinutes` outside 0–15 (`The waiting time must be between 0 and %1 minutes.`), but 27.0.39 runs neither. Out-of-range waiting times are clamped at runtime.
+The step also has checks for an empty question (`Enter the question to ask the user.`) and for `waitMinutes` outside 0–15 (`The waiting time must be between 0 and %1 minutes.`), but 27.0.40 runs neither. Out-of-range waiting times are clamped at runtime.
 
 ## Runtime errors
 

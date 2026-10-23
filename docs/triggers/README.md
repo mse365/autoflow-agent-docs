@@ -55,15 +55,15 @@ Publish rules that depend on the trigger:
 
 When a flow is published, checks run in this order:
 
-1. The flow must contain at least one action step: "A flow must contain at least one action step before it can be published. Add a step after the trigger and try again."
-2. **Trigger validation (hard stop).** Manual, OnDocumentModify, OnDocumentRelease, OnDocumentPost, OnDocumentReopen, OnPageOpen and OnPageClose check their configuration. Errors are reported as `This flow's trigger cannot be published:` followed by the list. The other triggers have no checks at this point.
-3. Step warnings, such as dangling references and terminating steps with successors, are collected and need the user's confirmation. A headless publish cannot confirm them, so it fails.
-4. Manual needs a Code on the flow card (checked here, before licensing). SubFlow skips licensing.
-5. Licensing.
-6. Trigger registration: SubFlow needs a Code on the flow card. OnPdfPrint and OnReportFileName require at least one report line and allow only one published flow per environment. Webhook registers with the AutoFlow portal; failures there do not stop the publish.
+1. Every flow needs a Code on the flow card (root `code` on import): "Flow %1 (%2) has no Code. Enter a Code on the flow card before activating it – for example YOURCOMPANY.FLOW-NAME. The Code identifies the flow across companies and environments."
+2. The flow must contain at least one action step: "A flow must contain at least one action step before it can be published. Add a step after the trigger and try again."
+3. **Trigger validation (hard stop).** Manual, OnDocumentModify, OnDocumentRelease, OnDocumentPost, OnDocumentReopen, OnPageOpen and OnPageClose check their configuration. Errors are reported as `This flow's trigger cannot be published:` followed by the list. The other triggers have no checks at this point.
+4. Step warnings, such as dangling references and terminating steps with successors, are collected and need the user's confirmation. A headless publish cannot confirm them, so it fails.
+5. Licensing (free tier: 2 published flows per production environment). SubFlow skips it.
+6. Trigger registration: OnPdfPrint and OnReportFileName require at least one report line and allow only one published flow per environment. Webhook registers with the AutoFlow portal (production needs a paid license); failures there do not stop the publish.
 7. Job Queue: Scheduled gets a recurring entry every 60 minutes. GlobalInsert, GlobalModify and GlobalDelete get a recurring pick-up entry every 5 minutes. All other triggers get none.
 
-Next release (not in 27.0.39): every flow, whatever its trigger, needs a Code on the flow card before it can be published.
+Before 27.0.40 only Manual and SubFlow flows needed a Code, with their own messages.
 
 ## Shared configuration patterns
 

@@ -150,8 +150,8 @@
       "Binary tokens only affect BLOB, Media or MediaSet fields reached through a 'value' SmartField definition (not the BC field-name fallback); on anything else they do nothing.",
       "xmlEscape escapes & < > \" ' (not idempotent).",
       "A text value with a format is parsed as Date, then Decimal, then Boolean, then DateTime; the first type that parses is formatted.",
-      "A configuration value that is exactly one {{root.Field}} (root = reference, Field = value definition on a BLOB/Media/MediaSet field, no suffix) is passed as raw bytes to HTTP Request body and Insert/Modify Record BLOB fields.",
-      "Next release (not in 27.0.39): binary step outputs keep their bytes. In 27.0.39 every step output is text."
+      "A configuration value that is exactly one {{root.Field}} (root = reference, Field = value definition on a BLOB/Media/MediaSet field, no suffix) is passed as raw bytes to HTTP Request body, Azure Blob: Upload file content and Insert/Modify Record BLOB/Media fields.",
+      "The only binary step output is an HTTP Request responseBody with a binary Content-Type. Later steps see it as base64 text; ;utf8/;utf16/xmlEscape do not decode it. An Insert/Modify Record value of exactly {{slug_responseBody}} for a BLOB or Media field decodes the base64 and stores the bytes. Before 27.0.40 every step output was text."
     ]
   },
   "slug": {

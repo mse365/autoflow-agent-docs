@@ -255,7 +255,7 @@
     "Test mode: when AutoFlow Setup has test mode active with test e-mail recipients, all To/CC/BCC recipients are replaced by the test recipients (in To; CC and BCC cleared) and the execution log notes the redirect.",
     "sentEmailId is the email message GUID (no braces), the same identifier Business Central shows as the Sent Email message id.",
     "accountId/accountConnector are environment-specific. A definition moved to another environment must have them re-selected, otherwise the step fails at run time.",
-    "Inline attachment content is decoded from base64 into text before being written as the attachment, so binary files (PDF, images) are not transferred byte-exact. Use Inline rows only for text; for binary files use a Reference row to an AutoFlow Document (e.g. from Create PDF or Azure Blob: Get file).",
+    "Inline attachment content is decoded from base64 into text before being written as the attachment, so binary files (PDF, images) are not transferred byte-exact. Use Inline rows only for text; for binary files use a Reference row to an AutoFlow Document (e.g. from Create PDF or Azure Blob: Get file). A binary HTTP Request responseBody is base64 text and is accepted as contentBase64, but a PDF or image downloaded that way arrives damaged.",
     "Sending uses Business Central's standard email module (Email.Send). Its result is not checked: if the connector fails, the step still succeeds, sentEmailId is returned, and the message stays in the Email Outbox with the error."
   ]
 }

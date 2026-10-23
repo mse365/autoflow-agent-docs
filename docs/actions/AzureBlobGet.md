@@ -110,3 +110,4 @@ No publish-time check exists for this step.
 - Downloading needs Storage Blob Data Reader. `includeTags` (on by default) also needs Storage Blob Data Owner. With a read-only SAS token, turn `includeTags` off.
 - Inside a For Each over List files results, bind `path` to the row's `Path` field.
 - Every run creates a new AutoFlow Document record.
+- This step, not HTTP Request, is the way to get a downloaded file as an AutoFlow Document for a byte-exact email attachment. An HTTP Request download is only base64 text in later steps.

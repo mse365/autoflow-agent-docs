@@ -33,7 +33,7 @@ None.
 
 No check is enforced. The step picker hides this step unless the flow's trigger is the page-close trigger, and no publish check enforces this either.
 
-The step has a check for an empty message (`Enter the message to show, or turn off "Tell the user why".`), but 27.0.39 runs it neither in the editor nor at publish. An empty message with `showMessage` true keeps the page open without telling the user why, so always write one.
+The step has a check for an empty message (`Enter the message to show, or turn off "Tell the user why".`), but 27.0.40 runs it neither in the editor nor at publish. An empty message with `showMessage` true keeps the page open without telling the user why, so always write one.
 
 ## Runtime errors
 

@@ -19,7 +19,7 @@ The step resolves `content` and writes it as a block blob to `path`, with `conte
 
 - **Exactly one SmartField that names an AutoFlow Document** (e.g. the `Document` output of a PDF step): that document's bytes are uploaded, and its stored content type is used.
 - **Exactly one SmartField that names a BLOB, Media or MediaSet field** one level into a record reference (e.g. `{{trigger_Rec.picture}}`): those bytes are uploaded byte for byte.
-- **Anything else**: the value is resolved as SmartText and uploaded as UTF-8 text.
+- **Anything else**: the value is resolved as SmartText and uploaded as UTF-8 text. This includes a binary HTTP Request `responseBody`: it uploads its base64 text, not the file.
 
 When `overwrite` is off, the step first checks whether a blob with exactly this path exists, and fails if so.
 
@@ -114,5 +114,6 @@ The editor does not check paths or tags; all of these fail only when the step ru
 ## Gotchas
 
 - Put **only** the SmartField in `content` when you want binary data. `report: {{CreatePdf_Document}}` is treated as text.
+- A file downloaded with HTTP Request cannot be uploaded byte for byte directly: `{{<slug>_responseBody}}` gives base64 text. Store it in a BLOB or Media field with Insert/Modify Record first, then upload that field.
 - Uploading needs Storage Blob Data Contributor. Writing tags needs Storage Blob Data Owner (or a SAS token with the Tags permission). With `overwrite = false`, the step also needs list permission.
 - Tag values resolved from SmartFields can contain characters that are not allowed (umlauts, `&`, `,`, …). The step then fails at run time.

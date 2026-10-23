@@ -1,13 +1,14 @@
 # Flow definition format
 
-A flow definition is a single UTF-8 JSON document. It is what **Export current version** downloads (`AutoFlow_<FlowNo>_<VersionId>.json`) and what **Create from file** imports. Everything about a flow's logic lives in this document; environment-specific things (credentials, webhook registrations, the flow's number, folder, licensing) do not.
+A flow definition is a single UTF-8 JSON document. It is what **Export current version** downloads (`AutoFlow_<Code>_<version>.json`, see [Flow Code and versions](#flow-code-and-versions)) and what **Create from file** imports. Everything about a flow's logic lives in this document; environment-specific things (credentials, webhook registrations, the flow's number, folder, licensing) do not.
 
 ## Top-level object
 
 ```jsonc
 {
   "name": "Notify sales on blocked customer",   // flow description
-  "code": "ACME.BLOCKED_CUSTOMER",             // optional, cross-environment identifier
+  "code": "ACME.BLOCKED_CUSTOMER",             // flow Code, needed before the flow can be published
+  "version": "1.2.0",                          // written by export; informational on import
   "iconUrl": "https://…/icon.svg",             // optional, flow icon
   "steps": [ /* trigger first, then action steps */ ],
   "notes": [ /* optional canvas sticky notes */ ],
@@ -18,13 +19,14 @@ A flow definition is a single UTF-8 JSON document. It is what **Export current v
 | Key | Type | Required | Notes |
 |---|---|---|---|
 | `name` | string | yes | Becomes the flow's **Description** on import (truncated to 100 characters). If another flow already has that description, the import appends ` (2)`, ` (3)`, … |
-| `code` | string | no | Flow **Code**, max 60 characters. Format `[NAMESPACE.]CODE`: `A–Z`, `0–9`, `_`, `-`, at most one `.`, not first or last. BC uppercases it. **Required for SubFlows**, since Run SubFlow steps call a SubFlow by its Code. On import the code is skipped without an error if another flow in the company already uses it or if it is malformed. |
+| `code` | string | recommended | Flow **Code**, max 60 characters. Format `[NAMESPACE.]CODE`: `A–Z`, `0–9`, `_`, `-`, at most one `.`, not first or last. BC uppercases it. **Every flow needs a Code before it can be published.** Use your own namespace, e.g. `ACME.BLOCKED-CUSTOMER`. Run SubFlow and Start flow steps call flows by Code. If a flow in the company already has this Code, import offers to add the file as a **new draft version of that flow** instead of creating a new flow (see [Flow Code and versions](#flow-code-and-versions)). A malformed code is skipped without an error. |
+| `version` | string | no | Version number `major.minor.patch` of the exported version, e.g. `"1.2.0"`. Written by export (missing for versions from before 27.0.40). On import it is only informational: it is never stored in the definition, and the new draft gets its own number. Don't invent one for a hand-written definition. |
 | `iconUrl` | string | no | Must be empty or start with `https://` (case-insensitive). If it doesn't, it is skipped on import. |
 | `steps` | array | yes | `steps[0]` **must** be the trigger. The other entries are the top-level action sequence, run in array order. |
 | `notes` | array | no | Canvas notes; they have no effect at runtime. See [Notes](#notes). |
 | `smartFieldDefs` | object | no | Flow-level definitions of how `{{slug_output.Segment…}}` paths walk related records. See [references-and-smart-fields.md §1.8](references-and-smart-fields.md#18-smartfielddefs-the-flow-level-path-definitions). |
 
-Only `name`, `code` and `iconUrl` are read from the root on import. The rest of the document is stored verbatim as the flow's draft version. **Import performs no validation**: a malformed definition imports fine and fails later, at publish or at runtime. That's why the checks in [validation.md](validation.md) exist.
+Only `name`, `code`, `iconUrl` and `version` are read from the root on import (`version` is then removed). The rest of the document is stored verbatim as the flow's draft version. **Import performs no validation**: a malformed definition imports fine and fails later, at publish or at runtime. That's why the checks in [validation.md](validation.md) exist.
 
 ## Trigger step (`steps[0]`)
 
@@ -165,23 +167,30 @@ Canvas sticky notes, display only:
 
 These are environment-local, so an agent can't set them through JSON:
 
-- Flow **No.**, status (draft or published), published and draft version ids, folder, category.
+- Flow **No.**, status (draft or published), the version number of the stored version (export adds it as `version`, import ignores it), folder, category.
 - Credentials and secrets. Steps reference them by key. Each environment must have matching credential records; see the HTTP Request and Azure Blob pages.
 - Webhook URLs and registrations, which are created on publish.
 - Licensing.
 
-## Next release: flow versions and Codes
+## Flow Code and versions
 
-The release after 27.0.39 changes how flows are identified and versioned. A definition written for 27.0.39 keeps working, but plan for this:
+- **Code.** Every flow needs a Code before it can be published: *"Flow %1 (%2) has no Code. Enter a Code on the flow card before activating it – for example YOURCOMPANY.FLOW-NAME. The Code identifies the flow across companies and environments."* Codes are unique per company. The Code can be changed on the flow card at any time, unless the flow is linked to a public gallery template or to someone else's template. Changing it breaks Run SubFlow and Start flow steps that call the old Code.
+- **Version numbers.** Every version has a number `major.minor.patch`. A new or imported flow starts as draft `0.0.1`. **Edit flow** on a published flow creates a draft with the next patch number (with `0.0.3` active, the draft is `0.0.4`); publishing keeps the number. Minor and major only change through the template gallery. Versions from before 27.0.40 that were neither published nor draft at upgrade time have no number (shown as `–`).
+- **Export.** *Export current version* (flow card, Flow Workspace or flow list; on a flow with a draft beside the published version it asks which one) and *Export* on a version in **Flow Versions** add the root `version` key and name the file `AutoFlow_<Code>_<version>.json`, e.g. `AutoFlow_ACME.BLOCKED-CUSTOMER_1.2.0.json`. Without a Code the flow No. is used, and for an unnumbered version its internal ID (and no `version` key).
+- **Import when the Code exists.** If a flow in the company already has the file's `code` (compared upper-cased), *Create from file* asks instead of creating a second flow:
+  - *"Flow %1 (%2) already has the Code %3. Import the file as a new draft version of that flow?"*
+  - If the flow already has an open draft: *"Flow %1 (%2) already has the Code %3 and an open draft (version %4). Import the file as a new draft version of that flow? The current draft stays available in the version history."*
+  - If the file's `version` is lower than the flow's highest version, this line is put in front, and the default answer is *No*: *"Caution: the file contains version %1, which is older than the flow's current version %2."*
 
-- **Every flow needs a `code`** before it can be activated (published), not only SubFlows. Give every definition a `code` in the form `NAMESPACE.NAME`, for example `ACME.BLOCKED-CUSTOMER`.
-- **Versions get numbers** (`major.minor.patch`, e.g. `1.2.0`). Export writes the version to a root `version` key and names the file `AutoFlow_<Code>_<version>.json`. The key is read on import only for information; don't invent one.
-- **Importing a file whose `code` already exists** in the company no longer creates a second flow. After a confirmation, it becomes a new **draft version** of the existing flow. Without that flow, import creates a new flow as before.
-- **Run SubFlow pins** use the SubFlow's version number instead of a local ID. See [Run SubFlow](actions/RunSubFlow.md).
+  **Yes** stores the definition as a new draft with the flow's next version number; **Created From** shows the file's `version`. The flow's description, Code and icon are **not** changed (the file's `name` and `iconUrl` are ignored), and the published version keeps running until the draft is published. Run SubFlow steps are re-pinned as on every import. **No** cancels the import. Without a matching Code, import creates a new flow, as before.
+- **Template references.** A flow installed or updated from the gallery also has a read-only **Template reference** version (e.g. `1.3.0`) with a working draft (`1.3.1`). A template reference can't be published (*"Version %1 is a template reference and cannot be activated. Create a draft from it and activate that instead."*). **Update from template** merges your changes with the template's, matching steps, edges and notes by `id`. When you edit the JSON of such a flow, keep existing ids, so your changes merge instead of turning into delete-and-add conflicts. Positions (`x`, `y`), `level`, the root `code`/`version` and Run SubFlow `subFlowVersion` pins are ignored by the merge.
+- **Run SubFlow pins** use the SubFlow's version number (`"1.2.0"`), which is the same in every environment. See [Run SubFlow](actions/RunSubFlow.md).
+
+Before 27.0.40: only SubFlows and manual flows needed a Code, versions had no numbers, export named the file `AutoFlow_<FlowNo>_<VersionId>.json` without a `version` key, and a file whose Code already existed was imported as a new flow without a Code.
 
 ## Lifecycle: import → draft → publish
 
-1. **Import** (*Create from file*): creates a new flow in **Draft** with this definition. No validation runs.
+1. **Import** (*Create from file*): creates a new flow in **Draft** (version `0.0.1`) with this definition, or, after a confirmation, a new draft version of the flow that already has the file's `code`. No validation runs.
 2. **Edit**: the editor rewrites the step you edit (configuration, outputs, slug) and leaves everything else alone.
-3. **Publish changes**: runs the publish checks in [validation.md](validation.md). Hard errors block publishing. Warnings ask for confirmation, and a non-interactive (API) publish treats them as *No*, so a flow with warnings can't be published headless.
+3. **Publish changes** (activates the draft): runs the publish checks in [validation.md](validation.md). Hard errors block publishing. Warnings ask for confirmation, and a non-interactive (API) publish treats them as *No*, so a flow with warnings can't be published headless.
 4. **Run**: runtime errors are logged per step on the execution.

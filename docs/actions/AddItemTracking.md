@@ -79,7 +79,7 @@ There are no publish-time checks specific to this step. A Confirm dialog after t
 
 ## Gotchas
 
-- **Key mismatch in 27.0.39:** the visual editor saves the number as `trackingValue`, but the runtime reads `value`. A step configured only in the editor fails at runtime with "Enter the … number to assign." In JSON, always write `value`, and write `trackingValue` with the same content.
+- **Key mismatch (still in 27.0.40):** the visual editor saves the number as `trackingValue`, but the runtime reads `value`. A step configured only in the editor fails at runtime with "Enter the … number to assign." In JSON, always write `value`, and write `trackingValue` with the same content.
 - `quantity` is text in invariant format. Use `"2.5"`, not `"2,5"`. A JSON number (`2`) is read as text too.
 - If the line's `No.` is not an existing item (e.g. a G/L account line), the step does nothing and still succeeds.
 - `trackingType` is the integer ordinal, not `"Lot"`. Any other number is not rejected, but no tracking number is set.

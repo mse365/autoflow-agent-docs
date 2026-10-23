@@ -173,7 +173,11 @@ def check_root(doc, r):
     elif len(doc["name"]) > 100:
         r.add("lint", "root.name-length", "$.name", "'name' is longer than 100 characters and will be truncated on import.")
     code = doc.get("code")
-    if code not in (None, ""):
+    if code in (None, ""):
+        r.add("error", "root.code-required", "$.code",
+              "Every flow needs a Code before it can be published (AutoFlow 27.0.40 and later). "
+              "Add a root 'code' such as \"ACME.FLOW-NAME\", or set it on the flow card after import.")
+    else:
         if not isinstance(code, str) or len(code) > 60 or not CODE_RE.match(code):
             r.add("error", "root.code", "$.code",
                   'Code must be empty or match <NAMESPACE.>CODE – letters A–Z, digits, "_" and "-" only, '

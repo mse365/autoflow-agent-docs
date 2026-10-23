@@ -143,6 +143,7 @@
     }
   ],
   "notes": [
+    "An HTTP Request responseBody is text only when the response Content-Type is text-based (see HttpRequest notes). For a binary Content-Type (e.g. JSON served as application/octet-stream) the input is base64 text, so JsonPath/XPath parsing fails and RegEx matches against the base64.",
     "Runtime output naming per line <name>: a single result is written as <name>; an array/multi result is written as <name>[0], <name>[1], ... (and NOT as <name>); no match writes <name> = ''. Downstream: {{<slug>_<name>}} gives the scalar or, for an indexed result, the first element; {{<slug>_<name>[n]}} addresses element n; a For Each or aggregate over {{<slug>_<name>}} walks all elements.",
     "JsonPath: the selected token yields <name>. A selected JSON array yields <name>[i] per element (objects/arrays serialised as JSON text, null as ''); an EMPTY array writes no value at all, so {{<slug>_<name>}} stays unresolved. Strings are returned unescaped; numbers/booleans as text; a selected object as JSON text. Only single-token paths work: a path matching several tokens (wildcards, '..') is treated as no match.",
     "XPath: results are ALWAYS indexed (<name>[0] even for a single node). Elements give their inner text (outer XML when flagged in rawXmlLines), attributes their value, text/CDATA nodes their value. Unprefixed element names in the selector are rewritten to *[local-name()='Name'], so namespaced documents match without prefixes; prefixed names, '@attr', '*', '.', function steps like text() are left as written.",

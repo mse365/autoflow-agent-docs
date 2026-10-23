@@ -28,40 +28,40 @@ Errors inside the SubFlow fail this step with the inner error message unchanged.
 ## How the called flow is identified
 
 - **Code, not No.** `configuration.subFlowCode` holds the SubFlow's **Code**: the flow's `Code` field, format `[NAMESPACE.]CODE`, e.g. `ACME.CUSTOMER_LOOKUP`. The flow No. comes from a number series, means nothing in another company or environment, and never appears in the step.
-- **Code rules.** A SubFlow can't be published without a Code (*"A Code must be set on the Flow Card before this SubFlow can be published. Run-SubFlow steps and templates reference SubFlows by Code, not by No."*). Once the flow has been published, the Code can't be changed to another value; only the **Reset Code** action on the flow card clears it, and that breaks all callers. Codes are unique per company. Other flows don't need a Code.
+- **Code rules.** Every flow, SubFlows included, needs a Code before it can be published (*"Flow %1 (%2) has no Code. Enter a Code on the flow card before activating it – for example YOURCOMPANY.FLOW-NAME. …"*). Codes are unique per company. The Code can be changed (or cleared with **Reset Code**) unless the flow is linked to a public or someone else's gallery template; changing it breaks all callers.
 - **What travels with the SubFlow.** Export writes the Code to the root `code` property. Save as template also writes it into the SubFlow trigger's configuration (`subFlowCode`, `iconUrl`).
-- **Import restores the Code.** On import ("Create from file", template install), the Code is put back onto the new flow, unless another flow in that company already uses it or it is malformed. In that case the import still succeeds, but the new flow has no Code until you set one by hand.
+- **Import restores the Code.** On import ("Create from file", template install), the Code is put back onto the new flow. If a flow in that company already has it, the file becomes a new draft version of that flow after a confirmation (see [Flow Code and versions](../flow-definition.md#flow-code-and-versions)). A malformed Code is dropped, and the new flow has no Code until you set one by hand.
 
 ### The version pin (`subFlowVersion`)
 
-In 27.0.39, `subFlowVersion` is an **integer**: the internal ID of a SubFlow version record in *this* database. It is not a version number, and the same ID means something else (or nothing) in another company or environment. The editor shows it as "Version %1".
+`subFlowVersion` is the SubFlow's **version number** as a string, e.g. `"1.2.0"`. A version number means the same SubFlow version in every company and environment, so the pin travels with exports and templates. The editor shows it as "Version %1" and offers "Switch to version %1" when the SubFlow has a newer published version.
 
-At run time the pin must be the ID of an existing version **of that SubFlow**. There is **no automatic fallback** to the published version: a missing pin, an unknown ID, or the ID of another flow's version is a run-time error.
+A pin without a `.` is read as a legacy pin: the internal ID of a version record in *this* database. The editor still writes an integer ID when the pinned version has no number (an old version from before 27.0.40).
 
-Don't write the pin as a string. A string such as `"1.2.0"` can't be read as an integer, so import and the run fail.
+At run time the pin must name an existing version **of that SubFlow** in this company. There is **no automatic fallback** to the published version at run time: a missing pin, a version number that doesn't exist here, an unknown ID or the ID of another flow's version is a run-time error. Only import (below) and the editor re-pin.
+
+Before 27.0.40: the pin was always an integer ID, and a string pin such as `"1.2.0"` broke import and the run. Leaving `subFlowVersion` out of hand-written JSON works in both.
 
 ### Re-pinning on import
 
-After "Create from file", a template install, an "Update from template" or "Duplicate", every Run SubFlow step in the definition, including steps nested in edges, is re-pinned:
+After "Create from file" (also as a new version of an existing flow), a template install, an "Update from template" or "Duplicate", every Run SubFlow step in the definition, including steps nested in edges, is re-pinned:
 
-1. If a flow with `subFlowCode` exists in the target company: a pin that is the ID of one of **its** versions is kept. Any other pin (absent, unknown, or another flow's version) is replaced by that SubFlow's **currently published version ID**.
+1. If a flow with `subFlowCode` exists in the target company: a pin that names one of **its** versions (by number, or by ID) is kept. Any other pin (absent, unknown number or ID, or another flow's version) is replaced by that SubFlow's **currently published version**, written as its version number.
 2. If no flow has that Code, or it has no published version, the step is left exactly as imported and the import still succeeds. The step fails at run time until the SubFlow is installed and published and the step is re-pinned: open and confirm the step (it re-resolves through the Code the same way), or import the caller again.
 3. `inputBindings` are never touched. They are keyed by parameter **name**.
 
-**For hand-written JSON, leave out `subFlowVersion`** and import the caller after the SubFlow is published in the target company; import then fills in the published version. Write an integer pin only when you copy it from an export of the same database.
+**For hand-written JSON, leave out `subFlowVersion`** and import the caller after the SubFlow is published in the target company; import then fills in the published version. Write a pin only when you mean a specific SubFlow version that exists in the target.
 
 Recommended order: **import and publish the SubFlow first, then import the callers.**
 
-"Save as template" removes `subFlowVersion` from every Run SubFlow step, and fails if a referenced SubFlow Code is not published in the source company.
-
-> **Next release (not in 27.0.39):** the pin becomes the SubFlow's version **number** as a string, e.g. `"1.2.0"`, which is the same in every environment, and every flow gets a mandatory Code. Integer pins keep working there. Leaving `subFlowVersion` out of hand-written JSON works in both releases.
+"Save as template" turns integer pins into the version number and removes pins to unnumbered versions. It fails if a referenced SubFlow Code is not published in the source company.
 
 ## Configuration
 
 | key | type | required | default | description |
 |---|---|---|---|---|
 | `subFlowCode` | string (≤ 60) | yes | `""` | Code of the SubFlow (see above). No SmartFields. |
-| `subFlowVersion` | integer | yes at run time | – | Version pin: the internal ID of one of the SubFlow's versions in this database (see above). Leave it out in hand-written JSON; import fills it in when the SubFlow is published in the target. Never a string. |
+| `subFlowVersion` | string (or legacy integer) | yes at run time | – | Version pin: the SubFlow's version number, e.g. `"1.2.0"`; a legacy integer is a version ID in this database (see above). Leave it out in hand-written JSON; import fills it in when the SubFlow is published in the target. |
 | `inputBindings` | object | no | `{}` | `{ "<paramName>": "<expression>" }`. Keys are the SubFlow trigger's `inputs[].name` (case-sensitive). For **Value** inputs the expression is any SmartText (`{{trigger_Rec.no}}`, literals, formulas). For **Reference** inputs it must be a **flat** wrapped selector `{{name}}` that names a reference in the calling flow, e.g. `{{trigger_Rec}}`: no dots, no `[n]`. Anything else is passed as plain text. Keys that match no declared input are still passed in, but the editor drops them when the step is confirmed. |
 | `customIconUrl` | string | no | `""` | Display only. The SubFlow's icon, copied by the editor and mirrored to the step's top-level `customIconUrl`. |
 
@@ -106,7 +106,7 @@ The step has no publish check of its own. The generic dangling-slug warning stil
 |---|---|---|---|
 | editor (status line) | warning | No flow with this Code, or it has no published version. Doesn't block saving, but confirming the step then clears all `inputBindings`. | SubFlow "%1" is not installed on this system, or has no published version. Install and publish it, then reopen this step. |
 | editor (status line) | warning | A Reference binding points at a different table than the input's `tableNo`. Doesn't block saving. | Parameter "%1" expects a reference to table %2, but the selected reference resolves to table %3. |
-| editor | info | A newer published version exists; the dialog offers a one-click switch | A newer version of this SubFlow is available. |
+| editor | info | A newer published version exists; the dialog offers a one-click switch ("Switch to version %1") | A newer version of this SubFlow is available. |
 | save as template | error | A referenced Code is not published in this company | Run-SubFlow step references SubFlow Code "%1", but no SubFlow with that Code is published on this tenant. Publish the missing SubFlow first, or remove the Run-SubFlow step before saving as template. |
 
 ## Runtime errors
@@ -114,8 +114,8 @@ The step has no publish check of its own. The generic dangling-slug warning stil
 | condition | message |
 |---|---|
 | `subFlowCode` empty or unknown | No SubFlow with Code "%1" exists in this company. |
-| Pin missing, `0` or not an existing version ID | SubFlow %1 has no published version pinned in the call (version %2). |
-| Pin is a version of another flow (typical after copying JSON between databases) | SubFlow %1 is pinned to version %2, which belongs to a different flow. The call was imported from another system; open the step and pick the version to run. |
+| Pin missing, `0`, a version number that doesn't exist for this SubFlow here, or an unknown ID (`%2` is then `0` or the ID) | SubFlow %1 has no published version pinned in the call (version %2). |
+| Legacy integer pin is a version of another flow (typical after copying JSON between databases) | SubFlow %1 is pinned to version %2, which belongs to a different flow. The call was imported from another system; open the step and pick the version to run. |
 | Nesting too deep (AutoFlow Setup, default 32) | Maximum SubFlow nesting depth (%1) exceeded. Call chain: %2. |
 | Empty definition | SubFlow %1 version %2 has an empty definition. |
 | No steps | SubFlow %1 version %2 has no trigger step. |
@@ -152,7 +152,7 @@ A hand-written call, without a pin; import pins it to the published version of `
 }
 ```
 
-After import (or in an export) the configuration also carries an integer pin, e.g. `"subFlowVersion": 42`.
+After import (or in an export) the configuration also carries the pin, e.g. `"subFlowVersion": "1.2.0"`.
 
 (`trigger_Rec` and `FindCustomer_Rec` stand for outputs of earlier steps in the calling flow.)
 
