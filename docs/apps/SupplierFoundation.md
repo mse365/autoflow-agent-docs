@@ -1,6 +1,6 @@
 # AutoFlow Supplier Foundation
 
-**AutoFlow Supplier Foundation** is a separate Business Central app on top of AutoFlow. It adds page actions for supplier work (search supplier items, update items and prices, send purchase orders, track order status, accept supplier documents) and fires a trigger for each of them. **The flows do the supplier-specific work**: Supplier Foundation knows no supplier, API or file format. It brings the actions, the triggers, one response step, and the fields and tables the flows write to.
+**AutoFlow Supplier Foundation** is a separate Business Central app on top of AutoFlow. It adds page actions for supplier work (search supplier items, update items and prices, send purchase orders, track order status, accept supplier documents) and fires a trigger for each of them. **The flows do the supplier-specific work**: Supplier Foundation knows no supplier, API or file format. It brings the actions, the triggers, one response step, the fields and tables the flows write to, and a setup table that tells the flows which vendor a supplier is.
 
 Use this page to understand how the pieces fit together. Each trigger and the step has its own reference page.
 
@@ -45,7 +45,7 @@ All eight triggers share these rules.
 
 | Flow | Trigger | Steps, roughly |
 |---|---|---|
-| Search | ItemSearch | HTTP Request (supplier search with `{{trigger_Query}}`) → Parser (list of products) → For Each → Parser (one product) → Add search result |
+| Search | ItemSearch | Find Records (supplier code → vendor) → HTTP Request (supplier search with `{{trigger_Query}}`) → Parser (list of products) → For Each → Parser (one product) → Add search result |
 | Import | SearchSelected | Decision on `{{trigger_ExistingItemNo}} = ''` → Insert Record Item + Insert Record Item Vendor, or Modify Record `{{trigger_Item}}` → Decision on `{{trigger_Context}} = SalesDocument` → Insert Record Sales Line |
 | Item master data | ItemUpdate | HTTP Request → Parser → Modify Record `{{trigger_Item}}` and `{{trigger_ItemVendor}}` |
 | Price and stock | PriceUpdate | HTTP Request → Parser → Modify Record `{{trigger_ItemVendor}}` → Case on `{{trigger_Source}}` → Modify Record on the line |
@@ -55,7 +55,41 @@ All eight triggers share these rules.
 
 With several suppliers, write one search flow per supplier (their results are combined) and branch on `{{trigger_VendorNo}}` in the other flows, or give each its own flow with a Decision on the vendor at the start.
 
+Where a flow needs "its" vendor and no trigger output gives it (the search flow, for `vendorNo` in Add search result), look it up by [supplier code](#supplier-codes) instead of writing a Vendor No. into the flow.
+
 Two complete examples: [examples/supplier-item-search.json](../../examples/supplier-item-search.json) and [examples/supplier-import-selected.json](../../examples/supplier-import-selected.json).
+
+## Supplier codes
+
+A supplier code is a fixed name for a supplier (`ACME`) that a user maps to one of their vendors on the *Supplier Codes* page (also under *Related* on the Vendor Card). Vendor numbers differ from company to company; the supplier code does not, so a flow that looks its vendor up by supplier code works in every company once the code is set up.
+
+### Supplier Code, table `5564016`
+
+| fieldNo | field | type | path name | notes |
+|---|---|---|---|---|
+| `1` | Supplier Code | Code[20] | `suppliercode` | primary key, not blank |
+| `2` | Vendor No. | Code[20] | `vendorno` | relation to Vendor; required |
+| `3` | Vendor Name | Text[100] | `vendorname` | FlowField, not calculated by Find Records |
+
+Several codes may point to the same vendor. Deleting a vendor deletes its supplier codes; renaming it updates them.
+
+Read it with **Find Records** on table `5564016`, filtered on field `1`, and use `{{<slug>_results.vendorno}}`:
+
+```json
+"configuration": {
+  "tableNo": 5564016,
+  "filters": [ { "fieldNo": 1, "filter": "ACME" } ],
+  "smartFilter": "",
+  "limit": 1,
+  "errorOnEmpty": false,
+  "keyFields": "",
+  "ascending": true
+}
+```
+
+When the code is not set up, `results` is not set and `{{<slug>_results.vendorno}}` stays in the text verbatim. Check `{{<slug>_count}} = 0` with a Decision and stop with an **Error** that tells the user to set the code up, as in [examples/supplier-item-search.json](../../examples/supplier-item-search.json). (`errorOnEmpty: true` also stops the flow, but its message names only the table number.)
+
+Flows normally only read this table. If one writes it, Insert Record and Modify Record with `"triggers": true` fail when Vendor No. is empty.
 
 ## Fields flows write
 
@@ -163,6 +197,6 @@ Extensible enums may have more values in an environment where a supplier-specifi
 When you hand over Supplier Foundation flows, list what the environment needs:
 
 - the Supplier Foundation app (and the AutoFlow release it requires),
-- the Vendor No. you used for the supplier, which must exist,
+- the supplier code the flows use (`ACME`), to be mapped to the supplier's vendor on the *Supplier Codes* page, or the Vendor No. if a flow uses one directly,
 - the AutoFlow credential (by code) for the supplier's API,
 - which flows to publish, and that the page actions appear only once they are published.

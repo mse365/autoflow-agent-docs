@@ -37,7 +37,7 @@
       "enum": null,
       "maxLength": 20,
       "smart": "text",
-      "description": "Business Central Vendor No. of the supplier. SmartText, cut to 20, upper-cased. Together with vendorItemNo it identifies an item imported earlier."
+      "description": "Business Central Vendor No. of the supplier. SmartText, cut to 20, upper-cased. Together with vendorItemNo it identifies an item imported earlier. Prefer looking it up by supplier code (Find Records on table 5564016, field 1) over a constant: {{<slug>_results.vendorno}}."
     },
     {
       "key": "vendorItemNo",

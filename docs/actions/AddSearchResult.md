@@ -101,7 +101,7 @@ There are no publish-time checks. The step picker offers it only in flows on Whe
 
 ## Example
 
-Inside a For Each over the supplier's products, with a Parser step `Product` that reads the current product:
+Inside a For Each over the supplier's products, with a Parser step `Product` that reads the current product and a Find Records step `Supplier` that found the vendor by its [supplier code](../apps/SupplierFoundation.md#supplier-codes):
 
 ```json
 {
@@ -115,7 +115,7 @@ Inside a For Each over the supplier's products, with a Parser step `Product` tha
   "configuration": {
     "description": "{{Product_name}}",
     "description2": "",
-    "vendorNo": "V-ACME",
+    "vendorNo": "{{Supplier_results.vendorno}}",
     "vendorItemNo": "{{Product_sku}}",
     "manufacturer": "{{Product_brand}}",
     "manufacturerItemNo": "{{Product_mpn}}",
@@ -143,7 +143,7 @@ A complete search flow is in [examples/supplier-item-search.json](../../examples
 
 ## Gotchas
 
-- `vendorNo` is the vendor's number **in Business Central**. Write it as a constant per supplier flow; the supplier's API does not know it.
+- `vendorNo` is the vendor's number **in Business Central**; the supplier's API does not know it. Look it up by [supplier code](../apps/SupplierFoundation.md#supplier-codes) before the loop (`{{Supplier_results.vendorno}}`) so the flow works in every company. A constant Vendor No. works too, but only where the vendor has that number.
 - Without `vendorNo` and `vendorItemNo` an imported item is never recognised again, so `ExistingItemNo` stays empty and the import flow creates duplicates.
 - Put what the import needs in `payload`. The selection flow gets only the result's fields and the payload, not the search flow's other outputs.
 - Keep the search flow fast. The user waits for it, and the trigger's `timeoutSec` (default 30) covers all of its steps.

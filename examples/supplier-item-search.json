@@ -30,6 +30,91 @@
       "level": 0
     },
     {
+      "id": "858CC208-4355-41D1-9272-49F60ED67328",
+      "type": "action",
+      "action": 5564409,
+      "description": "Find the ACME vendor",
+      "slug": "Supplier",
+      "iconUrl": "https://statics.autoflow.mse365.de/icons/database-search.svg",
+      "terminating": false,
+      "configuration": {
+        "tableNo": 5564016,
+        "filters": [
+          {
+            "fieldNo": 1,
+            "filter": "ACME"
+          }
+        ],
+        "smartFilter": "",
+        "limit": 1,
+        "errorOnEmpty": false,
+        "keyFields": "",
+        "ascending": true
+      },
+      "outputs": [
+        {
+          "name": "count",
+          "type": "value"
+        },
+        {
+          "name": "results",
+          "type": "reference",
+          "tableNo": 5564016
+        }
+      ]
+    },
+    {
+      "id": "BFAAB834-E181-4F6D-A67B-5EC9BE54AE90",
+      "type": "action",
+      "action": 100,
+      "description": "Supplier code missing?",
+      "slug": "NoSupplier",
+      "iconUrl": "https://statics.autoflow.mse365.de/icons/arrows-split-2.svg",
+      "terminating": false,
+      "configuration": {
+        "condition": "{{Supplier_count}} = 0"
+      },
+      "outputs": [
+        {
+          "name": "result",
+          "type": "value"
+        }
+      ],
+      "edges": [
+        {
+          "id": "6EBE6BEC-3286-4DB0-BFF1-866080655D22",
+          "value": "true",
+          "description": "Yes",
+          "steps": [
+            {
+              "id": "5B3021F1-7F97-47EE-A4C6-E95DD1B7FF69",
+              "type": "action",
+              "action": 102,
+              "description": "Error",
+              "slug": "SupplierError",
+              "iconUrl": "https://statics.autoflow.mse365.de/icons/alert-triangle.svg",
+              "terminating": true,
+              "configuration": {
+                "Error": "The supplier code ACME is not set up. Map it to a vendor on the Supplier Codes page."
+              },
+              "outputs": [
+                {
+                  "name": "Errormessage",
+                  "type": "value"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "83B8EE6B-3BB5-4109-8307-5050E3B82207",
+          "value": "false",
+          "description": "No",
+          "steps": []
+        }
+      ]
+    },
+    {
       "id": "84B68B95-EB40-47B0-B65C-6183712A1B0D",
       "type": "action",
       "action": 5564402,
@@ -253,7 +338,7 @@
               "terminating": false,
               "configuration": {
                 "description": "{{Product_name}}",
-                "vendorNo": "V-ACME",
+                "vendorNo": "{{Supplier_results.vendorno}}",
                 "vendorItemNo": "{{Product_sku}}",
                 "manufacturer": "{{Product_brand}}",
                 "manufacturerItemNo": "{{Product_mpn}}",
