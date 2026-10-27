@@ -299,6 +299,18 @@ def check_steps(doc, specs, r, strict_outputs):
                 elif o["type"] == "reference" and not (isinstance(o.get("tableNo"), int) and o["tableNo"] > 0):
                     r.add("error", "output.tableNo", ow, "A reference output needs a positive integer 'tableNo'.")
 
+    # lint: steps that only work with certain triggers (spec "worksWithTriggers")
+    flow_trigger = trig.get("trigger") if isinstance(trig, dict) else None
+    for step, where, *_ in walk_steps(steps, "$.steps"):
+        if not isinstance(step, dict) or step.get("type") != "action":
+            continue
+        spec = specs["action"].get(step.get("action")) if isinstance(step.get("action"), int) else None
+        allowed = (spec or {}).get("worksWithTriggers")
+        if allowed and flow_trigger not in allowed:
+            r.add("lint", "action.trigger-mismatch", where,
+                  f"{spec.get('caption')} only works in flows on trigger {', '.join(str(a) for a in allowed)}; "
+                  f"here it does nothing.")
+
     # publish: at least one action
     if action_count == 0:
         r.add("error", "publish.empty-flow", "$.steps",

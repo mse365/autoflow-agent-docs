@@ -1,0 +1,190 @@
+{
+  "kind": "trigger",
+  "name": "SearchSelected",
+  "id": 5564013,
+  "caption": "When a search result is selected",
+  "category": "AutoFlow Supplier Foundation",
+  "app": "AutoFlow Supplier Foundation",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "timeoutSec",
+      "type": "integer",
+      "required": true,
+      "default": 60,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Seconds the user waits for the flow at most (default 60). Checked between steps; when it has passed, the run fails and everything it did is rolled back. Missing, not an integer, or <= 0 means 60. Keep it between 1 and 600."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "Query",
+      "type": "value",
+      "tableNo": null,
+      "when": "always"
+    },
+    {
+      "name": "Context",
+      "type": "value",
+      "tableNo": null,
+      "when": "always"
+    },
+    {
+      "name": "SalesHeader",
+      "type": "reference",
+      "tableNo": 36,
+      "when": "only when started from a sales document"
+    },
+    {
+      "name": "VendorNo",
+      "type": "value",
+      "tableNo": null,
+      "when": "always (may be empty)"
+    },
+    {
+      "name": "VendorItemNo",
+      "type": "value",
+      "tableNo": null,
+      "when": "always (may be empty)"
+    },
+    {
+      "name": "Manufacturer",
+      "type": "value",
+      "tableNo": null,
+      "when": "always (may be empty)"
+    },
+    {
+      "name": "ManufacturerItemNo",
+      "type": "value",
+      "tableNo": null,
+      "when": "always (may be empty)"
+    },
+    {
+      "name": "GTIN",
+      "type": "value",
+      "tableNo": null,
+      "when": "always (may be empty)"
+    },
+    {
+      "name": "Description",
+      "type": "value",
+      "tableNo": null,
+      "when": "always"
+    },
+    {
+      "name": "Description2",
+      "type": "value",
+      "tableNo": null,
+      "when": "always (may be empty)"
+    },
+    {
+      "name": "UnitOfMeasure",
+      "type": "value",
+      "tableNo": null,
+      "when": "always (may be empty)"
+    },
+    {
+      "name": "UnitCost",
+      "type": "value",
+      "tableNo": null,
+      "when": "always"
+    },
+    {
+      "name": "UnitPrice",
+      "type": "value",
+      "tableNo": null,
+      "when": "always"
+    },
+    {
+      "name": "StockAmount",
+      "type": "value",
+      "tableNo": null,
+      "when": "always"
+    },
+    {
+      "name": "StockStatus",
+      "type": "value",
+      "tableNo": null,
+      "when": "always (may be empty)"
+    },
+    {
+      "name": "ImageUrl",
+      "type": "value",
+      "tableNo": null,
+      "when": "always (may be empty)"
+    },
+    {
+      "name": "Payload",
+      "type": "value",
+      "tableNo": null,
+      "when": "always (may be empty)"
+    },
+    {
+      "name": "ExistingItemNo",
+      "type": "value",
+      "tableNo": null,
+      "when": "always (may be empty)"
+    },
+    {
+      "name": "Item",
+      "type": "reference",
+      "tableNo": 27,
+      "when": "only when ExistingItemNo is set"
+    }
+  ],
+  "rules": [
+    {
+      "id": "SearchSelected.timeout-required-editor",
+      "severity": "error",
+      "stage": "editor",
+      "check": "The configuration dialog refuses to save while the timeout is empty.",
+      "message": "Please fill in the highlighted fields.",
+      "machine": {
+        "type": "type",
+        "key": "timeoutSec",
+        "valueType": "integer"
+      }
+    },
+    {
+      "id": "SearchSelected.timeout-default",
+      "severity": "info",
+      "stage": "runtime",
+      "check": "timeoutSec missing, not an integer or <= 0 is treated as 60.",
+      "message": "(no message)"
+    },
+    {
+      "id": "SearchSelected.timeout",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The flow did not finish within timeoutSec. The run is stopped and rolled back; the user sees the message.",
+      "message": "The flow %1 did not finish within %2 seconds and was stopped. Nothing it did has been kept."
+    },
+    {
+      "id": "SearchSelected.no-deferred-steps",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The flow runs synchronously, so a step that defers the run (Sleep) fails it.",
+      "message": "Step %1 (%2) requested a deferred resume, but the flow is running synchronously. Use Sleep or other time-based deferral steps only outside of synchronous frames (Webhook sync phase or SubFlow body)."
+    },
+    {
+      "id": "SearchSelected.flow-error",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "An error in the flow (e.g. an Error step) rolls back this record's run and stops the page action at this record; the user sees the flow's message.",
+      "message": "(the flow's own error message)"
+    }
+  ],
+  "notes": [
+    "Requires the AutoFlow Supplier Foundation app, which depends on AutoFlow and AutoFlow Core. See docs/apps/SupplierFoundation.md.",
+    "Interactive: fired by a page action for one record at a time; every published flow on the trigger runs inline in the user's session, one after the other, with the same outputs.",
+    "No commits while the flows run. Each record's run (all flows) is one transaction, committed before the next record.",
+    "Publish: no trigger-specific checks and no Job Queue entry.",
+    "The page action is shown only while at least one flow is published on the trigger.",
+    "Outputs marked 'only when …' are not set when the condition fails; a {{trigger_<name>}} token for them then stays in the text verbatim.",
+    "Re-entrancy guard: a flow that fires its own trigger again is skipped, not recursed into."
+  ]
+}

@@ -1,0 +1,447 @@
+{
+  "name": "Import selected supplier item",
+  "code": "EXAMPLE.SUPPLIER-IMPORT",
+  "steps": [
+    {
+      "id": "CA88C8D3-1832-4943-9B2A-5EF2457000E7",
+      "type": "trigger",
+      "trigger": 5564013,
+      "description": "When a search result is selected",
+      "slug": "trigger",
+      "iconUrl": "https://statics.autoflow.mse365.de/icons/af-sf-search-select.svg",
+      "configuration": {
+        "timeoutSec": 60
+      },
+      "outputs": [
+        {
+          "name": "Query",
+          "type": "value"
+        },
+        {
+          "name": "Context",
+          "type": "value"
+        },
+        {
+          "name": "SalesHeader",
+          "type": "reference",
+          "tableNo": 36
+        },
+        {
+          "name": "VendorNo",
+          "type": "value"
+        },
+        {
+          "name": "VendorItemNo",
+          "type": "value"
+        },
+        {
+          "name": "Manufacturer",
+          "type": "value"
+        },
+        {
+          "name": "ManufacturerItemNo",
+          "type": "value"
+        },
+        {
+          "name": "GTIN",
+          "type": "value"
+        },
+        {
+          "name": "Description",
+          "type": "value"
+        },
+        {
+          "name": "Description2",
+          "type": "value"
+        },
+        {
+          "name": "UnitOfMeasure",
+          "type": "value"
+        },
+        {
+          "name": "UnitCost",
+          "type": "value"
+        },
+        {
+          "name": "UnitPrice",
+          "type": "value"
+        },
+        {
+          "name": "StockAmount",
+          "type": "value"
+        },
+        {
+          "name": "StockStatus",
+          "type": "value"
+        },
+        {
+          "name": "ImageUrl",
+          "type": "value"
+        },
+        {
+          "name": "Payload",
+          "type": "value"
+        },
+        {
+          "name": "ExistingItemNo",
+          "type": "value"
+        },
+        {
+          "name": "Item",
+          "type": "reference",
+          "tableNo": 27
+        }
+      ],
+      "level": 0
+    },
+    {
+      "id": "3871E01C-EDE9-418E-8DC7-925C1CCB7E8E",
+      "type": "action",
+      "action": 100,
+      "description": "New item?",
+      "slug": "IsNew",
+      "iconUrl": "https://statics.autoflow.mse365.de/icons/arrows-split-2.svg",
+      "terminating": false,
+      "configuration": {
+        "condition": "{{trigger_ExistingItemNo}} = ''"
+      },
+      "outputs": [
+        {
+          "name": "result",
+          "type": "value"
+        }
+      ],
+      "edges": [
+        {
+          "id": "BED29A70-616A-4570-8159-C42F98DED76E",
+          "value": "true",
+          "description": "Yes",
+          "steps": [
+            {
+              "id": "721DE0CC-84F3-463C-A66D-547D53E457F8",
+              "type": "action",
+              "action": 5564405,
+              "description": "Create item",
+              "slug": "InsertItem",
+              "iconUrl": "https://statics.autoflow.mse365.de/icons/database-plus.svg",
+              "terminating": false,
+              "configuration": {
+                "tableNo": 27,
+                "triggers": true,
+                "templateCode": "",
+                "values": [
+                  {
+                    "lineNo": 10000,
+                    "fieldNo": 3,
+                    "value": "{{trigger_Description}}",
+                    "validate": true
+                  },
+                  {
+                    "lineNo": 20000,
+                    "fieldNo": 31,
+                    "value": "{{trigger_VendorNo}}",
+                    "validate": true
+                  },
+                  {
+                    "lineNo": 30000,
+                    "fieldNo": 32,
+                    "value": "{{trigger_VendorItemNo}}",
+                    "validate": true
+                  },
+                  {
+                    "lineNo": 40000,
+                    "fieldNo": 22,
+                    "value": "{{trigger_UnitCost}}",
+                    "validate": true,
+                    "inputFormat": "9"
+                  },
+                  {
+                    "lineNo": 50000,
+                    "fieldNo": 18,
+                    "value": "{{trigger_UnitPrice}}",
+                    "validate": true,
+                    "inputFormat": "9"
+                  }
+                ]
+              },
+              "outputs": [
+                {
+                  "name": "rec",
+                  "type": "reference",
+                  "tableNo": 27
+                }
+              ]
+            },
+            {
+              "id": "4B01A11D-5279-4176-98DE-6B7FAFBE75BE",
+              "type": "action",
+              "action": 5564405,
+              "description": "Create item vendor",
+              "slug": "InsertItemVendor",
+              "iconUrl": "https://statics.autoflow.mse365.de/icons/database-plus.svg",
+              "terminating": false,
+              "configuration": {
+                "tableNo": 99,
+                "triggers": true,
+                "templateCode": "",
+                "values": [
+                  {
+                    "lineNo": 10000,
+                    "fieldNo": 2,
+                    "value": "{{trigger_VendorNo}}",
+                    "validate": true
+                  },
+                  {
+                    "lineNo": 20000,
+                    "fieldNo": 1,
+                    "value": "{{InsertItem_rec.no}}",
+                    "validate": true
+                  },
+                  {
+                    "lineNo": 30000,
+                    "fieldNo": 7,
+                    "value": "{{trigger_VendorItemNo}}",
+                    "validate": true
+                  },
+                  {
+                    "lineNo": 40000,
+                    "fieldNo": 5564012,
+                    "value": "{{trigger_UnitCost}}",
+                    "validate": false,
+                    "inputFormat": "9"
+                  },
+                  {
+                    "lineNo": 50000,
+                    "fieldNo": 5564013,
+                    "value": "{{trigger_StockAmount}}",
+                    "validate": false,
+                    "inputFormat": "9"
+                  }
+                ]
+              },
+              "outputs": [
+                {
+                  "name": "rec",
+                  "type": "reference",
+                  "tableNo": 99
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "5C365544-CE2F-4195-A6B7-F4BA174EB80B",
+          "value": "false",
+          "description": "No",
+          "steps": [
+            {
+              "id": "924D1602-AADE-4419-875D-617E048F48D0",
+              "type": "action",
+              "action": 5564406,
+              "description": "Refresh unit cost",
+              "slug": "UpdateItem",
+              "iconUrl": "https://statics.autoflow.mse365.de/icons/database-edit.svg",
+              "terminating": false,
+              "configuration": {
+                "reference": "{{trigger_Item}}",
+                "tableNo": 27,
+                "triggers": true,
+                "values": [
+                  {
+                    "lineNo": 10000,
+                    "fieldNo": 22,
+                    "value": "{{trigger_UnitCost}}",
+                    "validate": true,
+                    "inputFormat": "9"
+                  }
+                ]
+              },
+              "outputs": [
+                {
+                  "name": "rec",
+                  "type": "reference",
+                  "tableNo": 27
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "399566D3-2AC6-4C58-BC37-ADBFD0D17ACA",
+      "type": "action",
+      "action": 5564409,
+      "description": "Find imported item",
+      "slug": "FindItem",
+      "iconUrl": "https://statics.autoflow.mse365.de/icons/database-search.svg",
+      "terminating": false,
+      "configuration": {
+        "tableNo": 99,
+        "filters": [
+          {
+            "fieldNo": 2,
+            "filter": "{{trigger_VendorNo}}"
+          },
+          {
+            "fieldNo": 7,
+            "filter": "{{trigger_VendorItemNo}}"
+          }
+        ],
+        "smartFilter": "",
+        "limit": 1,
+        "errorOnEmpty": true,
+        "keyFields": "",
+        "ascending": true
+      },
+      "outputs": [
+        {
+          "name": "count",
+          "type": "value"
+        },
+        {
+          "name": "results",
+          "type": "reference",
+          "tableNo": 99
+        }
+      ]
+    },
+    {
+      "id": "8D5575DE-973B-4946-89E5-E308B522D45E",
+      "type": "action",
+      "action": 100,
+      "description": "From a sales document?",
+      "slug": "FromSales",
+      "iconUrl": "https://statics.autoflow.mse365.de/icons/arrows-split-2.svg",
+      "terminating": false,
+      "configuration": {
+        "condition": "{{trigger_Context}} = SalesDocument"
+      },
+      "outputs": [
+        {
+          "name": "result",
+          "type": "value"
+        }
+      ],
+      "edges": [
+        {
+          "id": "1754B7CB-4BC5-40A3-9C0B-067B1B2CCE82",
+          "value": "true",
+          "description": "Yes",
+          "steps": [
+            {
+              "id": "77ED8756-A3F0-467F-9296-9341D82BB13B",
+              "type": "action",
+              "action": 5564409,
+              "description": "Find sales lines",
+              "slug": "FindLines",
+              "iconUrl": "https://statics.autoflow.mse365.de/icons/database-search.svg",
+              "terminating": false,
+              "configuration": {
+                "tableNo": 37,
+                "filters": [
+                  {
+                    "fieldNo": 1,
+                    "filter": "{{trigger_SalesHeader.documenttype}}"
+                  },
+                  {
+                    "fieldNo": 3,
+                    "filter": "{{trigger_SalesHeader.no}}"
+                  }
+                ],
+                "smartFilter": "",
+                "limit": 10000,
+                "errorOnEmpty": false,
+                "keyFields": "",
+                "ascending": true
+              },
+              "outputs": [
+                {
+                  "name": "count",
+                  "type": "value"
+                },
+                {
+                  "name": "results",
+                  "type": "reference",
+                  "tableNo": 37
+                }
+              ]
+            },
+            {
+              "id": "5F7B1ED4-40B1-475D-B4F3-12A10B2A9ADF",
+              "type": "action",
+              "action": 5564405,
+              "description": "Add sales line",
+              "slug": "InsertLine",
+              "iconUrl": "https://statics.autoflow.mse365.de/icons/database-plus.svg",
+              "terminating": false,
+              "configuration": {
+                "tableNo": 37,
+                "triggers": true,
+                "templateCode": "",
+                "values": [
+                  {
+                    "lineNo": 10000,
+                    "fieldNo": 1,
+                    "value": "{{trigger_SalesHeader.documenttype}}",
+                    "validate": false
+                  },
+                  {
+                    "lineNo": 20000,
+                    "fieldNo": 3,
+                    "value": "{{trigger_SalesHeader.no}}",
+                    "validate": false
+                  },
+                  {
+                    "lineNo": 30000,
+                    "fieldNo": 4,
+                    "value": "[[max({{FindLines_results}}, {{FindLines_results.lineno}}) + 10000]]",
+                    "validate": false
+                  },
+                  {
+                    "lineNo": 40000,
+                    "fieldNo": 5,
+                    "value": "Item",
+                    "validate": true
+                  },
+                  {
+                    "lineNo": 50000,
+                    "fieldNo": 6,
+                    "value": "{{FindItem_results.itemno}}",
+                    "validate": true
+                  },
+                  {
+                    "lineNo": 60000,
+                    "fieldNo": 15,
+                    "value": "1",
+                    "validate": true,
+                    "inputFormat": "9"
+                  },
+                  {
+                    "lineNo": 70000,
+                    "fieldNo": 5564012,
+                    "value": "{{trigger_VendorNo}}",
+                    "validate": true
+                  }
+                ]
+              },
+              "outputs": [
+                {
+                  "name": "rec",
+                  "type": "reference",
+                  "tableNo": 37
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "C1B10413-556C-405C-AA88-80E3A7E4FDD4",
+          "value": "false",
+          "description": "No",
+          "steps": []
+        }
+      ]
+    }
+  ]
+}

@@ -10,6 +10,16 @@
       "availability": "ga"
     },
     {
+      "name": "AddSearchResult",
+      "id": 5564012,
+      "caption": "Add search result",
+      "category": "AutoFlow Supplier Foundation",
+      "terminating": false,
+      "group": false,
+      "availability": "ga",
+      "app": "AutoFlow Supplier Foundation"
+    },
+    {
       "name": "AddToCollection",
       "id": 201,
       "caption": "Add to Collection",
@@ -345,6 +355,22 @@
   ],
   "triggers": [
     {
+      "name": "DocAccepted",
+      "id": 5564018,
+      "caption": "When a supplier document is accepted",
+      "category": "AutoFlow Supplier Foundation",
+      "availability": "ga",
+      "app": "AutoFlow Supplier Foundation"
+    },
+    {
+      "name": "DocRejected",
+      "id": 5564019,
+      "caption": "When a supplier document is rejected",
+      "category": "AutoFlow Supplier Foundation",
+      "availability": "ga",
+      "app": "AutoFlow Supplier Foundation"
+    },
+    {
       "name": "GlobalDelete",
       "id": 5564451,
       "caption": "When a record is deleted",
@@ -364,6 +390,22 @@
       "caption": "When a record is modified",
       "category": "Records",
       "availability": "ga"
+    },
+    {
+      "name": "ItemSearch",
+      "id": 5564012,
+      "caption": "When an item search is performed",
+      "category": "AutoFlow Supplier Foundation",
+      "availability": "ga",
+      "app": "AutoFlow Supplier Foundation"
+    },
+    {
+      "name": "ItemUpdate",
+      "id": 5564014,
+      "caption": "When an item is updated",
+      "category": "AutoFlow Supplier Foundation",
+      "availability": "ga",
+      "app": "AutoFlow Supplier Foundation"
     },
     {
       "name": "Manual",
@@ -429,11 +471,43 @@
       "availability": "ga"
     },
     {
+      "name": "OrderStatus",
+      "id": 5564017,
+      "caption": "When an order status is updated",
+      "category": "AutoFlow Supplier Foundation",
+      "availability": "ga",
+      "app": "AutoFlow Supplier Foundation"
+    },
+    {
+      "name": "POSent",
+      "id": 5564016,
+      "caption": "When a purchase order is sent",
+      "category": "AutoFlow Supplier Foundation",
+      "availability": "ga",
+      "app": "AutoFlow Supplier Foundation"
+    },
+    {
+      "name": "PriceUpdate",
+      "id": 5564015,
+      "caption": "When a price update is requested",
+      "category": "AutoFlow Supplier Foundation",
+      "availability": "ga",
+      "app": "AutoFlow Supplier Foundation"
+    },
+    {
       "name": "Scheduled",
       "id": 101,
       "caption": "On a schedule",
       "category": "Base",
       "availability": "ga"
+    },
+    {
+      "name": "SearchSelected",
+      "id": 5564013,
+      "caption": "When a search result is selected",
+      "category": "AutoFlow Supplier Foundation",
+      "availability": "ga",
+      "app": "AutoFlow Supplier Foundation"
     },
     {
       "name": "SubFlow",

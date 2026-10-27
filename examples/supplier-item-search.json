@@ -1,0 +1,289 @@
+{
+  "name": "ACME supplier item search",
+  "code": "EXAMPLE.ACME-SEARCH",
+  "steps": [
+    {
+      "id": "2B409323-B49E-4B29-BE0B-672D8888E907",
+      "type": "trigger",
+      "trigger": 5564012,
+      "description": "When an item search is performed",
+      "slug": "trigger",
+      "iconUrl": "https://statics.autoflow.mse365.de/icons/af-sf-search.svg",
+      "configuration": {
+        "timeoutSec": 30
+      },
+      "outputs": [
+        {
+          "name": "Query",
+          "type": "value"
+        },
+        {
+          "name": "Context",
+          "type": "value"
+        },
+        {
+          "name": "SalesHeader",
+          "type": "reference",
+          "tableNo": 36
+        }
+      ],
+      "level": 0
+    },
+    {
+      "id": "84B68B95-EB40-47B0-B65C-6183712A1B0D",
+      "type": "action",
+      "action": 5564402,
+      "description": "Search at ACME",
+      "slug": "Search",
+      "iconUrl": "https://statics.autoflow.mse365.de/icons/world-www.svg",
+      "terminating": false,
+      "configuration": {
+        "url": "/products/search",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        "body": "{\"query\":\"{{trigger_Query}}\",\"limit\":25}",
+        "credentialCode": "ACME-API"
+      },
+      "outputs": [
+        {
+          "name": "responseStatus",
+          "type": "value"
+        },
+        {
+          "name": "responseHeaders",
+          "type": "value"
+        },
+        {
+          "name": "responseBody",
+          "type": "value"
+        }
+      ]
+    },
+    {
+      "id": "6BE273A6-F3C9-4372-93E8-033960CA684A",
+      "type": "action",
+      "action": 100,
+      "description": "Search failed?",
+      "slug": "Failed",
+      "iconUrl": "https://statics.autoflow.mse365.de/icons/arrows-split-2.svg",
+      "terminating": false,
+      "configuration": {
+        "condition": "{{Search_responseStatus}} != 200"
+      },
+      "outputs": [
+        {
+          "name": "result",
+          "type": "value"
+        }
+      ],
+      "edges": [
+        {
+          "id": "4BB4609F-B143-4EBB-8B53-51F007B01AB4",
+          "value": "true",
+          "description": "Yes",
+          "steps": [
+            {
+              "id": "E5E22602-70E9-42CD-9419-48AAA7D0B89E",
+              "type": "action",
+              "action": 102,
+              "description": "Error",
+              "slug": "SearchError",
+              "iconUrl": "https://statics.autoflow.mse365.de/icons/alert-triangle.svg",
+              "terminating": true,
+              "configuration": {
+                "Error": "The ACME search failed (HTTP {{Search_responseStatus}}). Please try again later."
+              },
+              "outputs": [
+                {
+                  "name": "Errormessage",
+                  "type": "value"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "448BC860-574B-45EC-8AE7-DA995EA4642D",
+          "value": "false",
+          "description": "No",
+          "steps": []
+        }
+      ]
+    },
+    {
+      "id": "370314A3-08B9-4085-A1AB-19D83BDEDF0C",
+      "type": "action",
+      "action": 5564403,
+      "description": "Read product list",
+      "slug": "ParseList",
+      "iconUrl": "https://statics.autoflow.mse365.de/icons/braces.svg",
+      "terminating": false,
+      "configuration": {
+        "type": "JsonPath",
+        "input": "{{Search_responseBody}}",
+        "lines": {
+          "products": "$.products"
+        },
+        "namespaces": {},
+        "rawXmlLines": {},
+        "previewSample": ""
+      },
+      "outputs": [
+        {
+          "name": "products",
+          "type": "value"
+        }
+      ]
+    },
+    {
+      "id": "8B8161DE-3B45-416E-95E3-B20A3D1011B0",
+      "type": "action",
+      "action": 101,
+      "description": "For each product",
+      "slug": "Loop",
+      "iconUrl": "https://statics.autoflow.mse365.de/icons/refresh.svg",
+      "terminating": false,
+      "configuration": {
+        "selector": "{{ParseList_products}}"
+      },
+      "outputs": [
+        {
+          "name": "total",
+          "type": "value"
+        },
+        {
+          "name": "iteration",
+          "type": "value"
+        },
+        {
+          "name": "items",
+          "type": "value"
+        },
+        {
+          "name": "currentItem",
+          "type": "value"
+        }
+      ],
+      "edges": [
+        {
+          "id": "5C3D7939-0537-4CDA-BE65-C04C6B7F9A94",
+          "value": "for-each",
+          "description": "for each",
+          "steps": [
+            {
+              "id": "A43EEEDC-9CED-4D39-979A-725BC0618DB8",
+              "type": "action",
+              "action": 5564403,
+              "description": "Read product",
+              "slug": "Product",
+              "iconUrl": "https://statics.autoflow.mse365.de/icons/braces.svg",
+              "terminating": false,
+              "configuration": {
+                "type": "JsonPath",
+                "input": "{{Loop_currentItem}}",
+                "lines": {
+                  "id": "$.id",
+                  "name": "$.name",
+                  "sku": "$.sku",
+                  "brand": "$.brand",
+                  "mpn": "$.mpn",
+                  "ean": "$.ean",
+                  "image": "$.image",
+                  "price": "$.price",
+                  "rrp": "$.rrp",
+                  "stock": "$.stock"
+                },
+                "namespaces": {},
+                "rawXmlLines": {},
+                "previewSample": ""
+              },
+              "outputs": [
+                {
+                  "name": "id",
+                  "type": "value"
+                },
+                {
+                  "name": "name",
+                  "type": "value"
+                },
+                {
+                  "name": "sku",
+                  "type": "value"
+                },
+                {
+                  "name": "brand",
+                  "type": "value"
+                },
+                {
+                  "name": "mpn",
+                  "type": "value"
+                },
+                {
+                  "name": "ean",
+                  "type": "value"
+                },
+                {
+                  "name": "image",
+                  "type": "value"
+                },
+                {
+                  "name": "price",
+                  "type": "value"
+                },
+                {
+                  "name": "rrp",
+                  "type": "value"
+                },
+                {
+                  "name": "stock",
+                  "type": "value"
+                }
+              ]
+            },
+            {
+              "id": "A0E7116C-E3D8-4CC9-B8E2-552C6E2C9364",
+              "type": "action",
+              "action": 5564012,
+              "description": "Add search result",
+              "slug": "AddResult",
+              "iconUrl": "https://statics.autoflow.mse365.de/icons/af-sf-add-result.svg",
+              "terminating": false,
+              "configuration": {
+                "description": "{{Product_name}}",
+                "vendorNo": "V-ACME",
+                "vendorItemNo": "{{Product_sku}}",
+                "manufacturer": "{{Product_brand}}",
+                "manufacturerItemNo": "{{Product_mpn}}",
+                "gtin": "{{Product_ean}}",
+                "imageUrl": "{{Product_image}}",
+                "unitOfMeasure": "PCS",
+                "unitCost": "{{Product_price}}",
+                "unitPrice": "{{Product_rrp}}",
+                "stockAmount": "{{Product_stock}}",
+                "stockStatus": {
+                  "mode": "rules",
+                  "rules": [
+                    {
+                      "condition": "{{Product_stock}} > 10",
+                      "value": "InStock"
+                    },
+                    {
+                      "condition": "{{Product_stock}} > 0",
+                      "value": "LowStock"
+                    }
+                  ],
+                  "otherwise": "OutOfStock"
+                },
+                "payload": "{{Product_id}}"
+              },
+              "outputs": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

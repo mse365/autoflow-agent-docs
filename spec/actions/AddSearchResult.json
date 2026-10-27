@@ -1,0 +1,199 @@
+{
+  "kind": "action",
+  "name": "AddSearchResult",
+  "id": 5564012,
+  "caption": "Add search result",
+  "category": "AutoFlow Supplier Foundation",
+  "app": "AutoFlow Supplier Foundation",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "description",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": 100,
+      "smart": "text",
+      "description": "What the user sees as the result. SmartText. Trimmed, cut to 100 characters."
+    },
+    {
+      "key": "description2",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": 50,
+      "smart": "text",
+      "description": "Second description line. SmartText, cut to 50."
+    },
+    {
+      "key": "vendorNo",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": 20,
+      "smart": "text",
+      "description": "Business Central Vendor No. of the supplier. SmartText, cut to 20, upper-cased. Together with vendorItemNo it identifies an item imported earlier."
+    },
+    {
+      "key": "vendorItemNo",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": 50,
+      "smart": "text",
+      "description": "The supplier's item number. SmartText, cut to 50."
+    },
+    {
+      "key": "manufacturer",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": 100,
+      "smart": "text",
+      "description": "SmartText, cut to 100."
+    },
+    {
+      "key": "manufacturerItemNo",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": 50,
+      "smart": "text",
+      "description": "Manufacturer part number. SmartText, cut to 50."
+    },
+    {
+      "key": "gtin",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": 14,
+      "smart": "text",
+      "description": "GTIN/EAN. SmartText, cut to 14, upper-cased."
+    },
+    {
+      "key": "imageUrl",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": 2048,
+      "smart": "text",
+      "description": "Link to a picture of the item. SmartText, cut to 2048."
+    },
+    {
+      "key": "unitOfMeasure",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": 10,
+      "smart": "text",
+      "description": "Unit the prices refer to. SmartText, cut to 10, upper-cased."
+    },
+    {
+      "key": "unitCost",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "Purchase price the supplier offers. SmartText. Resolved text is read as a number: empty = 0; both 1234.5 and 1234,5 work, and a thousands separator next to the decimal one is dropped (1,234.50 / 1.234,50). Anything else fails the step."
+    },
+    {
+      "key": "unitPrice",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "Sales price, e.g. the recommended retail price. SmartText. Resolved text is read as a number: empty = 0; both 1234.5 and 1234,5 work, and a thousands separator next to the decimal one is dropped (1,234.50 / 1.234,50). Anything else fails the step."
+    },
+    {
+      "key": "stockAmount",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "Quantity the supplier has in stock. SmartText. Resolved text is read as a number: empty = 0; both 1234.5 and 1234,5 work, and a thousands separator next to the decimal one is dropped (1,234.50 / 1.234,50). Anything else fails the step."
+    },
+    {
+      "key": "stockStatus",
+      "type": "any",
+      "required": false,
+      "default": null,
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "Enum input: {\"mode\":\"fixed\"|\"smarttext\"|\"rules\", \"value\":\"InStock\", \"smartText\":\"...\", \"rules\":[{\"condition\":\"<SmartFilter>\",\"value\":\"InStock\"}], \"otherwise\":\"Unknown\"}. A plain string is read like smarttext. The resolved text may be the value name (InStock, LowStock, OutOfStock, OnOrder, Unknown), the caption in the user's language (In Stock) or the ordinal; case-insensitive. Empty or no matching rule without otherwise = blank; any other text = Unknown."
+    },
+    {
+      "key": "payload",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "Anything the import needs later (e.g. the supplier's product id or the whole JSON of the hit). Not shown to the user; passed unchanged to the SearchSelected trigger's Payload output. SmartText, no length limit."
+    }
+  ],
+  "outputs": [],
+  "rules": [
+    {
+      "id": "AddSearchResult.description-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "The configuration dialog refuses to save while Description is empty.",
+      "message": "Please fill in the highlighted fields.",
+      "machine": {
+        "type": "required",
+        "key": "description"
+      }
+    },
+    {
+      "id": "AddSearchResult.stockstatus-status",
+      "severity": "info",
+      "stage": "editor",
+      "check": "Status line in the configuration dialog: a Fixed value that is not in the list, or a rule without a condition or a value.",
+      "message": "%1: '%2' is not one of the values."
+    },
+    {
+      "id": "AddSearchResult.number",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "unitCost, unitPrice or stockAmount resolves to text that is not a number.",
+      "message": "The %1 of the search result is not a number: %2"
+    },
+    {
+      "id": "AddSearchResult.no-search",
+      "severity": "info",
+      "stage": "runtime",
+      "check": "Outside an item search (any flow not started by the ItemSearch trigger) the step adds nothing and logs an Info entry; the flow continues.",
+      "message": "No item search is in progress - the search result was not added. \"Add search result\" only works when the flow is started from the item search."
+    }
+  ],
+  "notes": [
+    "Requires the AutoFlow Supplier Foundation app. See docs/apps/SupplierFoundation.md.",
+    "Offered in the step picker only in flows whose trigger is ItemSearch (5564012). Also works in a SubFlow called from such a flow, because the results are collected per session.",
+    "Not terminating; call it once per hit, typically inside a For Each over the supplier's answer.",
+    "No outputs. The step's effect is the row it adds to the search results.",
+    "Values longer than a field are cut without an error.",
+    "Before showing the result, Supplier Foundation looks up an Item Vendor entry with vendorNo + vendorItemNo; the match is handed to the selection flow as ExistingItemNo."
+  ],
+  "worksWithTriggers": [
+    5564012
+  ]
+}

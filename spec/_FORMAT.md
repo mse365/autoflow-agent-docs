@@ -49,7 +49,9 @@ Every trigger and action has two files:
       "machine": { "type": "required", "key": "url" }   // optional; see below
     }
   ],
-  "notes": [ "free-text gotchas" ]
+  "notes": [ "free-text gotchas" ],
+  "app": "AutoFlow Supplier Foundation", // optional: the separate app that provides the step (absent = AutoFlow itself)
+  "worksWithTriggers": [5564012]          // optional, actions only: trigger ordinals the step works with; the validator lints other flows
 }
 ```
 

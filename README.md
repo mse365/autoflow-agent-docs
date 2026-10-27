@@ -13,6 +13,7 @@ Use it to let an AI agent such as Claude Code, Copilot or Cursor **write or modi
 | [docs/references-and-smart-fields.md](docs/references-and-smart-fields.md) | `{{slug_output}}` references, field paths, SmartFormula, SmartDate, conditions |
 | [docs/triggers/](docs/triggers/README.md) | One page per trigger |
 | [docs/actions/](docs/actions/README.md) | One page per action |
+| [docs/apps/SupplierFoundation.md](docs/apps/SupplierFoundation.md) | AutoFlow Supplier Foundation (separate app, preview): how its triggers, step, fields and tables fit together |
 | [docs/validation.md](docs/validation.md) | What AutoFlow checks at import, in the editor, at publish and at runtime |
 | [docs/validation-rules.md](docs/validation-rules.md) | Every rule of every step, with the exact message text |
 | [spec/](spec/) | Machine-readable specs for every step |
@@ -38,6 +39,7 @@ Round trip in Business Central:
 
 - Verified against **AutoFlow 27.0.40**, released 23 October 2026. To see your version, open *Extension Management* in Business Central and look at the AutoFlow entry.
 - Where older releases behave differently in a way that matters for writing JSON, the page has a short **Before 27.0.40** note.
+- **AutoFlow Supplier Foundation** (preview) is documented from its pre-release source and is newer than 27.0.40. Its steps are marked with the category *AutoFlow Supplier Foundation*.
 - Only generally available steps are included. Steps that are dark-launched or in preview are added once they ship.
 - The docs describe behaviour, not internals. Where behaviour was inferred rather than confirmed, the step page says so.
 - The flow definition JSON is AutoFlow's own storage format, not a public API with compatibility guarantees. Always validate against the docs for your AutoFlow version.

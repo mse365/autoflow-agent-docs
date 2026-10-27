@@ -4,8 +4,15 @@ Every action step has `"type": "action"` and `"action": <ordinal>`. The ordinal 
 
 - **Terminating** steps must be the last step in their sequence (`"terminating": true`).
 - **Group** steps carry `edges` with nested step sequences.
+- Steps in an app category (e.g. *AutoFlow Supplier Foundation*) need that app installed; see [docs/apps/](../apps/).
 
 Machine-readable list: [`spec/index.json`](../../spec/index.json).
+
+## AutoFlow Supplier Foundation
+
+| Action | `action` | Terminating | Group | Page |
+|---|---:|:---:|:---:|---|
+| Add search result | `5564012` |  |  | [AddSearchResult](AddSearchResult.md) |
 
 ## Control
 

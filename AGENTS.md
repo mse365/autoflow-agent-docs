@@ -6,13 +6,14 @@ You are working with **AutoFlow** flow definitions: the JSON documents that *Exp
 
 1. **Read the format first**: [docs/flow-definition.md](docs/flow-definition.md). It covers the root object, the trigger and action step shapes, edges, ids, slugs, outputs and execution order.
 2. **Pick the trigger** from [docs/triggers/README.md](docs/triggers/README.md) and **the actions** from [docs/actions/README.md](docs/actions/README.md). Then open each step's page: it lists every configuration key, its type and default, the outputs it produces, its validation rules, and a valid example.
+   Steps from a separate app (category *AutoFlow Supplier Foundation*) need that app installed. Read its overview, [docs/apps/SupplierFoundation.md](docs/apps/SupplierFoundation.md), before you write such a flow.
 3. **Wire data between steps** with `{{<slug>_<output>}}` tokens. The syntax (field paths, loop items, formulas, dates, conditions) is in [docs/references-and-smart-fields.md](docs/references-and-smart-fields.md).
 4. **Validate before you hand over**:
    ```sh
    python3 tools/validate_flow.py flow.json --strict
    ```
    Fix every `error` and `warning`. Explain any `lint` you keep. Then go through the checklist in [docs/validation.md](docs/validation.md#preflight-checklist-for-agents).
-5. **Tell the user what the environment needs**: credentials (by code), called SubFlows and manual flows (by Code, imported and published first), number series, dimension codes, and tables or fields from extensions.
+5. **Tell the user what the environment needs**: credentials (by code), called SubFlows and manual flows (by Code, imported and published first), number series, dimension codes, tables or fields from extensions, and apps such as AutoFlow Supplier Foundation.
 
 ## Rules that are easy to get wrong
 

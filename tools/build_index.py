@@ -48,8 +48,8 @@ def main():
     triggers = load("triggers")
 
     index = {
-        "actions": [{k: s.get(k) for k in ("name", "id", "caption", "category", "terminating", "group", "availability")} for s in actions],
-        "triggers": [{k: s.get(k) for k in ("name", "id", "caption", "category", "availability")} for s in triggers],
+        "actions": [{k: s.get(k) for k in ("name", "id", "caption", "category", "terminating", "group", "availability", "app") if k in s} for s in actions],
+        "triggers": [{k: s.get(k) for k in ("name", "id", "caption", "category", "availability", "app") if k in s} for s in triggers],
     }
     (ROOT / "spec" / "index.json").write_text(json.dumps(index, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
@@ -63,6 +63,7 @@ def main():
         "",
         "- **Terminating** steps must be the last step in their sequence (`\"terminating\": true`).",
         "- **Group** steps carry `edges` with nested step sequences.",
+        "- Steps in an app category (e.g. *AutoFlow Supplier Foundation*) need that app installed; see [docs/apps/](../apps/).",
         "",
         "Machine-readable list: [`spec/index.json`](../../spec/index.json).",
         "",

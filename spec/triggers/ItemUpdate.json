@@ -1,0 +1,94 @@
+{
+  "kind": "trigger",
+  "name": "ItemUpdate",
+  "id": 5564014,
+  "caption": "When an item is updated",
+  "category": "AutoFlow Supplier Foundation",
+  "app": "AutoFlow Supplier Foundation",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "timeoutSec",
+      "type": "integer",
+      "required": true,
+      "default": 60,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Seconds the user waits for the flow at most (default 60). Checked between steps; when it has passed, the run fails and everything it did is rolled back. Missing, not an integer, or <= 0 means 60. Keep it between 1 and 600."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "Item",
+      "type": "reference",
+      "tableNo": 27,
+      "when": "always"
+    },
+    {
+      "name": "ItemVendor",
+      "type": "reference",
+      "tableNo": 99,
+      "when": "only when the item's vendor has an Item Vendor entry"
+    },
+    {
+      "name": "VendorNo",
+      "type": "value",
+      "tableNo": null,
+      "when": "only when the item has a Vendor No."
+    }
+  ],
+  "rules": [
+    {
+      "id": "ItemUpdate.timeout-required-editor",
+      "severity": "error",
+      "stage": "editor",
+      "check": "The configuration dialog refuses to save while the timeout is empty.",
+      "message": "Please fill in the highlighted fields.",
+      "machine": {
+        "type": "type",
+        "key": "timeoutSec",
+        "valueType": "integer"
+      }
+    },
+    {
+      "id": "ItemUpdate.timeout-default",
+      "severity": "info",
+      "stage": "runtime",
+      "check": "timeoutSec missing, not an integer or <= 0 is treated as 60.",
+      "message": "(no message)"
+    },
+    {
+      "id": "ItemUpdate.timeout",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The flow did not finish within timeoutSec. The run is stopped and rolled back; the user sees the message.",
+      "message": "The flow %1 did not finish within %2 seconds and was stopped. Nothing it did has been kept."
+    },
+    {
+      "id": "ItemUpdate.no-deferred-steps",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The flow runs synchronously, so a step that defers the run (Sleep) fails it.",
+      "message": "Step %1 (%2) requested a deferred resume, but the flow is running synchronously. Use Sleep or other time-based deferral steps only outside of synchronous frames (Webhook sync phase or SubFlow body)."
+    },
+    {
+      "id": "ItemUpdate.flow-error",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "An error in the flow (e.g. an Error step) rolls back this record's run and stops the page action at this record; the user sees the flow's message.",
+      "message": "(the flow's own error message)"
+    }
+  ],
+  "notes": [
+    "Requires the AutoFlow Supplier Foundation app, which depends on AutoFlow and AutoFlow Core. See docs/apps/SupplierFoundation.md.",
+    "Interactive: fired by a page action for one record at a time; every published flow on the trigger runs inline in the user's session, one after the other, with the same outputs.",
+    "No commits while the flows run. Each record's run (all flows) is one transaction, committed before the next record.",
+    "Publish: no trigger-specific checks and no Job Queue entry.",
+    "The page action is shown only while at least one flow is published on the trigger.",
+    "Outputs marked 'only when …' are not set when the condition fails; a {{trigger_<name>}} token for them then stays in the text verbatim.",
+    "Re-entrancy guard: a flow that fires its own trigger again is skipped, not recursed into."
+  ]
+}
