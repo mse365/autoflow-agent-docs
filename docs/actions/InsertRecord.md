@@ -2,7 +2,7 @@
 
 [← All actions](README.md)
 
-Creates a new record in a table, optionally pre-filled from a Configuration Template, and returns a reference to it.
+Creates a new record in a table, optionally pre-filled from a template, and returns a reference to it.
 
 | | |
 |---|---|
@@ -15,7 +15,12 @@ Creates a new record in a table, optionally pre-filled from a Configuration Temp
 
 ## What it does
 
-The step opens the table `tableNo` and initialises an empty record. If `templateCode` is set, it validates each field line of that Configuration Template (RapidStart) into the record. It then applies the `values` rows in ascending `lineNo` order, with Validate or direct assignment per row. Finally it inserts the record with `Insert(triggers)` and emits the new record as the reference output `rec`.
+The step opens the table `tableNo` and initialises an empty record. What happens with `templateCode` depends on the table:
+
+- **Customer (18), Vendor (23), Item (27), Employee (5200)**: `templateCode` names a Business Central template (`Customer Templ.`, `Vendor Templ.`, `Item Templ.`, `Employee Templ.`). The step applies the `values` rows, takes the number from the template's No. Series if the number is still empty, inserts with `Insert(triggers)`, and then runs BC's `Apply<X>Template` with *UpdateExistingValues = false*: the template fills only fields that are still empty, copies its default dimensions (items: also the base unit of measure) and ends with `Modify(true)` – also when `triggers` is `false`. If no such template exists but a Configuration Template with that code exists for the same table, the step uses it the Configuration Template way (below).
+- **Every other table**: `templateCode` names a Configuration Template (RapidStart). Its field lines are validated into the record first, then the `values` rows are applied, then `Insert(triggers)`.
+
+The `values` rows are applied in ascending `lineNo` order, with Validate or direct assignment per row, and win over the template for the same field. The new record is emitted as the reference output `rec`.
 
 The insert runs inside the flow's database transaction. Any error (conversion, validation, duplicate key) fails the step.
 
@@ -25,7 +30,7 @@ The insert runs inside the flow's database transaction. Any error (conversion, v
 |---|---|---|---|---|
 | `tableNo` | integer | yes | `0` | Table number to insert into, as a JSON number (e.g. `18` = Customer). |
 | `triggers` | boolean | no | `true` | Run Triggers. `true` = `Insert(true)`, so OnInsert and its subscribers run. `false` = insert without the table trigger. |
-| `templateCode` | string | no | `""` | Configuration Template code (max 10). Template values are applied first, and `values` override them. The template's table must be `tableNo`. |
+| `templateCode` | string | no | `""` | Template code (max 20). Customer/Vendor/Item/Employee: a Business Central template of that table, with a Configuration Template of the same table as fallback. Other tables: a Configuration Template (max 10) whose table must be `tableNo`. `values` win over the template. |
 | `values` | array | no | `[]` | Field assignments, see below. Primary-key fields are allowed. The editor pre-fills one row per primary-key field. |
 
 ### `values[]` row (shared by Insert / Modify / Rename / Set document field values)
@@ -66,7 +71,8 @@ There are no publish-time checks specific to this step. A Confirm dialog placed 
 | condition | message |
 |---|---|
 | `tableNo` is 0 or missing | `Table No. is required for an Insert Record step.` |
-| Template not found | `Configuration Template "%1" does not exist.` |
+| Template not found (Customer/Vendor/Item/Employee) | `There is no %1 template "%2".` (%1 = table caption) |
+| Template not found (other tables) | `Configuration Template "%1" does not exist.` |
 | Template table ≠ `tableNo` | `Configuration Template "%1" is for table %2, but the step is configured for table %3.` |
 | `fieldNo` not in table | `Field %1 does not exist in table %2.` |
 | Invalid `inputFormat` (not empty, `9`, `xml` or a valid pattern) | `"%1" is not a valid input format. Leave it empty for the regional format, enter 9 or xml for the invariant XML notation, or enter a date/time pattern such as yyyyMMdd (tokens yyyy, yy, MM, dd, HH, mm, ss plus separators).` |
@@ -112,3 +118,4 @@ There are no publish-time checks specific to this step. A Confirm dialog placed 
 - Without `inputFormat`, decimals and dates are parsed in the **regional format of the user or job-queue session that runs the flow**. Use `"inputFormat": "9"` for machine-generated values such as `1234.50` or `2026-07-16`.
 - If you omit primary-key fields, the table's OnInsert (`triggers: true`) must fill them, e.g. from a number series. Otherwise the insert fails or creates a record with an empty key.
 - Scalar SmartFields anywhere in the configuration are resolved before the step runs. Reference SmartFields are kept for the step to resolve.
+- Up to AutoFlow 27.0.40, `templateCode` always named a Configuration Template (max 10 characters), also on Customer, Vendor, Item and Employee. Business Central templates are used from the release after 27.0.40.

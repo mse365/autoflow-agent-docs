@@ -94,6 +94,6 @@
     "Offered in the step picker for every trigger.",
     "Read-only: the step reads tables 5564016 and 5564017 and writes nothing.",
     "Each of the two values is taken from the nearest category up the tree that has one; what is still missing comes from the supplier code's Default Item Template Code / Default Item Category Code. The walk stops at a missing parent or a cycle.",
-    "ItemTemplateCode is an Item Templ. (table 1382), not a RapidStart Configuration Template: it cannot be passed to Insert Record's templateCode. Copy the fields you need from {{<slug>_ItemTemplate.<field>}}."
+    "ItemTemplateCode is an Item Templ. (table 1382). Insert Record's templateCode is a plain Code[20] in the editor, not SmartText: saving the step cuts a {{token}} there to 20 characters and upper-cases it, so the found template cannot be passed to it. Copy the template's fields from {{<slug>_ItemTemplate.<field>}} into values rows (Item Templ. uses Item's field numbers)."
   ]
 }

@@ -91,7 +91,7 @@ Then set the new item's *Item Category Code* (Item field `5702`) to `{{Category_
 
 ## Gotchas
 
-- `ItemTemplateCode` is an **Item Templ.** (table 1382), not a RapidStart Configuration Template, so it cannot go into Insert Record's `templateCode`. Copy the fields you need from the template into `values` rows instead. Item Templ. uses the same field numbers as Item, e.g. `{{Category_ItemTemplate.genprodpostinggroup}}` into field `91`, `vatprodpostinggroup` into `99`, `inventorypostinggroup` into `11`.
+- `ItemTemplateCode` is an **Item Templ.** (table 1382). [Insert Record](InsertRecord.md) on Item accepts an Item Templ. code in `templateCode`, but only a **fixed** code: the editor treats the key as a plain `Code[20]`, not SmartText, so saving the step cuts `{{Category_ItemTemplateCode}}` to 20 characters and upper-cases it (the validator warns). To use the template this step found, copy its fields into `values` rows. Item Templ. uses the same field numbers as Item: `{{Category_ItemTemplate.genprodpostinggroup}}` into field `91`, `vatprodpostinggroup` into `99`, `inventorypostinggroup` into `11`.
 - `ItemTemplate` and `ItemCategory` are not set when their code is empty, and a `{{Category_ItemTemplate.…}}` token then stays in the text verbatim, which makes a validated field fail. Set the supplier code's defaults, or branch on `{{Category_ItemTemplateCode}} != ''` first.
 - An unknown supplier code stops the flow. An unknown category does not: it falls back to the defaults. Check `{{Category_CategoryFound}}` if the flow must notice that.
 - Pass the category the way the tree was filled: if the tree holds the supplier's ids, pass the id; names are compared exactly.
