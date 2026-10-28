@@ -13,12 +13,13 @@ Use it to let an AI agent such as Claude Code, Copilot or Cursor **write or modi
 | [docs/references-and-smart-fields.md](docs/references-and-smart-fields.md) | `{{slug_output}}` references, field paths, SmartFormula, SmartDate, conditions |
 | [docs/triggers/](docs/triggers/README.md) | One page per trigger |
 | [docs/actions/](docs/actions/README.md) | One page per action |
-| [docs/apps/SupplierFoundation.md](docs/apps/SupplierFoundation.md) | AutoFlow Supplier Foundation (separate app, preview): how its triggers, step, fields and tables fit together |
+| [docs/apps/SupplierFoundation.md](docs/apps/SupplierFoundation.md) | AutoFlow Supplier Foundation (separate app, preview): how its triggers, steps, fields and tables fit together |
 | [docs/validation.md](docs/validation.md) | What AutoFlow checks at import, in the editor, at publish and at runtime |
 | [docs/validation-rules.md](docs/validation-rules.md) | Every rule of every step, with the exact message text |
 | [spec/](spec/) | Machine-readable specs for every step |
 | [examples/](examples/) | Complete, valid flow definitions |
 | [tools/validate_flow.py](tools/validate_flow.py) | Preflight validator (Python 3, no dependencies) |
+| [tools/af_api.py](tools/af_api.py) | Find, export and import flows through the AutoFlow Flow API (Python 3, no dependencies) |
 
 ## Quick start
 
@@ -29,7 +30,22 @@ python3 autoflow-agent-docs/tools/validate_flow.py my-flow.json
 
 Point your agent at `AGENTS.md`. For example, add it to your agent's instructions, or tell Claude Code: *"Read autoflow-agent-docs/AGENTS.md before editing flow JSON."*
 
-Round trip in Business Central:
+Round trip in Business Central, over the AutoFlow Flow API (the release after 27.0.40), signed in as you:
+
+```sh
+export AF_ENVIRONMENT=Production AF_COMPANY="CRONUS AG"
+python3 autoflow-agent-docs/tools/af_api.py login                 # once: sign in with a code
+python3 autoflow-agent-docs/tools/af_api.py export ACME.INVOICE-MAIL -o flow.json
+# … the agent edits flow.json and runs the validator …
+python3 autoflow-agent-docs/tools/af_api.py import flow.json      # lands as a draft
+```
+
+The import never publishes. It reports what publishing would stop or warn on, and you publish the draft in the flow editor. Setup and permissions: [Give Claude Code access to your flows](https://docs.autoflow365.app/docs/guides/flow-api).
+
+- **On-premises or a container:** set `AF_BASE_URL` to the API root instead of `AF_ENVIRONMENT`, and `AF_USERNAME` / `AF_PASSWORD` for Basic authentication with the user's normal password. Behind a reverse proxy, take the web client URL, append `rest` to the instance segment and add `/api`: web client `https://bc.example.com/f0552b78fae8/` → `AF_BASE_URL=https://bc.example.com/f0552b78fae8rest/api` (`…/f0552b78fae8/api` returns 404).
+- **`CERTIFICATE_VERIFY_FAILED` on macOS** with Python from python.org: that build has no CA bundle. `export SSL_CERT_FILE=/etc/ssl/cert.pem`, or run *Install Certificates.command* from its Applications folder.
+
+Without the API, the same round trip works by hand:
 
 1. **Export current version** on an existing flow to get its JSON, or let the agent write a new one.
 2. Let the agent edit it, then run the validator.

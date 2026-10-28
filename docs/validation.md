@@ -33,6 +33,19 @@ What *Create from file* does with the root:
 | everything else | Stored verbatim as the draft. `outputs` are **not** regenerated, and steps are not validated. |
 | Run SubFlow steps | A pin that names a version of the called SubFlow in this company is kept. Otherwise the step is re-pinned to the SubFlow's published version (written as its version number), if that SubFlow exists and is published. If not, the step is left unchanged and fails at runtime. **Import and publish SubFlows before the flows that call them.** See [Run SubFlow](actions/RunSubFlow.md#re-pinning-on-import). |
 
+### Import through the Flow API
+
+`POST …/flowImports` (and `tools/af_api.py import`) does the same as *Create from file*, without questions:
+
+| Situation | *Create from file* | Flow API |
+|---|---|---|
+| `code` belongs to an existing flow | asks; *No* cancels | always imports as the flow's next draft version |
+| that flow has an open draft | mentions it in the question | imports anyway; the old draft stays in the version history |
+| `version` lower than the flow's highest | caution in the question, default *No* | imports, and returns the caution as an issue |
+| text is not a JSON object, or has no `steps` array | error | HTTP 400, nothing written |
+
+After the import, the API runs the publish checks below on the new draft and returns them in `issues`: missing Code, no action step, unknown trigger, trigger configuration errors, duplicate unprefixed output names and every publish warning. A check that fails with an error (for example an unknown `action` number) is returned as the last issue instead of undoing the import. The draft is stored either way.
+
 ## Publish
 
 Checks run in this order. The first hard error stops the publish.
