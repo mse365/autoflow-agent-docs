@@ -1,0 +1,112 @@
+{
+  "kind": "action",
+  "name": "AddStamp",
+  "id": 5564428,
+  "caption": "Add Stamp",
+  "category": "Records",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "reference",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "record",
+      "description": "SmartField reference to the record that gets the stamp, written as one placeholder in double braces, e.g. \"{{trigger_Rec}}\" or \"{{FindInvoices_results}}\". It must resolve to a Reference (RecordId) in the flow context; surrounding whitespace is ignored. A new step in the editor is prefilled with the first record reference the flow offers (normally the trigger's record)."
+    },
+    {
+      "key": "text",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": 250,
+      "smart": "text",
+      "description": "The stamp text, e.g. \"Checked\" or \"G/L Account: {{glAccount}}\". SmartFields are resolved; the result is trimmed and must be 1-250 characters (longer fails the step, it is not cut)."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "entryNo",
+      "type": "value",
+      "tableNo": null,
+      "when": "always - the entry no. of the new stamp, as text (e.g. \"42\")"
+    }
+  ],
+  "rules": [
+    {
+      "id": "AddStamp.reference-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.reference must be present and non-empty.",
+      "message": "Please fill in the highlighted fields.",
+      "machine": {
+        "type": "required",
+        "key": "reference"
+      }
+    },
+    {
+      "id": "AddStamp.text-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.text must be present and non-empty.",
+      "message": "Please fill in the highlighted fields.",
+      "machine": {
+        "type": "required",
+        "key": "text"
+      }
+    },
+    {
+      "id": "AddStamp.text-maxLength",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The resolved text, trimmed, must not be longer than 250 characters.",
+      "message": "The stamp text has %1 characters; a stamp holds at most %2.",
+      "machine": {
+        "type": "maxLength",
+        "key": "text",
+        "max": 250
+      }
+    },
+    {
+      "id": "AddStamp.text-not-empty",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The resolved text, trimmed, must not be empty (e.g. a SmartField that resolved to nothing).",
+      "message": "A stamp needs a text."
+    },
+    {
+      "id": "AddStamp.reference-resolvable",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The reference must resolve to a record reference in the flow context.",
+      "message": "The record \"%1\" cannot be resolved."
+    },
+    {
+      "id": "AddStamp.record-exists",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The referenced record must still exist when the step runs.",
+      "message": "The record %1 no longer exists."
+    },
+    {
+      "id": "AddStamp.paid-licence",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "Stamps need a paid AutoFlow licence (a sandbox or a test licence counts as paid). Without one the step fails; the editor shows the same text as a red status line.",
+      "message": "Stamps need a paid AutoFlow licence."
+    }
+  ],
+  "notes": [
+    "Reference the output as {{<slug>_entryNo}}, e.g. {{add-stamp_entryNo}} for the default slug.",
+    "The stamp's source is the running flow execution; the flow name is stored with the stamp, so it survives the execution clean-up.",
+    "Stamps are append-only: they can never be changed or deleted, only canceled once (Cancel Stamp).",
+    "The step needs no permission set: it works in the session of whoever triggered the flow. Manual stamping in the UI needs the permission sets 'mse365 AF STAMP' / 'mse365 AF STAMP CNCL'.",
+    "To read stamps in a flow, use Find Records on table 5564416 'mse365 AF Stamp' (fields: 1 Entry No., 2 Table No., 3 Record SystemId, 5 Text, 6 Stamped At, 7 Source, 11 Canceled).",
+    "Posting a sales/purchase document copies its stamps to the posted documents (invoice, credit memo, shipment, receipt) as new entries."
+  ]
+}
