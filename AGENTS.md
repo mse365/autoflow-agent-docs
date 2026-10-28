@@ -12,7 +12,8 @@ You are working with **AutoFlow** flow definitions: the JSON documents that *Exp
    python3 tools/validate_flow.py flow.json --strict
    ```
    Fix every `error` and `warning`. Explain any `lint` you keep. Then go through the checklist in [docs/validation.md](docs/validation.md#preflight-checklist-for-agents).
-5. **Tell the user what the environment needs**: credentials (by code), called SubFlows and manual flows (by Code, imported and published first), number series, dimension codes, and tables or fields from extensions.
+5. **Import it, if you have API access**: `python3 tools/af_api.py import flow.json`. It lands as a draft and prints the issues publishing would stop or warn on – fix them and import again (each import is a new draft version, so don't import after every small edit). Never tell the user the flow is live: they review and publish the draft in the flow editor.
+6. **Tell the user what the environment needs**: credentials (by code), called SubFlows and manual flows (by Code, imported and published first), number series, dimension codes, and tables or fields from extensions.
 
 ## Rules that are easy to get wrong
 
@@ -32,10 +33,20 @@ You are working with **AutoFlow** flow definitions: the JSON documents that *Exp
 
 ## Modifying an existing flow
 
+- Get the current definition first. With API access: `python3 tools/af_api.py list` to find it, then `python3 tools/af_api.py export <code> -o flow.json` (the draft if there is one, else the published version; `--published` forces the published one). Without it, ask the user for the file from **Export current version**.
+- Keep the root `code`: that is what makes the import a new draft version of the same flow.
 - Change only what you need. Keep existing ids, slugs, `x`/`y` and `notes`.
 - After changing a step's configuration, regenerate that step's `outputs`, then re-check every reference to that step.
 - When inserting a step, give it a new id and a unique slug. Positions (`x`/`y`) are optional.
 - Re-run the validator on the whole document, not just the changed step.
+
+## Flow API access
+
+`tools/af_api.py` calls the AutoFlow Flow API as the signed-in user. It needs `AF_ENVIRONMENT` and `AF_COMPANY` (and `python3 tools/af_api.py login` once, which the **user** completes in the browser). On a `Not signed in` or `HTTP 401` error, ask the user to run `login`; on `HTTP 403`, they lack the AutoFlow permission set `mse365 AF ALL` in that company. The API cannot publish, delete or change setup, so don't look for a way to. If the user has no API access, fall back to export and *Create from file* by hand.
+
+On-premises or on a container, `AF_BASE_URL` (plus `AF_USERNAME` / `AF_PASSWORD`, Basic authentication with the user's normal password) replaces `AF_ENVIRONMENT` and `login`. Behind a reverse proxy, derive it from the web client URL: append `rest` to the instance segment and add `/api` – `https://<host>/<instance>/` becomes `https://<host>/<instance>rest/api`. `https://<host>/<instance>/api` returns 404.
+
+A `CERTIFICATE_VERIFY_FAILED` error while curl works means Python has no CA bundle (python.org builds on macOS): tell the user to `export SSL_CERT_FILE=/etc/ssl/cert.pem` or run *Install Certificates.command*.
 
 ## Machine-readable data
 
