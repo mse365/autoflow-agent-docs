@@ -41,6 +41,9 @@ python3 autoflow-agent-docs/tools/af_api.py import flow.json      # lands as a d
 
 The import never publishes. It reports what publishing would stop or warn on, and you publish the draft in the flow editor. Setup and permissions: [Give Claude Code access to your flows](https://docs.autoflow365.app/docs/guides/flow-api).
 
+- **On-premises or a container:** set `AF_BASE_URL` to the API root instead of `AF_ENVIRONMENT`, and `AF_USERNAME` / `AF_PASSWORD` for Basic authentication with the user's normal password. Behind a reverse proxy, take the web client URL, append `rest` to the instance segment and add `/api`: web client `https://bc.example.com/f0552b78fae8/` → `AF_BASE_URL=https://bc.example.com/f0552b78fae8rest/api` (`…/f0552b78fae8/api` returns 404).
+- **`CERTIFICATE_VERIFY_FAILED` on macOS** with Python from python.org: that build has no CA bundle. `export SSL_CERT_FILE=/etc/ssl/cert.pem`, or run *Install Certificates.command* from its Applications folder.
+
 Without the API, the same round trip works by hand:
 
 1. **Export current version** on an existing flow to get its JSON, or let the agent write a new one.

@@ -20,12 +20,19 @@ Configuration (environment variables):
     AF_TOKEN         Optional: an access token to use as is (e.g. from the Azure CLI)
     AF_CLIENT_ID     Optional: public client app id to sign in with (default: Microsoft's
                      first-party Azure PowerShell client, which needs no app registration)
-    AF_BASE_URL      On-premises only: the API root, e.g. https://bc.example.com:7048/BC/api
+    AF_BASE_URL      On-premises only: the API root, e.g. https://bc.example.com:7048/BC/api.
+                     Behind a reverse proxy (containers): the web client URL with "rest"
+                     appended to the instance segment, plus "/api" – web client
+                     https://<host>/<instance>/ -> AF_BASE_URL=https://<host>/<instance>rest/api
     AF_USERNAME / AF_PASSWORD   On-premises only: basic authentication instead of sign-in
 
 Sign-in is delegated: every call runs with your own Business Central user and AutoFlow
 role (mse365 AF ALL is enough). The cached sign-in lives in ~/.cache/autoflow-api/token.json,
 readable only by you, until it expires or you run "logout".
+
+TLS errors (CERTIFICATE_VERIFY_FAILED) with a python.org build of Python on macOS: that build
+has no CA bundle. Run "Install Certificates.command" from its Applications folder, or
+export SSL_CERT_FILE=/etc/ssl/cert.pem.
 
 Standard library only. Exit code: 0 = ok, 1 = API error, 2 = bad input or configuration.
 """
@@ -182,8 +189,14 @@ def call(method: str, url: str, body: dict | None = None) -> dict:
         try:
             return send(req)
         except urllib.error.URLError as err:  # HTTP errors are already ApiError here
+            reason = str(err.reason)
+            if "CERTIFICATE_VERIFY_FAILED" in reason:
+                # Not transient: python.org builds of Python on macOS ship without a CA bundle.
+                raise ApiError(f"Cannot reach {urllib.parse.urlsplit(url).netloc}: {reason} "
+                               "(Python has no CA certificates: export SSL_CERT_FILE=/etc/ssl/cert.pem, "
+                               "or run \"Install Certificates.command\" on macOS.)") from None
             if attempt == attempts:
-                raise ApiError(f"Cannot reach {urllib.parse.urlsplit(url).netloc}: {err.reason}") from None
+                raise ApiError(f"Cannot reach {urllib.parse.urlsplit(url).netloc}: {reason}") from None
             time.sleep(2 * attempt)
     raise AssertionError("unreachable")
 

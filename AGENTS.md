@@ -44,6 +44,10 @@ You are working with **AutoFlow** flow definitions: the JSON documents that *Exp
 
 `tools/af_api.py` calls the AutoFlow Flow API as the signed-in user. It needs `AF_ENVIRONMENT` and `AF_COMPANY` (and `python3 tools/af_api.py login` once, which the **user** completes in the browser). On a `Not signed in` or `HTTP 401` error, ask the user to run `login`; on `HTTP 403`, they lack the AutoFlow permission set `mse365 AF ALL` in that company. The API cannot publish, delete or change setup, so don't look for a way to. If the user has no API access, fall back to export and *Create from file* by hand.
 
+On-premises or on a container, `AF_BASE_URL` (plus `AF_USERNAME` / `AF_PASSWORD`, Basic authentication with the user's normal password) replaces `AF_ENVIRONMENT` and `login`. Behind a reverse proxy, derive it from the web client URL: append `rest` to the instance segment and add `/api` – `https://<host>/<instance>/` becomes `https://<host>/<instance>rest/api`. `https://<host>/<instance>/api` returns 404.
+
+A `CERTIFICATE_VERIFY_FAILED` error while curl works means Python has no CA bundle (python.org builds on macOS): tell the user to `export SSL_CERT_FILE=/etc/ssl/cert.pem` or run *Install Certificates.command*.
+
 ## Machine-readable data
 
 - `spec/actions/*.json`, `spec/triggers/*.json`: per-step configuration, outputs, edges and rules ([format](spec/_FORMAT.md)).
