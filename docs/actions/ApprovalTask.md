@@ -4,7 +4,7 @@
 
 Asks a user or a task group to approve or reject, waits in the background until the task is decided, and continues along the Approved or Rejected branch.
 
-> **Early access.** This step is part of AutoFlow Tasks, which is dark-launched: it only works where AutoFlow Tasks is enabled for the environment (portal feature flag `tasks`, switched on by mse on request). Elsewhere the step is hidden in the editor and publishing refuses it. Only use it when the user confirms AutoFlow Tasks is enabled. The details may still change before it is generally available. Added in the release after 27.0.40.
+> **Early access.** This step is part of AutoFlow Tasks and ships with the release after 27.0.40. AutoFlow Tasks is rolled out in stages: it is switched on for selected customers first (portal feature flag `tasks`) and for everyone else a few weeks later. Until it is switched on for an environment, the step is hidden in the editor and publishing refuses it. Only use it when the user confirms AutoFlow Tasks is enabled for them.
 
 | | |
 |---|---|

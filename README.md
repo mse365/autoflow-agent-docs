@@ -54,7 +54,7 @@ Without the API, the same round trip works by hand:
 
 - Verified against **AutoFlow 27.0.40**, released 23 October 2026. To see your version, open *Extension Management* in Business Central and look at the AutoFlow entry.
 - Where older releases behave differently in a way that matters for writing JSON, the page has a short **Before 27.0.40** note.
-- Steps that are dark-launched (enabled per environment on request) are included and marked **early access**, for early-access customers and testing. They only work where their feature is enabled, and their details may still change. All other steps are generally available.
+- Steps released in a staged rollout (switched on for selected customers first, for everyone a few weeks later) are marked **early access**. They are part of the release the docs are verified against, but only work where their feature is already switched on.
 - The docs describe behaviour, not internals. Where behaviour was inferred rather than confirmed, the step page says so.
 - The flow definition JSON is AutoFlow's own storage format, not a public API with compatibility guarantees. Always validate against the docs for your AutoFlow version.
 

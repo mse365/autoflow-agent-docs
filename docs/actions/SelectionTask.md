@@ -4,7 +4,7 @@
 
 Hands a list to a user or a task group, waits in the background until they have chosen one or more rows, and continues with the chosen records (or values) and their count. The list can be the records of a reference, array or iterator, or a list of plain values.
 
-> **Early access.** This step is part of AutoFlow Tasks, which is dark-launched: it only works where AutoFlow Tasks is enabled for the environment (portal feature flag `tasks`, switched on by mse on request). Elsewhere the step is hidden in the editor and publishing refuses it. Only use it when the user confirms AutoFlow Tasks is enabled. The details may still change before it is generally available. Added in the release after 27.0.40.
+> **Early access.** This step is part of AutoFlow Tasks and ships with the release after 27.0.40. AutoFlow Tasks is rolled out in stages: it is switched on for selected customers first (portal feature flag `tasks`) and for everyone else a few weeks later. Until it is switched on for an environment, the step is hidden in the editor and publishing refuses it. Only use it when the user confirms AutoFlow Tasks is enabled for them.
 
 | | |
 |---|---|
