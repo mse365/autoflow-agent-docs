@@ -17,6 +17,7 @@ Every trigger and action has two files:
   "caption": "HTTP Request",        // English caption shown in the step picker
   "category": "Web",                // picker category, if any
   "availability": "ga",             // "ga" | "dark-launched" | "deprecated" | "internal"; explain in notes
+  "feature": null,                  // dark-launched steps: the portal feature flag that enables them (e.g. "tasks"), else omitted
   "terminating": false,             // value written to step.terminating
   "group": false,                   // true if the step carries edges[] (branches/loop bodies)
   "edges": {                        // only when group = true
@@ -63,6 +64,14 @@ Every trigger and action has two files:
 | `range` | `key`, `min`, `max` | numeric value within range (either bound optional) |
 | `maxLength` | `key`, `max` | string length ≤ max |
 | `requiredIf` | `key`, `ifKey`, `equals` | `key` required when `configuration[ifKey] == equals` |
+| `requiredUnless` | `key`, `ifKey`, `equals` | `key` required unless `configuration[ifKey] == equals` (an absent `ifKey` counts as not equal) |
 | `regex` | `key`, `pattern` | string matches pattern (Python `re.fullmatch`) |
+| `triggerNotIn` | `triggers` | the flow's trigger ordinal (`steps[0].trigger`) is not one of `triggers`; reported on the step |
+| `feature` | `feature` | documents that the step needs a dark-launched feature; checked through `availability` / `feature`, not per rule |
 
 Keys may be dotted paths into nested objects (`auth.type`). Fields of array rows are written as `array[].field` (e.g. `attachments[].type`); the validator documents but does not check these. Anything that cannot be expressed this way stays as prose in `check` with no `machine` entry.
+
+### Dark-launched steps
+
+A step that ships behind a portal feature flag gets `"availability": "dark-launched"` and `"feature": "<flag>"`. Its page starts with an **Early access** callout. The validator warns on it (`step.dark-launched`) unless `--features <flag>` says the user confirmed the flag is on for their environment. When the step becomes generally available, set `availability` to `"ga"`, drop `feature`, and remove the callout.
+

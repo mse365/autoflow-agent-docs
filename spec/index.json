@@ -19,6 +19,16 @@
       "availability": "ga"
     },
     {
+      "name": "ApprovalTask",
+      "id": 5564560,
+      "caption": "Approval task",
+      "category": "Tasks",
+      "terminating": false,
+      "group": true,
+      "availability": "dark-launched",
+      "feature": "tasks"
+    },
+    {
       "name": "AzureBlobGet",
       "id": 5564421,
       "caption": "Azure Blob: Get file",
@@ -260,6 +270,16 @@
       "terminating": false,
       "group": false,
       "availability": "ga"
+    },
+    {
+      "name": "SelectionTask",
+      "id": 5564423,
+      "caption": "Selection task",
+      "category": "Tasks",
+      "terminating": false,
+      "group": false,
+      "availability": "dark-launched",
+      "feature": "tasks"
     },
     {
       "name": "SendEmail",
