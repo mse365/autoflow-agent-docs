@@ -362,7 +362,7 @@
                   ],
                   "otherwise": "OutOfStock"
                 },
-                "payload": "{{Product_id}}"
+                "payload": "{{Loop_currentItem}}"
               },
               "outputs": []
             }

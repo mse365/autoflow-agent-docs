@@ -1,0 +1,99 @@
+{
+  "kind": "action",
+  "name": "GetSuppItemCat",
+  "id": 5564013,
+  "caption": "Get supplier item category",
+  "category": "AutoFlow Supplier Foundation",
+  "app": "AutoFlow Supplier Foundation",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "supplierCode",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": 20,
+      "smart": "text",
+      "description": "Supplier code as set up on the Supplier Codes page (table 5564016), e.g. ACME. SmartText. Trimmed and upper-cased; empty, longer than 20 or not set up fails the step at runtime."
+    },
+    {
+      "key": "category",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "The supplier's category of the item: its code (Code[50], compared upper-cased) or, if no code matches, its name (Text[100], exact text). SmartText, trimmed. Empty or not found = the supplier code's defaults."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "ItemTemplateCode",
+      "type": "value",
+      "tableNo": null,
+      "when": "always - may be empty when neither the tree nor the supplier code's default has one"
+    },
+    {
+      "name": "ItemCategoryCode",
+      "type": "value",
+      "tableNo": null,
+      "when": "always - may be empty when neither the tree nor the supplier code's default has one"
+    },
+    {
+      "name": "ItemTemplate",
+      "type": "reference",
+      "tableNo": 1382,
+      "when": "only when ItemTemplateCode is not empty and the Item Templ. exists"
+    },
+    {
+      "name": "ItemCategory",
+      "type": "reference",
+      "tableNo": 5722,
+      "when": "only when ItemCategoryCode is not empty and the Item Category exists"
+    },
+    {
+      "name": "CategoryFound",
+      "type": "value",
+      "tableNo": null,
+      "when": "always - 'true' when the supplier's category was found, 'false' when it was empty or not found"
+    }
+  ],
+  "rules": [
+    {
+      "id": "GetSuppItemCat.suppliercode-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "The configuration dialog refuses to save while Supplier Code is empty.",
+      "message": "Please fill in the highlighted fields.",
+      "machine": {
+        "type": "required",
+        "key": "supplierCode"
+      }
+    },
+    {
+      "id": "GetSuppItemCat.unknown-supplier-code",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "supplierCode resolves to empty text, to more than 20 characters, or to a code that is not in table 5564016.",
+      "message": "The supplier code %1 is not set up. Add it on the Supplier Codes page."
+    },
+    {
+      "id": "GetSuppItemCat.category-not-found",
+      "severity": "info",
+      "stage": "runtime",
+      "check": "category is not empty but matches neither a code nor a name of the supplier code's categories. Logged as Info; the defaults are returned and the flow continues.",
+      "message": "Supplier category %1 of %2 was not found - the supplier code's defaults are used."
+    }
+  ],
+  "notes": [
+    "Requires the AutoFlow Supplier Foundation app. See docs/apps/SupplierFoundation.md.",
+    "Offered in the step picker for every trigger.",
+    "Read-only: the step reads tables 5564016 and 5564017 and writes nothing.",
+    "Each of the two values is taken from the nearest category up the tree that has one; what is still missing comes from the supplier code's Default Item Template Code / Default Item Category Code. The walk stops at a missing parent or a cycle.",
+    "ItemTemplateCode is an Item Templ. (table 1382), not a RapidStart Configuration Template: it cannot be passed to Insert Record's templateCode. Copy the fields you need from {{<slug>_ItemTemplate.<field>}}."
+  ]
+}

@@ -155,6 +155,16 @@
       "availability": "ga"
     },
     {
+      "name": "GetSuppItemCat",
+      "id": 5564013,
+      "caption": "Get supplier item category",
+      "category": "AutoFlow Supplier Foundation",
+      "terminating": false,
+      "group": false,
+      "availability": "ga",
+      "app": "AutoFlow Supplier Foundation"
+    },
+    {
       "name": "HttpRequest",
       "id": 5564402,
       "caption": "HTTP Request",

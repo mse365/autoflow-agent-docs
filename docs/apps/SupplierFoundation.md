@@ -1,8 +1,8 @@
 # AutoFlow Supplier Foundation
 
-**AutoFlow Supplier Foundation** is a separate Business Central app on top of AutoFlow. It adds page actions for supplier work (search supplier items, update items and prices, send purchase orders, track order status, accept supplier documents) and fires a trigger for each of them. **The flows do the supplier-specific work**: Supplier Foundation knows no supplier, API or file format. It brings the actions, the triggers, one response step, the fields and tables the flows write to, and a setup table that tells the flows which vendor a supplier is.
+**AutoFlow Supplier Foundation** is a separate Business Central app on top of AutoFlow. It adds page actions for supplier work (search supplier items, update items and prices, send purchase orders, track order status, accept supplier documents) and fires a trigger for each of them. **The flows do the supplier-specific work**: Supplier Foundation knows no supplier, API or file format. It brings the actions, the triggers, two steps, the fields and tables the flows write to, and setup tables that tell the flows which vendor a supplier is and how the supplier's categories map to item templates and item categories.
 
-Use this page to understand how the pieces fit together. Each trigger and the step has its own reference page.
+Use this page to understand how the pieces fit together. Each trigger and step has its own reference page.
 
 ## Requirements
 
@@ -25,7 +25,10 @@ Use this page to understand how the pieces fit together. Each trigger and the st
 
 A page action is shown only while at least one flow is published on its trigger. Accept and Reject are always shown: accepting is the user's decision, and the flows only add what should happen because of it.
 
-The one action step is [Add search result](../actions/AddSearchResult.md) (`"action": 5564012`). The step picker offers it only in flows on When an item search is performed.
+The two action steps:
+
+- [Add search result](../actions/AddSearchResult.md) (`"action": 5564012`). The step picker offers it only in flows on When an item search is performed.
+- [Get supplier item category](../actions/GetSuppItemCat.md) (`"action": 5564013`) maps a supplier's category to an item template and an item category. Offered for every trigger.
 
 ## How the flows run
 
@@ -46,7 +49,7 @@ All eight triggers share these rules.
 | Flow | Trigger | Steps, roughly |
 |---|---|---|
 | Search | ItemSearch | Find Records (supplier code → vendor) → HTTP Request (supplier search with `{{trigger_Query}}`) → Parser (list of products) → For Each → Parser (one product) → Add search result |
-| Import | SearchSelected | Decision on `{{trigger_ExistingItemNo}} = ''` → Insert Record Item + Insert Record Item Vendor, or Modify Record `{{trigger_Item}}` → Decision on `{{trigger_Context}} = SalesDocument` → Insert Record Sales Line |
+| Import | SearchSelected | Decision on `{{trigger_ExistingItemNo}} = ''` → Parser on `{{trigger_Payload}}` → Get supplier item category → Insert Record Item + Insert Record Item Vendor, or Modify Record `{{trigger_Item}}` → Decision on `{{trigger_Context}} = SalesDocument` → Insert Record Sales Line |
 | Item master data | ItemUpdate | HTTP Request → Parser → Modify Record `{{trigger_Item}}` and `{{trigger_ItemVendor}}` |
 | Price and stock | PriceUpdate | HTTP Request → Parser → Modify Record `{{trigger_ItemVendor}}` → Case on `{{trigger_Source}}` → Modify Record on the line |
 | Send order | POSent | Find Records (order lines) → HTTP Request or Send Email → Modify Record `{{trigger_PurchaseHeader}}` (Sent Via, Order Status = `Sent`) |
@@ -70,8 +73,10 @@ A supplier code is a fixed name for a supplier (`ACME`) that a user maps to one 
 | `1` | Supplier Code | Code[20] | `suppliercode` | primary key, not blank |
 | `2` | Vendor No. | Code[20] | `vendorno` | relation to Vendor; required |
 | `3` | Vendor Name | Text[100] | `vendorname` | FlowField, not calculated by Find Records |
+| `4` | Default Item Template Code | Code[20] | `defaultitemtemplatecode` | relation to Item Templ. (1382); used by [Get supplier item category](../actions/GetSuppItemCat.md) when the category tree has none |
+| `5` | Default Item Category Code | Code[20] | `defaultitemcategorycode` | relation to Item Category (5722); likewise |
 
-Several codes may point to the same vendor. Deleting a vendor deletes its supplier codes; renaming it updates them.
+Several codes may point to the same vendor. Deleting a vendor deletes its supplier codes and their item categories; renaming it updates them. Deleting a supplier code with its triggers deletes its item categories.
 
 Read it with **Find Records** on table `5564016`, filtered on field `1`, and use `{{<slug>_results.vendorno}}`:
 
@@ -90,6 +95,29 @@ Read it with **Find Records** on table `5564016`, filtered on field `1`, and use
 When the code is not set up, `results` is not set and `{{<slug>_results.vendorno}}` stays in the text verbatim. Check `{{<slug>_count}} = 0` with a Decision and stop with an **Error** that tells the user to set the code up, as in [examples/supplier-item-search.json](../../examples/supplier-item-search.json). (`errorOnEmpty: true` also stops the flow, but its message names only the table number.)
 
 Flows normally only read this table. If one writes it, Insert Record and Modify Record with `"triggers": true` fail when Vendor No. is empty.
+
+### Supplier item categories, table `5564017`
+
+The supplier's own category tree, one per supplier code, mapped to item templates and item categories. Users maintain it on the *Supplier Item Categories* page (also *Item Categories* on the Supplier Codes page); a flow can fill it from the supplier's category list. [Get supplier item category](../actions/GetSuppItemCat.md) reads it.
+
+| fieldNo | field | type | path name | notes |
+|---|---|---|---|---|
+| `1` | Supplier Code | Code[20] | `suppliercode` | key; relation to Supplier Code |
+| `2` | Code | Code[50] | `code` | key; the supplier's own id of the category |
+| `3` | Name | Text[100] | `name` | the supplier's name of the category |
+| `4` | Parent Code | Code[50] | `parentcode` | Code of the parent category of the same supplier code; empty at the top |
+| `5` | Level | Integer | `level` | calculated, do not write |
+| `6` | Item Template Code | Code[20] | `itemtemplatecode` | relation to Item Templ. (1382); empty = use the nearest parent's |
+| `7` | Item Category Code | Code[20] | `itemcategorycode` | relation to Item Category (5722); empty = use the nearest parent's |
+| `8` | Sort Path | Text[250] | `sortpath` | calculated, only orders the list as a tree; do not write |
+
+Filling it from a flow with Insert Record:
+
+- Use `"triggers": true`. The insert then calculates Level and Sort Path for the category and for any subcategories already there, so the categories may come in any order: a subcategory before its parent is fine. Without triggers, Level stays 0 and the list does not show the tree.
+- Parent Code is not checked against existing categories. With `"validate": true` on its row, a parent that would make the category its own ancestor fails with "Category %1 cannot be a subcategory of itself - %2 is one of its subcategories."
+- Validated Item Template Code and Item Category Code must exist.
+- A category cannot be renamed, and a category that still has subcategories cannot be deleted ("Category %1 has subcategories. Delete or move them first.").
+- To refresh an existing tree, Find Records on table `5564017` with field `1` = the supplier code and field `2` = the id, then Insert or Modify Record. Modify Record with triggers recalculates the tree as well.
 
 ## Fields flows write
 
@@ -199,4 +227,5 @@ When you hand over Supplier Foundation flows, list what the environment needs:
 - the Supplier Foundation app (and the AutoFlow release it requires),
 - the supplier code the flows use (`ACME`), to be mapped to the supplier's vendor on the *Supplier Codes* page, or the Vendor No. if a flow uses one directly,
 - the AutoFlow credential (by code) for the supplier's API,
+- for flows that use Get supplier item category: the supplier item categories (or a flow that fills them) and the supplier code's Default Item Template Code and Default Item Category Code,
 - which flows to publish, and that the page actions appear only once they are published.

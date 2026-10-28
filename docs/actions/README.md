@@ -13,6 +13,7 @@ Machine-readable list: [`spec/index.json`](../../spec/index.json).
 | Action | `action` | Terminating | Group | Page |
 |---|---:|:---:|:---:|---|
 | Add search result | `5564012` |  |  | [AddSearchResult](AddSearchResult.md) |
+| Get supplier item category | `5564013` |  |  | [GetSuppItemCat](GetSuppItemCat.md) |
 
 ## Control
 

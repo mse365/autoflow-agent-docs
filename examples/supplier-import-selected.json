@@ -118,6 +118,68 @@
           "description": "Yes",
           "steps": [
             {
+              "id": "DD2EE6A9-1200-446A-8FAD-E963B4F0F3A8",
+              "type": "action",
+              "action": 5564403,
+              "description": "Read the search hit",
+              "slug": "Hit",
+              "iconUrl": "https://statics.autoflow.mse365.de/icons/braces.svg",
+              "terminating": false,
+              "configuration": {
+                "type": "JsonPath",
+                "input": "{{trigger_Payload}}",
+                "lines": {
+                  "category": "$.category"
+                },
+                "namespaces": {},
+                "rawXmlLines": {},
+                "previewSample": ""
+              },
+              "outputs": [
+                {
+                  "name": "category",
+                  "type": "value"
+                }
+              ]
+            },
+            {
+              "id": "CAAB1BC6-C7F1-47E7-9B94-8B361686B7A7",
+              "type": "action",
+              "action": 5564013,
+              "description": "Get supplier item category",
+              "slug": "Category",
+              "iconUrl": "https://statics.autoflow.mse365.de/icons/af-sf-category.svg",
+              "terminating": false,
+              "configuration": {
+                "supplierCode": "ACME",
+                "category": "{{Hit_category}}"
+              },
+              "outputs": [
+                {
+                  "name": "ItemTemplateCode",
+                  "type": "value"
+                },
+                {
+                  "name": "ItemCategoryCode",
+                  "type": "value"
+                },
+                {
+                  "name": "ItemTemplate",
+                  "type": "reference",
+                  "tableNo": 1382
+                },
+                {
+                  "name": "ItemCategory",
+                  "type": "reference",
+                  "tableNo": 5722
+                },
+                {
+                  "name": "CategoryFound",
+                  "type": "value"
+                }
+              ]
+            },
+            {
               "id": "721DE0CC-84F3-463C-A66D-547D53E457F8",
               "type": "action",
               "action": 5564405,
@@ -161,6 +223,12 @@
                     "value": "{{trigger_UnitPrice}}",
                     "validate": true,
                     "inputFormat": "9"
+                  },
+                  {
+                    "lineNo": 60000,
+                    "fieldNo": 5702,
+                    "value": "{{Category_ItemCategoryCode}}",
+                    "validate": true
                   }
                 ]
               },

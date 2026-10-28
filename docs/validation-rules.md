@@ -96,6 +96,7 @@ Rules are grouped by stage (see [validation.md](validation.md)): **publish** rul
 | [Find Records](actions/FindRecords.md) | error | configuration.tableNo must be present and non-zero. The editor's Table field is required. | Please fill in the highlighted fields. | yes |
 | [Loop Over Elements](actions/ForEachLoop.md) | error | configuration.selector must be non-empty (required field in the configuration dialog) | Please fill in the highlighted fields. | yes |
 | [Get Dimensions](actions/GetDimensions.md) | error | configuration.reference must be non-empty (required field in the config canvas). | Please fill in the highlighted fields. | yes |
+| [Get supplier item category](actions/GetSuppItemCat.md) | error | The configuration dialog refuses to save while Supplier Code is empty. | Please fill in the highlighted fields. | yes |
 | [HTTP Request](actions/HttpRequest.md) | error | configuration.url must be non-empty (required field in the config canvas). | Please fill in the highlighted fields. | yes |
 | [HTTP Request](actions/HttpRequest.md) | warning | configuration.method should be one of GET, POST, PUT, PATCH, DELETE (upper case). Any other text is sent as-is at run time; the editor upper-cases a known method and shows anything else (e.g. HEAD) as GET, overwriting it with GET on the next save. |  | yes |
 | [HTTP Request](actions/HttpRequest.md) | warning | configuration.method should be present; the editor always writes it. The run time sends the text as-is, so an empty method is passed to the platform unchanged. |  | yes |
@@ -280,6 +281,7 @@ Rules are grouped by stage (see [validation.md](validation.md)): **publish** rul
 | [Get Dimensions](actions/GetDimensions.md) | error | The table of the resolved record must equal configuration.tableNo. | Reference resolves to table %1 but the step is configured for table %2. |  |
 | [Get Dimensions](actions/GetDimensions.md) | error | The table must have a field named 'Dimension Set ID'. | Table "%1" has no "Dimension Set ID" field, so dimensions cannot be set on it. |  |
 | [Get Dimensions](actions/GetDimensions.md) | warning | dimensions should be a JSON array; other types produce no outputs. |  | yes |
+| [Get supplier item category](actions/GetSuppItemCat.md) | error | supplierCode resolves to empty text, to more than 20 characters, or to a code that is not in table 5564016. | The supplier code %1 is not set up. Add it on the Supplier Codes page. |  |
 | [HTTP Request](actions/HttpRequest.md) | warning | configuration.headers should be a JSON object of name → value. Anything else (e.g. an array of rows) is silently ignored at run time, so no step headers are sent. |  | yes |
 | [HTTP Request](actions/HttpRequest.md) | warning | credentialCode is read as at most 20 characters; a longer value is truncated and then usually matches no credential (the request is sent without it). |  | yes |
 | [HTTP Request](actions/HttpRequest.md) | error | When the credential has base URLs, the final URL must match one of them; otherwise the request is not sent. | The URL "%1" is not allowed by credential "%2". Allowed prefixes: %3. |  |
