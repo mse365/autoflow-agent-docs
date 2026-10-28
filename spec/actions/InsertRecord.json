@@ -34,9 +34,9 @@
       "required": false,
       "default": "",
       "enum": null,
-      "maxLength": 10,
+      "maxLength": 20,
       "smart": "none",
-      "description": "Optional Configuration Template (RapidStart) code. Its field lines are validated into the new record before the values[] rows are applied, so values[] override template values for the same field. The template's Table ID must equal tableNo. Truncated to 10 characters. The editor always writes the key (empty string when unused)."
+      "description": "Optional template code. On Customer (18), Vendor (23), Item (27) and Employee (5200) it names a Business Central template (Customer Templ., Vendor Templ., Item Templ., Employee Templ.); if no such template exists, a Configuration Template (RapidStart) for the same table with that code is used instead. On every other table it names a Configuration Template whose Table ID must equal tableNo. Business Central template: the template's No. Series assigns the number when values[] leaves it empty, and after Insert(triggers) BC's Apply<X>Template fills only fields that are still empty and copies the template's default dimensions (items: base unit of measure); it ends with Modify(true) even when triggers is false. Configuration Template: its field lines are validated into the record before values[] is applied. Either way values[] wins over the template for the same field. Truncated to 20 characters. The editor always writes the key (empty string when unused)."
     },
     {
       "key": "values",
@@ -146,10 +146,17 @@
       }
     },
     {
+      "id": "InsertRecord.entity-template-exists",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "If templateCode is set on Customer, Vendor, Item or Employee, it must name a Business Central template of that table (Customer Templ., ...) or a Configuration Template for that table.",
+      "message": "There is no %1 template \"%2\"."
+    },
+    {
       "id": "InsertRecord.template-exists",
       "severity": "error",
       "stage": "runtime",
-      "check": "If templateCode is set, the Configuration Template must exist.",
+      "check": "If templateCode is set on any other table, the Configuration Template must exist (codes longer than 10 characters never match one).",
       "message": "Configuration Template \"%1\" does not exist."
     },
     {
@@ -163,12 +170,12 @@
       "id": "InsertRecord.templateCode-maxLength",
       "severity": "warning",
       "stage": "runtime",
-      "check": "templateCode longer than 10 characters is silently truncated.",
+      "check": "templateCode longer than 20 characters is silently truncated.",
       "message": "",
       "machine": {
         "type": "maxLength",
         "key": "templateCode",
-        "max": 10
+        "max": 20
       }
     },
     {
@@ -233,7 +240,7 @@
   ],
   "notes": [
     "The table number lives in configuration.tableNo AND in outputs[0].tableNo; keep them identical (outputs are regenerated from configuration by the editor, but a hand-written file is used as-is).",
-    "Order of operations at runtime: open table -> Init -> apply template (validate each template field) -> apply values[] in lineNo order (Validate or direct assign per row) -> Insert(triggers) -> emit 'rec'.",
+    "Order of operations at runtime: open table -> Init -> Configuration Template only: validate each template field -> apply values[] in lineNo order (Validate or direct assign per row) -> Business Central template only: number from the template's No. Series if still empty -> Insert(triggers) -> Business Central template only: Apply<X>Template (fills empty fields, dimensions, Modify(true)) -> emit 'rec'.",
     "Primary-key fields are written like any other field. If you omit them and the table's OnInsert does not assign them, the insert may fail with a duplicate key or create a record with an empty key.",
     "Blob and Media fields: a bare {{token}} that resolves to binary content is streamed as-is; otherwise the resolved text is base64-decoded, and if that fails the text is stored as UTF-8. MediaSet is not supported.",
     "RecordId fields can only be filled from a reference SmartField ({{slug_rec}}, {{FindX_results}}, dotted paths); literal text cannot be converted to a RecordId.",
