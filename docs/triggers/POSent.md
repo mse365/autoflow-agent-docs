@@ -23,7 +23,7 @@ One run per order. Every flow on this trigger runs inline, in one transaction pe
 
 Supplier Foundation itself writes nothing to the order. Record the result in the flow: *Sent Via* (field `5564012`, Text[50]), *Supplier Order Status* (`5564013`, e.g. `Sent`) and *Order Status Updated At* (`5564014`).
 
-See [how Supplier Foundation flows run](../apps/SupplierFoundation.md#how-the-flows-run) for the transaction and timeout rules all eight triggers share.
+See [how Supplier Foundation flows run](../apps/SupplierFoundation.md#how-the-flows-run) for the transaction and timeout rules the inline Supplier Foundation triggers share.
 
 ## Configuration
 

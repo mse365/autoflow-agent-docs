@@ -1,0 +1,143 @@
+{
+  "kind": "action",
+  "name": "SetSupplierPrice",
+  "id": 5564014,
+  "caption": "Set supplier price",
+  "category": "AutoFlow Supplier Foundation",
+  "app": "AutoFlow Supplier Foundation",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "supplierCode",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": 20,
+      "smart": "text",
+      "description": "Supplier code as set up on the Supplier Codes page (table 5564016). SmartText. Trimmed and upper-cased; empty, longer than 20 or not set up fails the step. Its Vendor No. gets the price."
+    },
+    {
+      "key": "itemNo",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": 20,
+      "smart": "text",
+      "description": "Item No. SmartText, trimmed. The item must exist (Business Central's own error otherwise)."
+    },
+    {
+      "key": "variantCode",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": 10,
+      "smart": "text",
+      "description": "Item variant. SmartText, trimmed. Empty = the item itself. Validated, so it must exist."
+    },
+    {
+      "key": "unitOfMeasureCode",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": 10,
+      "smart": "text",
+      "description": "Unit the price refers to. SmartText, trimmed. Empty = with price lists the unit Business Central puts on a new price list line (the item's purchase unit); in the legacy purchase prices it stays empty. Validated, so it must be a unit of the item."
+    },
+    {
+      "key": "directUnitCost",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "The price, in the vendor's currency. SmartText resolving to a number: decimal point or decimal comma; with both, the last one is the decimal separator and the other is dropped. Empty means 0. Anything else fails the step."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "PriceListCode",
+      "type": "value",
+      "tableNo": null,
+      "when": "always - the purchase price list written to; empty when the extended price calculation is off (legacy purchase prices)"
+    }
+  ],
+  "rules": [
+    {
+      "id": "SetSupplierPrice.suppliercode-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "The configuration dialog refuses to save while Supplier Code is empty.",
+      "message": "Please fill in the highlighted fields.",
+      "machine": {
+        "type": "required",
+        "key": "supplierCode"
+      }
+    },
+    {
+      "id": "SetSupplierPrice.itemno-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "The configuration dialog refuses to save while Item No. is empty.",
+      "message": "Please fill in the highlighted fields.",
+      "machine": {
+        "type": "required",
+        "key": "itemNo"
+      }
+    },
+    {
+      "id": "SetSupplierPrice.cost-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "The configuration dialog refuses to save while Direct Unit Cost is empty.",
+      "message": "Please fill in the highlighted fields.",
+      "machine": {
+        "type": "required",
+        "key": "directUnitCost"
+      }
+    },
+    {
+      "id": "SetSupplierPrice.number",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "directUnitCost resolves to text that is not a number.",
+      "message": "The %1 of the search result is not a number: %2"
+    },
+    {
+      "id": "SetSupplierPrice.unknown-supplier-code",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "supplierCode resolves to empty text, more than 20 characters, or a code not in table 5564016.",
+      "message": "The supplier code %1 is not set up. Add it on the Supplier Codes page."
+    },
+    {
+      "id": "SetSupplierPrice.no-price-list-nos",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "Extended price calculation on, the supplier code has no price list yet, and Price List Nos. on the Purchases & Payables Setup is empty.",
+      "message": "The supplier code %1 has no price list yet, and no number series is set up to create one. Fill in Price List Nos. on the Purchases & Payables Setup, or enter a price list on the supplier code."
+    },
+    {
+      "id": "SetSupplierPrice.other-vendor-price-list",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The supplier code's Price List Code names a price list whose source is not the supplier code's vendor.",
+      "message": "Price list %1 of supplier code %2 is not a price list of vendor %3. Clear the price list on the supplier code (a new one is then created) or enter one of the vendor's purchase price lists."
+    }
+  ],
+  "notes": [
+    "Requires the AutoFlow Supplier Foundation app. See docs/apps/SupplierFoundation.md.",
+    "Offered in the step picker for every trigger; typically used on PriceUpdate (5564015).",
+    "Writes where Business Central's purchase price calculation reads: with the extended price calculation into the supplier code's purchase price list (created on first use from Price List Nos. and stored as the supplier code's Price List Code), otherwise into the legacy Purchase Price table.",
+    "One price per item + variant + unit of measure, without starting date or minimum quantity; setting it again updates that price (nothing is written when it is unchanged). The price is active at once.",
+    "With Allow Editing Active Price off (Purchases & Payables Setup), the whole price list is set to Draft and back to Active around the change.",
+    "Logs an Info entry 'Price of item %1 set to %2 in price list %3.'",
+    "The error for a non-number directUnitCost reuses the Add search result text ('... of the search result ...'), with %1 = Direct Unit Cost."
+  ]
+}

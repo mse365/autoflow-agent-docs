@@ -2,7 +2,7 @@
 
 [← All triggers](README.md) · [Supplier Foundation overview](../apps/SupplierFoundation.md)
 
-Runs once for each sales line, purchase line or item whose price and availability the user updates. Use it to ask the supplier for price and stock and write them to the line or item and to the Item Vendor entry.
+Runs once for each sales line, purchase line or item whose price and availability the user updates. Use it to ask the supplier for price and stock: write the price with [Set supplier price](../actions/SetSupplierPrice.md), and the stock to the line or item and to the Item Vendor entry. Unlike the other Supplier Foundation triggers, its runs are **queued** in the background.
 
 | | |
 |---|---|
@@ -23,19 +23,23 @@ Runs once for each sales line, purchase line or item whose price and availabilit
 
 One run per line or item. Lines that are not of type Item, or have no No., are skipped. If nothing is left, the user sees "There is nothing to update - none of the selected lines is an item."
 
-Every flow on this trigger runs inline, in one transaction per line or item, committed before the next one. An error stops at that line: its changes are rolled back, the lines before it keep theirs.
+**Queued, not inline.** For every line or item, each flow published on this trigger gets its own execution with a Job Queue entry, like a manually started flow. The action commits, then shows a progress window: "*n* of *m* done" and the latest execution-log message, which is the step that is running. When all runs have finished, failed ones are reported with the offer to open them. After five minutes the window closes with "The flow is taking longer than expected and keeps running in the background. You can follow it in the AutoFlow executions." If AutoFlow is set to start flows manually, the runs wait until their Job Queue entries are started.
+
+So, unlike the other Supplier Foundation triggers:
+
+- Each run is an ordinary background run: it commits after every step, and a failed run keeps the work of the steps before the error. Runs for different lines are independent; one failing does not stop the others.
+- There is no timeout, and **Sleep** works.
+- Runs may finish in any order, and may run in parallel.
 
 Which vendor: a sales line uses its *Supplier No.* (field `5564012`), and when that is empty the item's *Vendor No.*; a purchase line uses its *Buy-from Vendor No.*; an item uses its *Vendor No.* The Item Vendor entry is the one for that vendor and the line's variant, or, if there is none, the one without a variant.
 
-See [how Supplier Foundation flows run](../apps/SupplierFoundation.md#how-the-flows-run) for the transaction and timeout rules all eight triggers share.
+The other rules in [how Supplier Foundation flows run](../apps/SupplierFoundation.md#how-the-flows-run) (outputs that don't apply are not set, enum value names) apply here too.
 
 ## Configuration
 
-| key | type | required | default | description |
-|---|---|---|---|---|
-| `timeoutSec` | integer | yes | `60` | How long the user waits at most. Checked between steps; when it has passed, the run fails and is rolled back. Missing or `0` or less means 60. Keep it between 1 and 600. |
+None: write `"configuration": {}`. No table, no filters, no timeout; the record comes from the page action.
 
-There is nothing else to configure: no table, no filters. The record comes from the page action.
+**Before** this trigger was queued, it had a `timeoutSec` like the other Supplier Foundation triggers. A flow that still carries it is not rejected; the key is ignored.
 
 ## Outputs
 
@@ -54,18 +58,13 @@ Reference them as `{{trigger_Source}}`, `{{trigger_VendorNo}}` and so on. Declar
 
 | stage | severity | rule | message |
 |---|---|---|---|
-| editor | error | timeout empty | Please fill in the highlighted fields. |
 | publish | – | no trigger-specific checks | – |
 
 ## Runtime errors
 
 | condition | message |
 |---|---|
-| the flows run longer than `timeoutSec` | The flow %1 did not finish within %2 seconds and was stopped. Nothing it did has been kept. |
-| a Sleep step runs | Step %1 (%2) requested a deferred resume, but the flow is running synchronously. Use Sleep or other time-based deferral steps only outside of synchronous frames (Webhook sync phase or SubFlow body). |
-| any error in the flow | The flow's own message. This record's run is rolled back and the action stops here. |
-
-`%1` in the timeout message is the flow number, `%2` the timeout.
+| any error in the flow | The flow's own message, on the failed execution. The steps before it keep their work; the other lines' runs go on. At the end the user is asked "%1 of %2 executions ended with an error. Do you want to open them?" (one run: "The flow ended with an error. Do you want to open the execution?"). |
 
 ## Example
 
@@ -77,9 +76,7 @@ Reference them as `{{trigger_Source}}`, `{{trigger_VendorNo}}` and so on. Declar
   "description": "When a price update is requested",
   "slug": "trigger",
   "iconUrl": "https://statics.autoflow.mse365.de/icons/af-sf-price.svg",
-  "configuration": {
-    "timeoutSec": 60
-  },
+  "configuration": {},
   "outputs": [
     { "name": "Source", "type": "value" },
     { "name": "SalesLine", "type": "reference", "tableNo": 37 },
@@ -92,10 +89,13 @@ Reference them as `{{trigger_Source}}`, `{{trigger_VendorNo}}` and so on. Declar
 }
 ```
 
+A complete flow (ask the supplier, Set supplier price, stock on the line) is in [examples/supplier-price-update.json](../../examples/supplier-price-update.json).
+
 ## Gotchas
 
 - Branch on `{{trigger_Source}}` (a Decision or a Case) before you touch `SalesLine` or `PurchaseLine`; the other one is not set and stays verbatim.
-- Where to write: Item Vendor fields `5564012` *Supplier Unit Price*, `5564013` *Supplier Stock*, `5564014` *Supplier Stock Status*, `5564015` *Availability Updated At*. Sales Line `5564013`–`5564015` and Purchase Line `5564012`–`5564014` hold stock, stock status and the update time. See the [overview](../apps/SupplierFoundation.md#fields-flows-write).
-- A Sales Quote action updates every item line, so a quote with 30 lines runs the flow 30 times. Keep the flow fast; users who need only some lines can select them on the line subform instead.
-- The flow runs while the user waits. A Sleep step fails it, and a slow HTTP call counts against `timeoutSec`.
+- Where to write: the **price** with [Set supplier price](../actions/SetSupplierPrice.md) (`supplierCode`, `itemNo` `{{trigger_Item.no}}`, `variantCode`, `unitOfMeasureCode`, `directUnitCost`), into Business Central's purchase prices. The sales and purchase lines show it as *Supplier Price*, calculated by Business Central's price calculation. The **stock** with Modify Record: Item Vendor `5564013` *Supplier Stock*, `5564014` *Supplier Stock Status*, `5564015` *Availability Updated At*; Sales Line `5564013`–`5564015`; Purchase Line `5564012`–`5564014`. There is no supplier price field to write any more. See the [overview](../apps/SupplierFoundation.md#fields-flows-write).
+- A Sales Quote action updates every item line, so a quote with 30 lines queues 30 runs per flow. Users who need only some lines can select them on the line subform instead.
+- The page does not lock the lines while the runs are queued: the user can change a line before its run gets to it. Read the line's values from `{{trigger_SalesLine.…}}` when the run needs them, not from the time the action started.
+- Set supplier price uses a supplier code, not the vendor. With several suppliers, look the supplier code up from `{{trigger_VendorNo}}` with Find Records on table `5564016` (field `2` = Vendor No.).
 - Add search result is not offered for this trigger, and does nothing here.

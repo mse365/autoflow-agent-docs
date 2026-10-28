@@ -14,6 +14,7 @@ Machine-readable list: [`spec/index.json`](../../spec/index.json).
 |---|---:|:---:|:---:|---|
 | Add search result | `5564012` |  |  | [AddSearchResult](AddSearchResult.md) |
 | Get supplier item category | `5564013` |  |  | [GetSuppItemCat](GetSuppItemCat.md) |
+| Set supplier price | `5564014` |  |  | [SetSupplierPrice](SetSupplierPrice.md) |
 
 ## Control
 

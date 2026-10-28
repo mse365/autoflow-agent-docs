@@ -28,7 +28,7 @@ When the user picks a row and confirms with OK, the dialog closes and [When a se
 
 If a flow raises an error (for example an **Error** step after a failed HTTP call), the user sees the flow's message and the search shows nothing.
 
-See [how Supplier Foundation flows run](../apps/SupplierFoundation.md#how-the-flows-run) for the transaction and timeout rules all eight triggers share.
+See [how Supplier Foundation flows run](../apps/SupplierFoundation.md#how-the-flows-run) for the transaction and timeout rules the inline Supplier Foundation triggers share.
 
 ## Configuration
 

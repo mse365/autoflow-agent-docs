@@ -327,6 +327,16 @@
       "availability": "ga"
     },
     {
+      "name": "SetSupplierPrice",
+      "id": 5564014,
+      "caption": "Set supplier price",
+      "category": "AutoFlow Supplier Foundation",
+      "terminating": false,
+      "group": false,
+      "availability": "ga",
+      "app": "AutoFlow Supplier Foundation"
+    },
+    {
       "name": "Sleep",
       "id": 103,
       "caption": "Sleep",

@@ -25,7 +25,7 @@ Before the result was shown, Supplier Foundation looked for an Item Vendor entry
 
 All flows on this trigger run in one transaction, which is committed at the end. An error rolls back everything they did and shows the flow's message.
 
-See [how Supplier Foundation flows run](../apps/SupplierFoundation.md#how-the-flows-run) for the transaction and timeout rules all eight triggers share.
+See [how Supplier Foundation flows run](../apps/SupplierFoundation.md#how-the-flows-run) for the transaction and timeout rules the inline Supplier Foundation triggers share.
 
 ## Configuration
 

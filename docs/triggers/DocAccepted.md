@@ -25,7 +25,7 @@ Every flow on this trigger runs inline. When they succeed, the document is set t
 
 Unlike the other actions, Accept also works when no flow is published. The document is then just marked Accepted.
 
-See [how Supplier Foundation flows run](../apps/SupplierFoundation.md#how-the-flows-run) for the transaction and timeout rules all eight triggers share.
+See [how Supplier Foundation flows run](../apps/SupplierFoundation.md#how-the-flows-run) for the transaction and timeout rules the inline Supplier Foundation triggers share.
 
 ## Configuration
 

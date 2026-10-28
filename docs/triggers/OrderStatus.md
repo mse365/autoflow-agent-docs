@@ -23,7 +23,7 @@ One run per order, inline, one transaction per order, committed before the next 
 
 Supplier Foundation writes nothing by itself. The flow sets *Supplier Order Status* (field `5564013`) and *Order Status Updated At* (`5564014`) and inserts supplier documents (tables `5564013` header, `5564014` lines). A user then accepts or rejects each document, which fires [When a supplier document is accepted](DocAccepted.md) or [rejected](DocRejected.md).
 
-See [how Supplier Foundation flows run](../apps/SupplierFoundation.md#how-the-flows-run) for the transaction and timeout rules all eight triggers share.
+See [how Supplier Foundation flows run](../apps/SupplierFoundation.md#how-the-flows-run) for the transaction and timeout rules the inline Supplier Foundation triggers share.
 
 ## Configuration
 

@@ -1,0 +1,354 @@
+{
+  "name": "ACME price and availability",
+  "code": "EXAMPLE.ACME-PRICE",
+  "steps": [
+    {
+      "id": "A66980DE-5469-46FA-9236-6A7CEE97F159",
+      "type": "trigger",
+      "trigger": 5564015,
+      "description": "When a price update is requested",
+      "slug": "trigger",
+      "iconUrl": "https://statics.autoflow.mse365.de/icons/af-sf-price.svg",
+      "configuration": {},
+      "outputs": [
+        {
+          "name": "Source",
+          "type": "value"
+        },
+        {
+          "name": "SalesLine",
+          "type": "reference",
+          "tableNo": 37
+        },
+        {
+          "name": "PurchaseLine",
+          "type": "reference",
+          "tableNo": 39
+        },
+        {
+          "name": "Item",
+          "type": "reference",
+          "tableNo": 27
+        },
+        {
+          "name": "ItemVendor",
+          "type": "reference",
+          "tableNo": 99
+        },
+        {
+          "name": "VendorNo",
+          "type": "value"
+        }
+      ],
+      "level": 0
+    },
+    {
+      "id": "F93F4842-6187-43A1-9CA1-D4594471FB4A",
+      "type": "action",
+      "action": 5564402,
+      "description": "Ask ACME for price and stock",
+      "slug": "Ask",
+      "iconUrl": "https://statics.autoflow.mse365.de/icons/world-www.svg",
+      "terminating": false,
+      "configuration": {
+        "url": "/products/{{trigger_Item.vendoritemno}}/availability",
+        "method": "GET",
+        "headers": {
+          "Accept": "application/json"
+        },
+        "body": "",
+        "credentialCode": "ACME-API"
+      },
+      "outputs": [
+        {
+          "name": "responseStatus",
+          "type": "value"
+        },
+        {
+          "name": "responseHeaders",
+          "type": "value"
+        },
+        {
+          "name": "responseBody",
+          "type": "value"
+        }
+      ]
+    },
+    {
+      "id": "DB158FBB-D5B8-48B0-ABA4-2814577DE7A4",
+      "type": "action",
+      "action": 100,
+      "description": "Request failed?",
+      "slug": "Failed",
+      "iconUrl": "https://statics.autoflow.mse365.de/icons/arrows-split-2.svg",
+      "terminating": false,
+      "configuration": {
+        "condition": "{{Ask_responseStatus}} != 200"
+      },
+      "outputs": [
+        {
+          "name": "result",
+          "type": "value"
+        }
+      ],
+      "edges": [
+        {
+          "id": "CF50A9C5-8040-4FEB-B9EF-E0301EE6EB91",
+          "value": "true",
+          "description": "Yes",
+          "steps": [
+            {
+              "id": "1EBAFD88-01F9-46E2-BEBF-9A441BD5415F",
+              "type": "action",
+              "action": 102,
+              "description": "Error",
+              "slug": "FailedError",
+              "iconUrl": "https://statics.autoflow.mse365.de/icons/alert-triangle.svg",
+              "terminating": true,
+              "configuration": {
+                "Error": "ACME did not answer for item {{trigger_Item.no}} (HTTP {{Ask_responseStatus}})."
+              },
+              "outputs": [
+                {
+                  "name": "Errormessage",
+                  "type": "value"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "94A4FAEC-5B52-44B6-942B-38DA06290870",
+          "value": "false",
+          "description": "No",
+          "steps": []
+        }
+      ]
+    },
+    {
+      "id": "7E8B2778-AEFA-4A49-AEDB-8092D1821949",
+      "type": "action",
+      "action": 5564403,
+      "description": "Read price and stock",
+      "slug": "Price",
+      "iconUrl": "https://statics.autoflow.mse365.de/icons/braces.svg",
+      "terminating": false,
+      "configuration": {
+        "type": "JsonPath",
+        "input": "{{Ask_responseBody}}",
+        "lines": {
+          "price": "$.price",
+          "stock": "$.stock"
+        },
+        "namespaces": {},
+        "rawXmlLines": {},
+        "previewSample": ""
+      },
+      "outputs": [
+        {
+          "name": "price",
+          "type": "value"
+        },
+        {
+          "name": "stock",
+          "type": "value"
+        }
+      ]
+    },
+    {
+      "id": "BB40B636-6993-413D-9535-4D5C5073DB01",
+      "type": "action",
+      "action": 100,
+      "description": "Price reported?",
+      "slug": "HasPrice",
+      "iconUrl": "https://statics.autoflow.mse365.de/icons/arrows-split-2.svg",
+      "terminating": false,
+      "configuration": {
+        "condition": "{{Price_price}} != ''"
+      },
+      "outputs": [
+        {
+          "name": "result",
+          "type": "value"
+        }
+      ],
+      "edges": [
+        {
+          "id": "7B9AC072-C821-4762-817D-079FC183F1FC",
+          "value": "true",
+          "description": "Yes",
+          "steps": [
+            {
+              "id": "04A4A309-1B74-4B22-BA30-FF36E1066E00",
+              "type": "action",
+              "action": 5564014,
+              "description": "Set supplier price",
+              "slug": "SetPrice",
+              "iconUrl": "https://statics.autoflow.mse365.de/icons/af-sf-set-price.svg",
+              "terminating": false,
+              "configuration": {
+                "supplierCode": "ACME",
+                "itemNo": "{{trigger_Item.no}}",
+                "variantCode": "",
+                "unitOfMeasureCode": "",
+                "directUnitCost": "{{Price_price}}"
+              },
+              "outputs": [
+                {
+                  "name": "PriceListCode",
+                  "type": "value"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "5BB97691-DC11-40D0-8838-7B2E021792FA",
+          "value": "false",
+          "description": "No",
+          "steps": []
+        }
+      ]
+    },
+    {
+      "id": "5261B007-266F-4AD3-97D5-BBC1B77E7C89",
+      "type": "action",
+      "action": 100,
+      "description": "From a SalesLine?",
+      "slug": "IsSales",
+      "iconUrl": "https://statics.autoflow.mse365.de/icons/arrows-split-2.svg",
+      "terminating": false,
+      "configuration": {
+        "condition": "{{trigger_Source}} = SalesLine"
+      },
+      "outputs": [
+        {
+          "name": "result",
+          "type": "value"
+        }
+      ],
+      "edges": [
+        {
+          "id": "8077F94D-B9C6-48AC-A4AA-CD709EDFC0ED",
+          "value": "true",
+          "description": "Yes",
+          "steps": [
+            {
+              "id": "98F79856-BB74-40F0-91EB-C5AB5535F798",
+              "type": "action",
+              "action": 5564406,
+              "description": "Stock on the sales line",
+              "slug": "StockSales",
+              "iconUrl": "https://statics.autoflow.mse365.de/icons/database-edit.svg",
+              "terminating": false,
+              "configuration": {
+                "reference": "{{trigger_SalesLine}}",
+                "tableNo": 37,
+                "triggers": true,
+                "values": [
+                  {
+                    "lineNo": 10000,
+                    "fieldNo": 5564013,
+                    "value": "{{Price_stock}}",
+                    "validate": true,
+                    "inputFormat": "9"
+                  },
+                  {
+                    "lineNo": 20000,
+                    "fieldNo": 5564015,
+                    "value": "{{currentDateTime;9}}",
+                    "validate": true,
+                    "inputFormat": "9"
+                  }
+                ]
+              },
+              "outputs": [
+                {
+                  "name": "rec",
+                  "type": "reference",
+                  "tableNo": 37
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "CAA7D48B-95A8-464E-B035-B81527317413",
+          "value": "false",
+          "description": "No",
+          "steps": []
+        }
+      ]
+    },
+    {
+      "id": "7CAA32A5-BD45-41C4-90A5-8D71554E229E",
+      "type": "action",
+      "action": 100,
+      "description": "From a PurchaseLine?",
+      "slug": "IsPurchase",
+      "iconUrl": "https://statics.autoflow.mse365.de/icons/arrows-split-2.svg",
+      "terminating": false,
+      "configuration": {
+        "condition": "{{trigger_Source}} = PurchaseLine"
+      },
+      "outputs": [
+        {
+          "name": "result",
+          "type": "value"
+        }
+      ],
+      "edges": [
+        {
+          "id": "A537F298-90EA-4099-89F6-7EE4FD894509",
+          "value": "true",
+          "description": "Yes",
+          "steps": [
+            {
+              "id": "3247E55F-4413-4CB0-92DE-678733683461",
+              "type": "action",
+              "action": 5564406,
+              "description": "Stock on the purchase line",
+              "slug": "StockPurch",
+              "iconUrl": "https://statics.autoflow.mse365.de/icons/database-edit.svg",
+              "terminating": false,
+              "configuration": {
+                "reference": "{{trigger_PurchaseLine}}",
+                "tableNo": 39,
+                "triggers": true,
+                "values": [
+                  {
+                    "lineNo": 10000,
+                    "fieldNo": 5564012,
+                    "value": "{{Price_stock}}",
+                    "validate": true,
+                    "inputFormat": "9"
+                  },
+                  {
+                    "lineNo": 20000,
+                    "fieldNo": 5564014,
+                    "value": "{{currentDateTime;9}}",
+                    "validate": true,
+                    "inputFormat": "9"
+                  }
+                ]
+              },
+              "outputs": [
+                {
+                  "name": "rec",
+                  "type": "reference",
+                  "tableNo": 39
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "3DB8727F-19C8-472B-ADC1-72D274EB3CD7",
+          "value": "false",
+          "description": "No",
+          "steps": []
+        }
+      ]
+    }
+  ]
+}

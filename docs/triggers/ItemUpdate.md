@@ -23,7 +23,7 @@ One run per item. For each item, every flow on this trigger runs inline, in the 
 
 The vendor is the item's *Vendor No.* The Item Vendor entry is the one for that vendor without a variant code.
 
-See [how Supplier Foundation flows run](../apps/SupplierFoundation.md#how-the-flows-run) for the transaction and timeout rules all eight triggers share.
+See [how Supplier Foundation flows run](../apps/SupplierFoundation.md#how-the-flows-run) for the transaction and timeout rules the inline Supplier Foundation triggers share.
 
 ## Configuration
 
