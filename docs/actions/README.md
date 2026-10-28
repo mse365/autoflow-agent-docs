@@ -42,6 +42,8 @@ Machine-readable list: [`spec/index.json`](../../spec/index.json).
 | Action | `action` | Terminating | Group | Page |
 |---|---:|:---:|:---:|---|
 | Add Item Tracking | `5564417` |  |  | [AddItemTracking](AddItemTracking.md) |
+| Add Stamp | `5564428` |  |  | [AddStamp](AddStamp.md) |
+| Cancel Stamp | `5564429` |  |  | [CancelStamp](CancelStamp.md) |
 | Delete Record | `5564407` |  |  | [DeleteRecord](DeleteRecord.md) |
 | Draw number from number series | `5564554` |  |  | [NoSeriesDraw](NoSeriesDraw.md) |
 | Find Records | `5564409` |  |  | [FindRecords](FindRecords.md) |
