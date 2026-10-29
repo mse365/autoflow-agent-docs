@@ -5,7 +5,10 @@ Mirrors the checks AutoFlow runs at import, publish and (where statically knowab
 runtime, plus the per-step rules recorded in ../spec. Standard library only.
 
 Usage:
-    python3 tools/validate_flow.py flow.json [more.json ...] [--json] [--strict]
+    python3 tools/validate_flow.py flow.json [more.json ...] [--json] [--strict] [--features tasks]
+
+--features names the dark-launched AutoFlow features (portal feature flags) the user confirmed are
+enabled for their environment; steps that need one of them are then not reported as early access.
 
 Exit code: 0 = no errors (warnings allowed unless --strict), 1 = errors found, 2 = bad input.
 
@@ -207,7 +210,7 @@ def check_root(doc, r):
     return True
 
 
-def check_steps(doc, specs, r, strict_outputs):
+def check_steps(doc, specs, r, strict_outputs, features=()):
     steps = doc["steps"]
     ids = {}
     slugs = {}  # lower -> original
@@ -217,6 +220,7 @@ def check_steps(doc, specs, r, strict_outputs):
     trig = steps[0]
     if not isinstance(trig, dict) or trig.get("type") != "trigger":
         r.add("error", "trigger.first", "$.steps[0]", "The first step must be the trigger (type \"trigger\").")
+    flow_trigger = trig.get("trigger") if isinstance(trig, dict) else None
     for step, where, siblings, idx, parent in walk_steps(steps, "$.steps"):
         if not isinstance(step, dict):
             r.add("error", "step.object", where, "Step must be an object.")
@@ -245,10 +249,10 @@ def check_steps(doc, specs, r, strict_outputs):
         if stype == "trigger":
             if not is_root_first:
                 r.add("error", "trigger.position", where, "Only steps[0] may be a trigger.")
-            check_trigger(step, where, specs, r)
+            check_trigger(step, where, specs, r, features)
         elif stype == "action":
             action_count += 1
-            check_action(step, where, siblings, idx, specs, r)
+            check_action(step, where, siblings, idx, specs, r, features, flow_trigger)
         else:
             r.add("error", "step.type", where, "Step 'type' must be \"trigger\" (steps[0]) or \"action\".")
 
@@ -345,7 +349,7 @@ def check_steps(doc, specs, r, strict_outputs):
                               f"'{{{{{ref_slug}_{rest}}}}}': step '{ref_slug}' has no output named '{out_name}' (has: {', '.join(sorted(known))}).")
 
 
-def check_trigger(step, where, specs, r):
+def check_trigger(step, where, specs, r, features=()):
     t = step.get("trigger")
     if not isinstance(t, int) or isinstance(t, bool):
         r.add("error", "trigger.ordinal", where, "'trigger' must be the trigger enum ordinal (integer).")
@@ -355,11 +359,11 @@ def check_trigger(step, where, specs, r):
         if specs["trigger"]:
             r.add("error", "trigger.unknown", where, f"Unknown trigger ordinal {t}. See docs/triggers/README.md.")
         return
-    check_availability(spec, where, r)
+    check_availability(spec, where, r, features)
     check_config_rules(spec, step.get("configuration"), where, r)
 
 
-def check_action(step, where, siblings, idx, specs, r):
+def check_action(step, where, siblings, idx, specs, r, features=(), flow_trigger=None):
     a = step.get("action")
     if not isinstance(a, int) or isinstance(a, bool):
         r.add("error", "action.ordinal", where, "'action' must be the action enum ordinal (integer).")
@@ -403,7 +407,7 @@ def check_action(step, where, siblings, idx, specs, r):
                   f"Unknown action ordinal {a}: \"Step '<id>' has no valid action in the flow definition.\" at runtime. See docs/actions/README.md.")
         return
 
-    check_availability(spec, where, r)
+    check_availability(spec, where, r, features)
     if isinstance(spec.get("terminating"), bool) and isinstance(term, bool) and term != spec["terminating"]:
         r.add("error" if spec["terminating"] else "lint", "action.terminating", where,
               f"'terminating' must be {str(spec['terminating']).lower()} for {spec.get('caption', spec.get('name'))}.")
@@ -418,16 +422,24 @@ def check_action(step, where, siblings, idx, specs, r):
             if fe.get("value") not in values:
                 r.add("lint", "action.edge-missing", where,
                       f"Expected an edge with value '{fe.get('value')}' ({fe.get('description', '')}).")
-    check_config_rules(spec, step.get("configuration"), where, r)
+    check_config_rules(spec, step.get("configuration"), where, r, flow_trigger)
 
 
-def check_availability(spec, where, r):
+def check_availability(spec, where, r, features=()):
     av = spec.get("availability", "ga")
-    if av not in ("ga", None):
-        r.add("warning", "step.availability", where, f"{spec.get('caption', spec.get('name'))} availability is '{av}'.")
+    caption = spec.get("caption", spec.get("name"))
+    feature = spec.get("feature")
+    if av == "dark-launched" and feature:
+        if feature not in features:
+            r.add("warning", "step.dark-launched", where,
+                  f"{caption} is early access: it needs the AutoFlow feature '{feature}' enabled for the environment, "
+                  f"otherwise it is hidden in the editor and publish refuses it. Use it only when the user confirmed "
+                  f"'{feature}' is enabled, then validate with --features {feature}.")
+    elif av not in ("ga", None):
+        r.add("warning", "step.availability", where, f"{caption} availability is '{av}'.")
 
 
-def check_config_rules(spec, config, where, r):
+def check_config_rules(spec, config, where, r, flow_trigger=None):
     if not isinstance(config, dict):
         return
     seen_rules = set()
@@ -442,6 +454,10 @@ def check_config_rules(spec, config, where, r):
         msg = rule.get("message") or ""
         if not msg or msg.startswith("("):  # specs use "(no message …)" for silent checks
             msg = rule.get("check") or rid
+        if m.get("type") == "triggerNotIn":
+            if flow_trigger in (m.get("triggers") or []):
+                r.add(sev, rid, where, f"[{rule.get('stage', '')}] {msg}")
+            continue
         key = m.get("key")
         ok = run_machine(m, config)
         if ok is False and (rid, key) not in seen_rules:
@@ -479,6 +495,11 @@ def run_machine(m, config):
         if p2 and v2 == m.get("equals"):
             return present and not is_empty(val)
         return None
+    if t == "requiredUnless":
+        p2, v2 = get_path(config, m.get("ifKey", ""))
+        if p2 and v2 == m.get("equals"):
+            return None
+        return present and not is_empty(val)
     if not present or val is None or val == "":
         return None
     if t == "type":
@@ -506,10 +527,10 @@ def run_machine(m, config):
 
 # --------------------------------------------------------------------------- main
 
-def validate(doc, specs, strict_outputs=True):
+def validate(doc, specs, strict_outputs=True, features=()):
     r = Report()
     if check_root(doc, r):
-        check_steps(doc, specs, r, strict_outputs)
+        check_steps(doc, specs, r, strict_outputs, features)
     return r
 
 
@@ -519,6 +540,8 @@ def main(argv=None):
     ap.add_argument("--json", action="store_true", help="machine-readable output")
     ap.add_argument("--strict", action="store_true", help="treat warnings as failures")
     ap.add_argument("--no-lint", action="store_true", help="hide lint findings")
+    ap.add_argument("--features", default="",
+                    help="comma-separated dark-launched features enabled for the environment (e.g. tasks)")
     args = ap.parse_args(argv)
 
     specs = load_specs()
@@ -531,7 +554,7 @@ def main(argv=None):
             results[str(f)] = [{"severity": "error", "rule": "json.parse", "where": "$", "message": str(e)}]
             exit_code = max(exit_code, 2)
             continue
-        rep = validate(doc, specs)
+        rep = validate(doc, specs, features={f.strip() for f in args.features.split(",") if f.strip()})
         items = [i for i in rep.items if not (args.no_lint and i["severity"] == "lint")]
         results[str(f)] = items
         if rep.count("error") or (args.strict and rep.count("warning")):

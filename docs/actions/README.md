@@ -5,6 +5,7 @@ Every action step has `"type": "action"` and `"action": <ordinal>`. The ordinal 
 - **Terminating** steps must be the last step in their sequence (`"terminating": true`).
 - **Group** steps carry `edges` with nested step sequences.
 - Steps in an app category (e.g. *AutoFlow Supplier Foundation*) need that app installed; see [docs/apps/](../apps/).
+- **Early access** steps are released in stages (selected customers first, everyone a few weeks later): they only work where their AutoFlow feature is already switched on. Use them only when the user confirms it is.
 
 Machine-readable list: [`spec/index.json`](../../spec/index.json).
 
@@ -54,6 +55,8 @@ Machine-readable list: [`spec/index.json`](../../spec/index.json).
 | Action | `action` | Terminating | Group | Page |
 |---|---:|:---:|:---:|---|
 | Add Item Tracking | `5564417` |  |  | [AddItemTracking](AddItemTracking.md) |
+| Add Stamp | `5564428` |  |  | [AddStamp](AddStamp.md) |
+| Cancel Stamp | `5564429` |  |  | [CancelStamp](CancelStamp.md) |
 | Delete Record | `5564407` |  |  | [DeleteRecord](DeleteRecord.md) |
 | Draw number from number series | `5564554` |  |  | [NoSeriesDraw](NoSeriesDraw.md) |
 | Find Records | `5564409` |  |  | [FindRecords](FindRecords.md) |
@@ -69,6 +72,13 @@ Machine-readable list: [`spec/index.json`](../../spec/index.json).
 |---|---:|:---:|:---:|---|
 | Run SubFlow | `5564411` |  |  | [RunSubFlow](RunSubFlow.md) |
 | Start flow | `5564424` |  |  | [StartManualFlow](StartManualFlow.md) |
+
+## Tasks
+
+| Action | `action` | Terminating | Group | Page |
+|---|---:|:---:|:---:|---|
+| Approval task (early access) | `5564560` |  | yes | [ApprovalTask](ApprovalTask.md) |
+| Selection task (early access) | `5564423` |  |  | [SelectionTask](SelectionTask.md) |
 
 ## Trigger Responses
 

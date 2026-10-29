@@ -48,8 +48,8 @@ def main():
     triggers = load("triggers")
 
     index = {
-        "actions": [{k: s.get(k) for k in ("name", "id", "caption", "category", "terminating", "group", "availability", "app") if k in s} for s in actions],
-        "triggers": [{k: s.get(k) for k in ("name", "id", "caption", "category", "availability", "app") if k in s} for s in triggers],
+        "actions": [{k: s.get(k) for k in ("name", "id", "caption", "category", "terminating", "group", "availability", "feature", "app") if (k not in ("feature", "app") or s.get(k))} for s in actions],
+        "triggers": [{k: s.get(k) for k in ("name", "id", "caption", "category", "availability", "app") if k != "app" or s.get(k)} for s in triggers],
     }
     (ROOT / "spec" / "index.json").write_text(json.dumps(index, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
@@ -64,6 +64,7 @@ def main():
         "- **Terminating** steps must be the last step in their sequence (`\"terminating\": true`).",
         "- **Group** steps carry `edges` with nested step sequences.",
         "- Steps in an app category (e.g. *AutoFlow Supplier Foundation*) need that app installed; see [docs/apps/](../apps/).",
+        "- **Early access** steps are released in stages (selected customers first, everyone a few weeks later): they only work where their AutoFlow feature is already switched on. Use them only when the user confirms it is.",
         "",
         "Machine-readable list: [`spec/index.json`](../../spec/index.json).",
         "",
@@ -72,7 +73,7 @@ def main():
         lines += [f"## {cat}", "", "| Action | `action` | Terminating | Group | Page |", "|---|---:|:---:|:---:|---|"]
         for s in sorted(by_cat[cat], key=lambda x: x.get("caption") or x["name"]):
             lines.append(
-                f"| {s.get('caption')} | `{s['id']}` | {'yes' if s.get('terminating') else ''} | {'yes' if s.get('group') else ''} | [{s['name']}]({s['name']}.md) |"
+                f"| {s.get('caption')}{' (early access)' if s.get('availability') == 'dark-launched' else ''} | `{s['id']}` | {'yes' if s.get('terminating') else ''} | {'yes' if s.get('group') else ''} | [{s['name']}]({s['name']}.md) |"
             )
         lines.append("")
     (ROOT / "docs" / "actions" / "README.md").write_text("\n".join(lines), encoding="utf-8")

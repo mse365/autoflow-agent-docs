@@ -20,6 +20,15 @@
       "app": "AutoFlow Supplier Foundation"
     },
     {
+      "name": "AddStamp",
+      "id": 5564428,
+      "caption": "Add Stamp",
+      "category": "Records",
+      "terminating": false,
+      "group": false,
+      "availability": "ga"
+    },
+    {
       "name": "AddToCollection",
       "id": 201,
       "caption": "Add to Collection",
@@ -27,6 +36,16 @@
       "terminating": false,
       "group": false,
       "availability": "ga"
+    },
+    {
+      "name": "ApprovalTask",
+      "id": 5564560,
+      "caption": "Approval task",
+      "category": "Tasks",
+      "terminating": false,
+      "group": true,
+      "availability": "dark-launched",
+      "feature": "tasks"
     },
     {
       "name": "AzureBlobGet",
@@ -51,6 +70,15 @@
       "id": 5564422,
       "caption": "Azure Blob: Upload file",
       "category": "Documents",
+      "terminating": false,
+      "group": false,
+      "availability": "ga"
+    },
+    {
+      "name": "CancelStamp",
+      "id": 5564429,
+      "caption": "Cancel Stamp",
+      "category": "Records",
       "terminating": false,
       "group": false,
       "availability": "ga"
@@ -280,6 +308,16 @@
       "terminating": false,
       "group": false,
       "availability": "ga"
+    },
+    {
+      "name": "SelectionTask",
+      "id": 5564423,
+      "caption": "Selection task",
+      "category": "Tasks",
+      "terminating": false,
+      "group": false,
+      "availability": "dark-launched",
+      "feature": "tasks"
     },
     {
       "name": "SendEmail",

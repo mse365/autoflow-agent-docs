@@ -1,0 +1,352 @@
+{
+  "kind": "action",
+  "name": "SelectionTask",
+  "id": 5564423,
+  "caption": "Selection task",
+  "category": "Tasks",
+  "availability": "dark-launched",
+  "feature": "tasks",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "instructions",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "What the person should choose, and why. Shown on the task card. Supports SmartFields {{..}}, SmartFormulas [[..]] and SmartControls {#..#}. The task's subject is the step's description (fallback: the flow's description)."
+    },
+    {
+      "key": "assignType",
+      "type": "integer",
+      "required": false,
+      "default": 0,
+      "enum": [
+        0,
+        1,
+        2
+      ],
+      "maxLength": null,
+      "smart": "none",
+      "description": "0 = a single user, 1 = a task group (any member can complete it), 2 = the user who started the flow (assignee is ignored). The editor always writes it. Other values count as user."
+    },
+    {
+      "key": "assignee",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "Required unless assignType is 2. assignType 0: a Business Central user name (or user security ID); assignType 1: a task group code. Case-insensitive, trimmed. Can be a SmartField resolved when the step runs. The user must exist and be enabled."
+    },
+    {
+      "key": "input",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "field",
+      "description": "The list to choose from: exactly one SmartField placeholder '{{name}}' pointing to a reference, an array or an iterator of records (e.g. '{{<slug>_results}}' of Find Records), or to a value or an array of values. Read in its raw form. Each record or value becomes one row; at most 1,000 rows."
+    },
+    {
+      "key": "inputKind",
+      "type": "string",
+      "required": false,
+      "default": "reference",
+      "enum": [
+        "reference",
+        "value"
+      ],
+      "maxLength": null,
+      "smart": "none",
+      "description": "\"reference\" (records) or \"value\" (plain values). The editor derives it from the input's type. It decides the type of the 'results' output; at runtime the step goes by what the input actually holds."
+    },
+    {
+      "key": "tableNo",
+      "type": "integer",
+      "required": false,
+      "default": 0,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Records: the table of the input's records (the tableNo of the 'results' reference output). Values: 0."
+    },
+    {
+      "key": "columns",
+      "type": "array",
+      "required": false,
+      "default": [],
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Records only: the columns of the list, rows of { caption, value }. Empty: one column with the record's primary key. The editor always writes the array."
+    },
+    {
+      "key": "columns[].caption",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Column caption."
+    },
+    {
+      "key": "columns[].value",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "SmartText resolved once per row. It must use the input as its prefix, e.g. '{{FindCust_results.name}}' for input '{{FindCust_results}}'; that prefix is pointed at the row's record. Other SmartFields may appear too (resolved against the whole flow context, which is slower). The values are a snapshot taken when the task is created."
+    },
+    {
+      "key": "valueCaption",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Values only: the caption above the values. Empty: the input's name."
+    },
+    {
+      "key": "multiSelect",
+      "type": "boolean",
+      "required": false,
+      "default": false,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "true: the person may choose several rows (at least one); false: exactly one."
+    },
+    {
+      "key": "onEmpty",
+      "type": "integer",
+      "required": false,
+      "default": 0,
+      "enum": [
+        0,
+        1
+      ],
+      "maxLength": null,
+      "smart": "none",
+      "description": "When the input holds no rows (no task is created then): 0 = fail the step, 1 = continue with count \"0\" and no 'results'."
+    },
+    {
+      "key": "dueDate",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "Optional. A date (yyyy-mm-dd is safest) or a SmartDate such as [[TODAY+5D]]. A value that does not resolve to a date is ignored silently."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "results",
+      "type": "reference",
+      "tableNo": "<configuration.tableNo>",
+      "when": "once completed, when at least one row was chosen; inputKind \"value\": type value, no tableNo. {{slug_results}} is the first chosen row, {{slug_results[i]}} the i-th (0-based, in list order) - the same shape as Find Records"
+    },
+    {
+      "name": "count",
+      "type": "value",
+      "tableNo": null,
+      "when": "always once the step finishes - number of chosen rows; \"0\" when onEmpty = 1 let an empty list through"
+    },
+    {
+      "name": "completedBy",
+      "type": "value",
+      "tableNo": null,
+      "when": "once completed - user name of who completed the task"
+    },
+    {
+      "name": "task",
+      "type": "reference",
+      "tableNo": 5564323,
+      "when": "once completed - the task record (table 5564323 mse365 AF-CO Task)"
+    }
+  ],
+  "rules": [
+    {
+      "id": "SelectionTask.instructions-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "The configuration dialog refuses to save while the instructions are empty. (The step's own check 'Enter the instructions for the person who chooses.' is not run.)",
+      "message": "Please fill in the highlighted fields.",
+      "machine": {
+        "type": "required",
+        "key": "instructions"
+      }
+    },
+    {
+      "id": "SelectionTask.assignee-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "assignType 0 or 1: the configuration dialog refuses to save while the assignee is empty. At runtime an empty assignee fails the step.",
+      "message": "Please fill in the highlighted fields.",
+      "machine": {
+        "type": "requiredUnless",
+        "key": "assignee",
+        "ifKey": "assignType",
+        "equals": 2
+      }
+    },
+    {
+      "id": "SelectionTask.input-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "The configuration dialog refuses to save while the list to choose from is empty. It must be one {{name}} placeholder. (The step's own check 'Choose the list to choose from: a SmartField placeholder ({{name}}) holding records or values.' is not run.)",
+      "message": "Please fill in the highlighted fields.",
+      "machine": {
+        "type": "required",
+        "key": "input"
+      }
+    },
+    {
+      "id": "SelectionTask.input-selector",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "configuration.input must be exactly one placeholder {{name}}. Anything else resolves to nothing, so the list is empty (onEmpty applies).",
+      "message": "(see SelectionTask.empty-list)",
+      "machine": {
+        "type": "regex",
+        "key": "input",
+        "pattern": "\\s*\\{\\{[^{}]+\\}\\}\\s*"
+      }
+    },
+    {
+      "id": "SelectionTask.tasks-not-enabled",
+      "severity": "error",
+      "stage": "publish",
+      "check": "AutoFlow Tasks (portal feature flag 'tasks') is not enabled for the environment. Hard error. The step is also hidden from the step list.",
+      "message": "The task step '%1' cannot be published: AutoFlow Tasks is not enabled for this environment.",
+      "machine": {
+        "type": "feature",
+        "feature": "tasks"
+      }
+    },
+    {
+      "id": "SelectionTask.trigger-cannot-wait",
+      "severity": "error",
+      "stage": "publish",
+      "check": "The flow's trigger runs inline and cannot wait for a person: 5564529 record created or modified (interactive), 5564543 document released, 5564549 document posted, 5564409 document reopened, 5564407 page opened, 5564408 page closed, 5564405 PDF printed, 5564406 report file name, 5564404 SubFlow. Hard error. The step is also hidden from the step list in such flows.",
+      "message": "The task step '%1' cannot be used in this flow: its trigger runs while the user works on the record (or answers right away), so the flow cannot wait for a person there. Use a trigger that runs in the background, such as a record trigger, a schedule or a manual start.",
+      "machine": {
+        "type": "triggerNotIn",
+        "triggers": [
+          5564529,
+          5564543,
+          5564549,
+          5564409,
+          5564407,
+          5564408,
+          5564405,
+          5564406,
+          5564404
+        ]
+      }
+    },
+    {
+      "id": "SelectionTask.columns-use-input",
+      "severity": "info",
+      "stage": "editor",
+      "check": "Each column's value should contain at least one SmartField that starts with the input's name ('{{<input>.field}}'). The step's own check ('The column '%1' must use the list to choose from, for example {{%2.Name}}.') is not run; a column that does not use the input shows the same value in every row.",
+      "message": "(no message)"
+    },
+    {
+      "id": "SelectionTask.empty-list",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The input holds no rows (or only one blank value, as an upstream step that matched nothing leaves) and onEmpty is 0. No task is created.",
+      "message": "The list to choose from (%1) is empty, so there is nothing to choose. To continue instead, set \"If the list is empty\" to \"Continue with no results\"."
+    },
+    {
+      "id": "SelectionTask.mixed-list",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The input holds both records and values",
+      "message": "The list to choose from (%1) holds both records and values. Choose a list of records or a list of values."
+    },
+    {
+      "id": "SelectionTask.runtime-not-enabled",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "AutoFlow Tasks was switched off after the flow was published",
+      "message": "AutoFlow Tasks is not enabled for this environment."
+    },
+    {
+      "id": "SelectionTask.runtime-inline",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The step runs inside an inline frame (backstop for the publish check)",
+      "message": "Task steps cannot run in a trigger that runs while the user works on the record (for example when a document is released, posted or modified). Run the task from a flow with a background trigger instead."
+    },
+    {
+      "id": "SelectionTask.runtime-subflow",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The step runs in a flow executed as a sub-flow",
+      "message": "Task steps cannot run inside a sub-flow. Put the task step into the calling flow."
+    },
+    {
+      "id": "SelectionTask.no-starter",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "assignType 2 and the run has no user",
+      "message": "The task cannot be assigned to the user who started the flow: the run has no user."
+    },
+    {
+      "id": "SelectionTask.no-assignee",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "assignType 0/1 and assignee resolves to an empty text",
+      "message": "The task has no assignee. Choose a user or a group in the step."
+    },
+    {
+      "id": "SelectionTask.user-not-found",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "assignType 0 and no Business Central user has that user name (or user security ID)",
+      "message": "The task cannot be assigned to user %1: the user does not exist."
+    },
+    {
+      "id": "SelectionTask.user-disabled",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "assignType 0 and the user is disabled",
+      "message": "The task cannot be assigned to user %1: the user is disabled."
+    },
+    {
+      "id": "SelectionTask.group-not-found",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "assignType 1 and no task group has that code",
+      "message": "The task cannot be assigned to group %1: the group does not exist."
+    },
+    {
+      "id": "SelectionTask.cancelled",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The task was cancelled (by an administrator, or because the run was deleted) while the flow waited",
+      "message": "Task %1 was cancelled by %2: %3"
+    }
+  ],
+  "notes": [
+    "Dark-launched: only available where AutoFlow Tasks (portal feature flag 'tasks') is enabled for the environment. Elsewhere the step is hidden in the editor and publish refuses it.",
+    "The rows are built once, when the task is created: column values are a snapshot. Lists longer than 1,000 rows are cut to the first 1,000 (logged), and the task card says the list was cut.",
+    "The flow waits in the background like the Approval task: parked, checked every poll interval (AutoFlow Setup 'Task Poll Interval (Min.)', default 5 minutes), and continued immediately when the user the flow runs as completes the task themselves. Each loop pass creates its own task; a retried run reuses the task it created.",
+    "Completing a selection task needs a paid AutoFlow licence and an AutoFlow Tasks seat - except assignType 2 (the user who started the flow) completing it while following the run in its progress dialog. Assigning needs no seat; the editor's status line warns when a fixed assignee or every member of a fixed group has no seat.",
+    "In a Webhook flow with WaitForResponse, put the step after Respond to Webhook: in the synchronous phase the step cannot park and fails.",
+    "If a chosen record was deleted before the task is completed, the person is asked to change the selection."
+  ]
+}

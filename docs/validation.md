@@ -15,9 +15,12 @@ Run the preflight validator before handing a definition to a user:
 python3 tools/validate_flow.py my-flow.json          # human-readable
 python3 tools/validate_flow.py my-flow.json --json   # machine-readable
 python3 tools/validate_flow.py my-flow.json --strict # also fail on warnings
+python3 tools/validate_flow.py my-flow.json --features tasks  # the user confirmed AutoFlow Tasks is enabled
 ```
 
 It reports `error` (AutoFlow refuses the definition or it will certainly fail), `warning` (publish asks for confirmation) and `lint` (AutoFlow doesn't check this, but it's almost certainly a mistake).
+
+Early-access (dark-launched) steps get a `step.dark-launched` warning: they only work where their feature is enabled for the environment. Pass `--features <feature>` (e.g. `tasks`) once the user has confirmed it is.
 
 ## Import
 
@@ -58,6 +61,7 @@ Checks run in this order. The first hard error stops the publish.
 6. **Step warnings**, collected for every action step and confirmed together:
    - **Terminating step with a successor**: *"Step "%1" is a terminating step but has a successor – terminating steps must end the path."* This is decided by the step's own `terminating` flag in the JSON, so the flag must be correct.
    - **Step-specific publish checks**: Sleep (duration), Confirm dialog (dialog in a non-interactive or post-write position), Send Notification (actions and targets). See [validation-rules.md](validation-rules.md#stage-publish).
+   - **Task steps** (early access: [Approval task](actions/ApprovalTask.md), [Selection task](actions/SelectionTask.md)) are checked at the same point, but their checks are **hard errors**: AutoFlow Tasks must be enabled for the environment, and the trigger must be one that can wait.
    - **Dangling references**: *"Step "%1" references unknown slug "%2"."* AutoFlow scans every string inside every step's `configuration`. For each `{{…}}`, it takes the text before the **first underscore** as a slug and warns if no step has that slug. Tokens without an underscore, such as built-ins like `{{today}}`, are skipped. The check doesn't look at output names or field paths, so `{{trigger_Typo}}` passes publish and then silently resolves to the literal text at runtime. The validator's `reference.unknown-output` lint catches this.
 7. **Licensing** (error). SubFlows don't count toward the flow limit and skip this step. Republishing a flow that is already counted needs no new slot. The messages:
    - Free tier full (2 published flows per production environment; sandboxes are unlimited, every paid license model has unlimited flows): *"All flows of the AutoFlow free tier in this environment are in use. To publish this flow, unpublish another one, or license AutoFlow in the AutoFlow portal (portal.mse365.de) for unlimited flows."*
@@ -95,5 +99,6 @@ Before you hand a definition over:
 6. All editor-stage rules on each step's page are met. They aren't enforced at publish, but they are what makes the step work.
 7. The root `code` is set (every flow needs one to be published), and environment dependencies (credentials, Codes of called flows, tables and fields from extensions) are listed for the user.
 8. `python3 tools/validate_flow.py flow.json --strict` reports no errors or warnings, except dangling-reference warnings you can explain.
+9. Early-access steps are used only if the user confirmed their feature is enabled (and you validated with `--features`). Tell the user which task groups or users the flow assigns tasks to.
 
 All rules, by step: [validation-rules.md](validation-rules.md).

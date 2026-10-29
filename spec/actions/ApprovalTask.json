@@ -1,0 +1,301 @@
+{
+  "kind": "action",
+  "name": "ApprovalTask",
+  "id": 5564560,
+  "caption": "Approval task",
+  "category": "Tasks",
+  "availability": "dark-launched",
+  "feature": "tasks",
+  "terminating": false,
+  "group": true,
+  "edges": {
+    "fixed": [
+      {
+        "value": "true",
+        "description": "Approved"
+      },
+      {
+        "value": "false",
+        "description": "Rejected"
+      }
+    ],
+    "dynamic": false,
+    "rules": "Exactly two edges in this order: edges[0] value \"true\" (approved) and edges[1] value \"false\" (rejected), the same values as Decision and Confirm dialog. The engine routes on the 'result' output. An edge with no steps continues after the step."
+  },
+  "configuration": [
+    {
+      "key": "instructions",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "What the approver should check. Shown on the task card. Supports SmartFields {{..}}, SmartFormulas [[..]] and SmartControls {#..#}. The task's subject is the step's description (fallback: the flow's description), not this text."
+    },
+    {
+      "key": "assignType",
+      "type": "integer",
+      "required": false,
+      "default": 0,
+      "enum": [
+        0,
+        1
+      ],
+      "maxLength": null,
+      "smart": "none",
+      "description": "0 = a single user, 1 = a task group (any member can decide). The editor always writes it. Any value other than 1 is treated as a user."
+    },
+    {
+      "key": "assignee",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "assignType 0: a Business Central user name (or user security ID). assignType 1: a task group code. Matched case-insensitively after trimming. Can be a SmartField that holds the name or code, resolved when the step runs. The user must exist and be enabled; assignees need no AutoFlow Tasks seat."
+    },
+    {
+      "key": "requiredApprovals",
+      "type": "integer",
+      "required": false,
+      "default": 1,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Task group only: how many different members must approve. Values below 1 count as 1. More than 1 needs assignType 1, and the group needs at least that many members. One rejection rejects the task right away."
+    },
+    {
+      "key": "dueDate",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "Optional. A date (yyyy-mm-dd is safest) or a SmartDate such as [[TODAY+5D]]. Overdue tasks are highlighted in the inbox and can be sent as a digest. A value that does not resolve to a date is ignored silently (no due date)."
+    },
+    {
+      "key": "attachments",
+      "type": "array",
+      "required": false,
+      "default": [],
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Rows of { type, reference, url, caption } shown on the task card. The editor always writes the array ([] when empty)."
+    },
+    {
+      "key": "attachments[].type",
+      "type": "string",
+      "required": true,
+      "default": null,
+      "enum": [
+        "record",
+        "document",
+        "link"
+      ],
+      "maxLength": null,
+      "smart": "none",
+      "description": "record = a Business Central record the approver can open; document = a file the approver can preview and download (an AutoFlow document or an Incoming Document Attachment); link = a URL. Any other value makes the row be skipped."
+    },
+    {
+      "key": "attachments[].reference",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "field",
+      "description": "record / document rows: exactly one SmartField placeholder '{{name}}' pointing to a reference, an array or an iterator, read in its raw form. Each record it holds becomes one attachment. A row that resolves to no record is skipped without error."
+    },
+    {
+      "key": "attachments[].url",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "link rows: the URL. SmartText. If it is exactly one placeholder that holds an array of values, each value becomes one link. An empty URL is skipped."
+    },
+    {
+      "key": "attachments[].caption",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "Caption shown for the attachment. SmartText. Used for every attachment the row produces."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "result",
+      "type": "value",
+      "tableNo": null,
+      "when": "once decided - \"true\" (approved) or \"false\" (rejected); the engine routes on it"
+    },
+    {
+      "name": "approved",
+      "type": "value",
+      "tableNo": null,
+      "when": "once decided - \"true\" / \"false\", same as result"
+    },
+    {
+      "name": "comment",
+      "type": "value",
+      "tableNo": null,
+      "when": "once decided - approved: every approver's comment joined with '; '; rejected: the rejecting comment (always present, a rejection needs one)"
+    },
+    {
+      "name": "decidedBy",
+      "type": "value",
+      "tableNo": null,
+      "when": "once decided - approved: the approvers' user names joined with ', '; rejected: the rejecting user"
+    },
+    {
+      "name": "task",
+      "type": "reference",
+      "tableNo": 5564323,
+      "when": "once decided - the task record (table 5564323 mse365 AF-CO Task), for linking or reporting"
+    }
+  ],
+  "rules": [
+    {
+      "id": "ApprovalTask.instructions-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "The configuration dialog refuses to save while the instructions are empty. (The step's own check 'Enter the instructions for the approver.' is not run.)",
+      "message": "Please fill in the highlighted fields.",
+      "machine": {
+        "type": "required",
+        "key": "instructions"
+      }
+    },
+    {
+      "id": "ApprovalTask.assignee-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "The configuration dialog refuses to save while the assignee is empty. At runtime an empty assignee fails the step. (The step's own check 'Choose who approves: a user or a task group.' is not run.)",
+      "message": "Please fill in the highlighted fields.",
+      "machine": {
+        "type": "required",
+        "key": "assignee"
+      }
+    },
+    {
+      "id": "ApprovalTask.tasks-not-enabled",
+      "severity": "error",
+      "stage": "publish",
+      "check": "AutoFlow Tasks (portal feature flag 'tasks') is not enabled for the environment. Hard error, not a 'publish anyway' warning. The step is also hidden from the step list.",
+      "message": "The task step '%1' cannot be published: AutoFlow Tasks is not enabled for this environment.",
+      "machine": {
+        "type": "feature",
+        "feature": "tasks"
+      }
+    },
+    {
+      "id": "ApprovalTask.trigger-cannot-wait",
+      "severity": "error",
+      "stage": "publish",
+      "check": "The flow's trigger runs inline and cannot wait for a person: 5564529 record created or modified (interactive), 5564543 document released, 5564549 document posted, 5564409 document reopened, 5564407 page opened, 5564408 page closed, 5564405 PDF printed, 5564406 report file name, 5564404 SubFlow. Hard error. The step is also hidden from the step list in such flows.",
+      "message": "The task step '%1' cannot be used in this flow: its trigger runs while the user works on the record (or answers right away), so the flow cannot wait for a person there. Use a trigger that runs in the background, such as a record trigger, a schedule or a manual start.",
+      "machine": {
+        "type": "triggerNotIn",
+        "triggers": [
+          5564529,
+          5564543,
+          5564549,
+          5564409,
+          5564407,
+          5564408,
+          5564405,
+          5564406,
+          5564404
+        ]
+      }
+    },
+    {
+      "id": "ApprovalTask.runtime-not-enabled",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "AutoFlow Tasks was switched off after the flow was published",
+      "message": "AutoFlow Tasks is not enabled for this environment."
+    },
+    {
+      "id": "ApprovalTask.runtime-inline",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The step runs inside an inline frame (backstop for the publish check, e.g. a flow published before it existed)",
+      "message": "Task steps cannot run in a trigger that runs while the user works on the record (for example when a document is released, posted or modified). Run the task from a flow with a background trigger instead."
+    },
+    {
+      "id": "ApprovalTask.runtime-subflow",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The step runs in a flow executed as a sub-flow (the execution has a parent execution)",
+      "message": "Task steps cannot run inside a sub-flow. Put the task step into the calling flow."
+    },
+    {
+      "id": "ApprovalTask.no-assignee",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "assignee resolves to an empty text",
+      "message": "The task has no assignee. Choose a user or a group in the step."
+    },
+    {
+      "id": "ApprovalTask.user-not-found",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "assignType 0 and no Business Central user has that user name (or user security ID)",
+      "message": "The task cannot be assigned to user %1: the user does not exist."
+    },
+    {
+      "id": "ApprovalTask.user-disabled",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "assignType 0 and the user is disabled",
+      "message": "The task cannot be assigned to user %1: the user is disabled."
+    },
+    {
+      "id": "ApprovalTask.group-not-found",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "assignType 1 and no task group has that code",
+      "message": "The task cannot be assigned to group %1: the group does not exist."
+    },
+    {
+      "id": "ApprovalTask.multi-approval-needs-group",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "requiredApprovals > 1 while assignType is not 1. (The step's own check 'More than one approval needs a task group as the assignee.' is not run in the editor.)",
+      "message": "A task that needs more than one approval must be assigned to a group."
+    },
+    {
+      "id": "ApprovalTask.too-many-approvals",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "requiredApprovals is larger than the task group's member count",
+      "message": "The task needs %1 approvals, but group %2 has only %3 member(s)."
+    },
+    {
+      "id": "ApprovalTask.cancelled",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The task was cancelled (by an administrator, or because the run was deleted) while the flow waited",
+      "message": "Task %1 was cancelled by %2: %3"
+    }
+  ],
+  "notes": [
+    "Dark-launched: only available where AutoFlow Tasks (portal feature flag 'tasks') is enabled for the environment. Elsewhere the step is hidden in the editor and publish refuses it.",
+    "The flow waits in the background. The first run creates the task and parks the execution; it is checked again every poll interval (AutoFlow Setup 'Task Poll Interval (Min.)', default 5 minutes). When the user the flow runs as decides the task themselves, the run continues immediately. No session is held while waiting, so a task can stay open for days.",
+    "Each pass of a loop creates its own task. A retried or restarted run finds the task it already created instead of creating a second one.",
+    "In a Webhook flow with WaitForResponse, put the step after Respond to Webhook: in the synchronous phase the step cannot park and fails.",
+    "Assignees need no AutoFlow Tasks seat, but deciding an approval needs a paid AutoFlow licence. Rejecting needs a comment.",
+    "requiredApprovals > 1: the task completes when that many different members approved; the first rejection rejects it.",
+    "The task is shown in the AutoFlow task inbox. The assignee (plus their delegate while they are out of office) or every group member gets an e-mail, unless they turned new-task e-mails off in their task settings."
+  ]
+}
