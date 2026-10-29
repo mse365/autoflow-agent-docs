@@ -34,6 +34,8 @@ Without a user interface, the answer (and, for a waited question, who gave it) i
 
 The branch labels are stored as `edges[0].description` (Yes) and `edges[1].description` (No), not in `configuration`.
 
+**Translatable** ([translations](../flow-definition.md#translations)): `message`; the Yes / No labels are the edges' `description` (`edge:<id>`).
+
 ## Edges
 
 | value | default description | taken when |

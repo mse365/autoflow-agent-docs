@@ -23,6 +23,8 @@ The step resolves `Message` (SmartFields, SmartFormulas and SmartControls) and w
 |---|---|---|---|---|
 | `Message` | string | no | `""` | Text to log. Note the capital `M`, because keys are case-sensitive. Supports `{{..}}`, `[[..]]` and `{#..#}`. If the key is missing, an empty entry is written. |
 
+**Translatable** ([translations](../flow-definition.md#translations)): `Message`.
+
 ## Outputs
 
 None.

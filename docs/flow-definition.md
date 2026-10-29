@@ -12,7 +12,8 @@ A flow definition is a single UTF-8 JSON document. It is what **Export current v
   "iconUrl": "https://…/icon.svg",             // optional, flow icon
   "steps": [ /* trigger first, then action steps */ ],
   "notes": [ /* optional canvas sticky notes */ ],
-  "smartFieldDefs": { /* optional record-path definitions, see references-and-smart-fields.md §1.8 */ }
+  "smartFieldDefs": { /* optional record-path definitions, see references-and-smart-fields.md §1.8 */ },
+  "translations": { /* optional, the flow name in other languages, see Translations */ }
 }
 ```
 
@@ -25,6 +26,7 @@ A flow definition is a single UTF-8 JSON document. It is what **Export current v
 | `steps` | array | yes | `steps[0]` **must** be the trigger. The other entries are the top-level action sequence, run in array order. |
 | `notes` | array | no | Canvas notes; they have no effect at runtime. See [Notes](#notes). |
 | `smartFieldDefs` | object | no | Flow-level definitions of how `{{slug_output.Segment…}}` paths walk related records. See [references-and-smart-fields.md §1.8](references-and-smart-fields.md#18-smartfielddefs-the-flow-level-path-definitions). |
+| `translations` | object | no | The flow name in other languages. See [Translations](#translations). |
 
 Only `name`, `code`, `iconUrl` and `version` are read from the root on import (`version` is then removed). The rest of the document is stored verbatim as the flow's draft version. **Import performs no validation**: a malformed definition imports fine and fails later, at publish or at runtime. That's why the checks in [validation.md](validation.md) exist.
 
@@ -88,6 +90,7 @@ Only `name`, `code`, `iconUrl` and `version` are read from the root on import (`
 | `x`, `y` | integer | no | Canvas position relative to the parent: the canvas for top-level steps, the parent group for nested ones. Omit them to auto-layout. |
 | `status` | object | no | Written by the editor for run visualisation; ignored at runtime. Omit it. |
 | `level` | integer | no | Ignored on read. Omit it. |
+| `translations` | object | no | The step's texts in other languages (description, branch labels, prose configuration keys). See [Translations](#translations). |
 
 ## Edges (group steps)
 
@@ -162,6 +165,41 @@ Canvas sticky notes, display only:
 ```
 
 `color` is one of `yellow`, `pink`, `blue`, `green`, `lavender`, `grey`. In `html`, only `b`, `i`, `u`, `br` and text survive: the editor strips every other tag (keeping its text) when it shows or saves the note. `width` and `height` are optional; leave them out to auto-size.
+
+## Translations
+
+Since 27.0.41 a flow can carry its texts in several languages. The default text stays exactly where it is (`name`, `description`, the edge `description`, the prose keys of `configuration`); the other languages sit next to it in a `translations` map, so a reader that does not know about translations still sees the default text.
+
+```jsonc
+{
+  "name": "Mahnung versenden",
+  "translations": { "ENU": { "name": { "text": "Send reminder", "src": "3f1a…" } } },
+  "steps": [ {
+    "id": "…", "type": "action", "action": 5564557,
+    "description": "Kunde benachrichtigen",
+    "configuration": { "Message": "Hallo {{trigger_Rec.name}}", "display": 0,
+                       "actions": [ { "label": "Öffnen", "type": "2", "target": "21", "record": "{{trigger_Rec}}" } ] },
+    "translations": {
+      "ENU": {
+        "description":                    { "text": "Notify customer", "src": "9b0c…" },
+        "configuration.Message":          { "text": "Hello {{trigger_Rec.name}}", "src": "c4e2…" },
+        "configuration.actions[0].label": { "text": "Open", "src": "7a51…" },
+        "edge:4D2F…":                     { "text": "Yes", "src": "e019…" }
+      }
+    }
+  } ]
+}
+```
+
+- **Language key**: the Business Central language code of table *Language*, upper case, e.g. `DEU`, `ENU`, `FRA`. A user sees the language of their Business Central session.
+- **Paths** (keys of a language map): on the flow only `name`; on a step `description`, `configuration.<key>` for a prose configuration key, `configuration.<rows>[<index>].<column>` for one row of a repeater (0-based index), and `edge:<edgeId>` for the label of one of the step's own edges.
+- **Entry**: `{ "text": "<translation>", "src": "<hash>" }`. `src` is the hash of the default text the translation was made for (16 hex characters, the first 16 of a lower-case SHA-256 of the UTF-8 text). When the default text changes, the translation is *outdated*: still used, but flagged on the Translations worksheet. When you write translations by hand, you may set `src` to `""` – the worksheet then shows them as outdated until someone confirms them, which is the honest state. An empty `text` counts as no translation.
+- **Which configuration keys**: only the keys the step declares as prose – the step pages mark them (*Translatable*: …). Technical values (selectors, filters, URLs, codes) are never translated; a translation for such a key is ignored by the editor's worksheet.
+- **Fallback**: no translation, or an empty one, means the default text is used. Nothing fails because of a missing translation.
+- **Edges**: the branch labels are stored on the *step* (`edge:<id>`), not inside the edge object. When you copy a step, generate new edge ids and rename these keys accordingly, as the editor does.
+- **Where it shows**: the execution viewer, the Flow Workspace preview and the flow pickers show descriptions, branch labels and the flow name in the viewer's language. Using the translated *configuration* texts at run time (the message of a notification, the body of an email) is controlled per step by an output language, coming in a later release.
+
+Rename a slug? Translated texts reference the same `{{slug_…}}` tokens as the default text – rewrite them there too.
 
 ## What is *not* in the definition
 

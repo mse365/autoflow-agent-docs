@@ -51,6 +51,8 @@ Anyone can be an assignee or a group member, with no seat needed. **Completing**
 
 A column whose SmartFields all start with the input is resolved against the row alone, which is fast. Columns that also use other SmartFields work too, but each row then resolves against the whole flow context.
 
+**Translatable** ([translations](../flow-definition.md#translations)): `instructions`, `valueCaption`, `columns[].caption`.
+
 ## Outputs
 
 | name | type | tableNo | notes |

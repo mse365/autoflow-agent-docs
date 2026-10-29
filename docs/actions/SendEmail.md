@@ -40,6 +40,8 @@ Attachment rows:
 | `filename` | Inline | SmartText file name including extension. The content type is guessed from the extension (pdf, png, jpg/jpeg, gif, txt, html/htm, csv, xml, json, zip, xlsx, docx; otherwise `application/octet-stream`). |
 | `contentBase64` | Inline | SmartText base64 content. |
 
+**Translatable** ([translations](../flow-definition.md#translations)): `subject`, `body`.
+
 ## Outputs
 
 | name | type | tableNo | notes |
