@@ -26,6 +26,8 @@ Stamps are append-only: they can never be changed or deleted, only canceled once
 | `reference` | string | yes | `""` | One SmartField placeholder that resolves to a record reference, e.g. `"{{trigger_Rec}}"`. A new step in the editor is prefilled with the first record reference the flow offers (normally the trigger's record). |
 | `text` | string | yes | `""` | The stamp text. SmartFields are resolved; the result is trimmed and must be 1–250 characters. Longer text fails the step, it is not cut. |
 
+**Translatable** ([translations](../flow-definition.md#translations)): `text`.
+
 ## Outputs
 
 | name | type | tableNo | notes |

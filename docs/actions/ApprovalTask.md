@@ -75,6 +75,8 @@ Attachment rows:
 
 A row that resolves to nothing is skipped without an error. An empty list is no reason to stop an approval.
 
+**Translatable** ([translations](../flow-definition.md#translations)): `instructions`, `attachments[].caption`; the Approved / Rejected labels are the edges' `description` (`edge:<id>`).
+
 ## Edges
 
 | value | default description | taken when |

@@ -16,6 +16,7 @@
       "enum": null,
       "maxLength": 2048,
       "smart": "text",
+      "translatable": true,
       "description": "The message text (note the capital M in the key). Supports SmartFields ({{..}}), SmartFormulas ([[..]]) and SmartControls ({#..#}). Shown text is truncated to 2048 characters. Empty = the step does nothing."
     },
     {
@@ -46,6 +47,7 @@
       "enum": null,
       "maxLength": 100,
       "smart": "text",
+      "translatable": true,
       "description": "Button caption (SmartText; truncated to 100 characters)."
     },
     {

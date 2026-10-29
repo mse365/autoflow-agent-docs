@@ -76,6 +76,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "text",
+      "translatable": true,
       "description": "Subject line. Required in the dialog; not checked at run time."
     },
     {
@@ -86,6 +87,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "text",
+      "translatable": true,
       "description": "HTML body (rich-text editor). SmartFields resolved at run time. Always sent as HTML."
     },
     {

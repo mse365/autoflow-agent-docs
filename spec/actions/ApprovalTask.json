@@ -31,6 +31,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "text",
+      "translatable": true,
       "description": "What the approver should check. Shown on the task card. Supports SmartFields {{..}}, SmartFormulas [[..]] and SmartControls {#..#}. The task's subject is the step's description (fallback: the flow's description), not this text."
     },
     {
@@ -128,6 +129,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "text",
+      "translatable": true,
       "description": "Caption shown for the attachment. SmartText. Used for every attachment the row produces."
     }
   ],

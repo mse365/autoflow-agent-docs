@@ -82,6 +82,78 @@ def get_path(obj, dotted):
     return True, cur
 
 
+LANG_RE = re.compile(r"^[A-Z0-9]{1,10}$")
+TRANSL_SEGMENT_RE = re.compile(r"^([^\[\]]*)((?:\[\d+\])*)$")
+
+
+def get_indexed_path(obj, path):
+    """Resolve 'a.b[2].c' (object keys and 0-based array indexes). Returns (found, value)."""
+    cur = obj
+    for seg in path.split("."):
+        m = TRANSL_SEGMENT_RE.match(seg)
+        if not m:
+            return False, None
+        key, idx = m.group(1), m.group(2)
+        if key:
+            if not isinstance(cur, dict) or key not in cur:
+                return False, None
+            cur = cur[key]
+        for i in re.findall(r"\[(\d+)\]", idx):
+            i = int(i)
+            if not isinstance(cur, list) or i >= len(cur):
+                return False, None
+            cur = cur[i]
+    return True, cur
+
+
+def check_translations(container, where, r, step=None, spec=None):
+    """'translations' sidecar (docs/flow-definition.md#translations) on the root (step=None) or a step."""
+    tr = container.get("translations")
+    if tr is None:
+        return
+    tw = f"{where}.translations"
+    if not isinstance(tr, dict):
+        r.add("error", "translations.object", tw, "'translations' must be an object keyed by language code (e.g. \"ENU\").")
+        return
+    translatable = {c["key"] for c in (spec or {}).get("configuration", []) if c.get("translatable")} if spec else set()
+    for lang, lmap in tr.items():
+        lw = f"{tw}.{lang}"
+        if not LANG_RE.match(str(lang)):
+            r.add("lint", "translations.language", lw, f"'{lang}' should be a Business Central language code in upper case (DEU, ENU, FRA, …).")
+        if not isinstance(lmap, dict):
+            r.add("error", "translations.language-map", lw, "A language entry must be an object keyed by path (\"description\", \"configuration.<key>\", \"edge:<id>\").")
+            continue
+        for path, entry in lmap.items():
+            ew = f"{lw}.{path}"
+            if not isinstance(entry, dict) or not isinstance(entry.get("text"), str):
+                r.add("error", "translations.entry", ew, "A translation entry must be {\"text\": \"…\", \"src\": \"<hash or empty>\"}.")
+                continue
+            if not isinstance(entry.get("src"), str):
+                r.add("lint", "translations.src", ew, "'src' should be the hash of the default text, or \"\" to mark the translation as outdated.")
+            if step is None:
+                if path != "name":
+                    r.add("warning", "translations.path", ew, "On the flow only 'name' can be translated.")
+                continue
+            if path == "description":
+                continue
+            if path.startswith("edge:"):
+                edge_ids = sorted(e.get("id") for e in (step.get("edges") or []) if isinstance(e, dict) and isinstance(e.get("id"), str))
+                if path[5:] not in edge_ids:
+                    r.add("warning", "translations.edge", ew, f"'{path}' names no edge of this step (edges: {edge_ids}). Branch labels are keyed by the step's own edge ids.")
+                continue
+            if not path.startswith("configuration."):
+                r.add("warning", "translations.path", ew, "Step paths are 'description', 'configuration.<key>' (rows as <rows>[<index>].<column>) or 'edge:<id>'.")
+                continue
+            cfg_path = path[len("configuration."):]
+            found, value = get_indexed_path(step.get("configuration") or {}, cfg_path)
+            if not found or not isinstance(value, str):
+                r.add("warning", "translations.missing-default", ew, f"'{cfg_path}' is not a string in this step's configuration, so the translation can never be used.")
+            pattern = re.sub(r"\[\d+\]", "[]", cfg_path)
+            if translatable and pattern not in translatable:
+                r.add("lint", "translations.not-translatable", ew,
+                      f"'{pattern}' is not a translatable key of this step (translatable: {', '.join(sorted(translatable))}); the Translations worksheet will not show it.")
+
+
 def is_empty(v):
     return v is None or (isinstance(v, str) and v.strip() == "") or (isinstance(v, (list, dict)) and len(v) == 0)
 
@@ -207,6 +279,7 @@ def check_root(doc, r):
                         r.add("lint", "notes.key", w, f"Note is missing '{k}'.")
                 if n.get("color") not in NOTE_COLORS:
                     r.add("lint", "notes.color", w, f"Note color must be one of {sorted(NOTE_COLORS)}.")
+    check_translations(doc, "$", r)
     return True
 
 
@@ -258,6 +331,7 @@ def check_steps(doc, specs, r, strict_outputs, features=()):
 
         if not isinstance(step.get("description"), str):
             r.add("lint", "step.description", where, "Step should have a string 'description' (used as label and in messages).")
+        check_translations(step, where, r, step=step, spec=specs["action"].get(step.get("action")) if stype == "action" else None)
 
         slug = step.get("slug")
         if stype == "trigger":

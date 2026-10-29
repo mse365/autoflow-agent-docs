@@ -16,6 +16,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "text",
+      "translatable": true,
       "description": "Text written to the execution log at Info level. The key is case-sensitive and capitalised ('Message'). Supports SmartFields {{..}}, SmartFormulas [[..]] and SmartControls {#..#}. If the key is missing, an empty Info entry is written."
     }
   ],
