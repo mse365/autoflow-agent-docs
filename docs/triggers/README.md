@@ -31,16 +31,16 @@ Every flow starts with exactly one trigger step, `steps[0]`:
 
 ### AutoFlow Supplier Foundation (separate app)
 
-These triggers exist only when the **AutoFlow Supplier Foundation** app is installed. A page action fires them for one record at a time; every flow on the trigger runs inline while the user waits, in one transaction per record. The exception is the price update: its runs are queued. Read the [overview](../apps/SupplierFoundation.md) first.
+These triggers exist only when the **AutoFlow Supplier Foundation** app is installed. A page action fires them for one record at a time; every flow on the trigger runs inline while the user waits, in one transaction per record. The exceptions are the price update and sending orders, whose runs are queued; the Start steps of Supplier Foundation queue any of four triggers for one record. Read the [overview](../apps/SupplierFoundation.md) first.
 
 | Trigger | `"trigger"` | Fired by | Transaction | Record context (outputs) | Typical use |
 |---|---|---|---|---|---|
 | [When an item search is performed](ItemSearch.md) | `5564012` | *Search supplier items* (sales documents, Item List), per search text | committed after the search | `Query`, `Context`, `SalesHeader` | Search the supplier, Add search result per hit |
 | [When a search result is selected](SearchSelected.md) | `5564013` | OK in the search dialog | one, committed at the end | every result field, `Payload`, `ExistingItemNo`, `Item` | Import the item, add a sales line |
-| [When an item is updated](ItemUpdate.md) | `5564014` | *Update from supplier* (Item Card, Item List) | one per item | `Item`, `ItemVendor`, `VendorNo` | Refresh item master data |
+| [When an item is updated](ItemUpdate.md) | `5564014` | *Update from supplier* (Item Card, Item List); Start item update (queued) | one per item | `Item`, `ItemVendor`, `VendorNo` | Refresh item master data |
 | [When a price update is requested](PriceUpdate.md) | `5564015` | *Update price and availability* (sales/purchase documents and lines, items) | **queued**: one async run (Job Queue entry) per line or item and flow, commit per step | `Source`, `SalesLine` / `PurchaseLine` / `Item`, `ItemVendor`, `VendorNo` | Price (Set supplier price) and stock from the supplier |
-| [When a purchase order is sent](POSent.md) | `5564016` | *Send to supplier* (Purchase Order, list) | one per order | `PurchaseHeader`, `VendorNo` | Transmit the order |
-| [When an order status is updated](OrderStatus.md) | `5564017` | *Update order status* (Purchase Order, list) | one per order | `PurchaseHeader`, `VendorNo` | Order status, create supplier documents |
+| [When a purchase order is sent](POSent.md) | `5564016` | *Send to supplier* (Purchase Order, list) | **queued**: one async run per order and flow, commit per step | `PurchaseHeader`, `VendorNo` | Transmit the order |
+| [When an order status is updated](OrderStatus.md) | `5564017` | *Update order status* (Purchase Order, list); Start order status update (queued) | one per order | `PurchaseHeader`, `VendorNo` | Order status, create supplier documents |
 | [When a supplier document is accepted](DocAccepted.md) | `5564018` | *Accept* (Supplier Documents) | one per document, with the status change | `SupplierDocument`, `PurchaseHeader`, `DocumentType`, `VendorNo` | Apply a confirmation or delivery note |
 | [When a supplier document is rejected](DocRejected.md) | `5564019` | *Reject* (Supplier Documents) | one per document, with the status change | `SupplierDocument`, `PurchaseHeader`, `DocumentType`, `VendorNo` | Tell the supplier or the buyer |
 
@@ -77,7 +77,7 @@ When a flow is published, checks run in this order:
 4. Step warnings, such as dangling references and terminating steps with successors, are collected and need the user's confirmation. A headless publish cannot confirm them, so it fails.
 5. Licensing (free tier: 2 published flows per production environment). SubFlow skips it.
 6. Trigger registration: OnPdfPrint and OnReportFileName require at least one report line and allow only one published flow per environment. Webhook registers with the AutoFlow portal (production needs a paid license); failures there do not stop the publish.
-7. Job Queue: Scheduled gets a recurring entry every 60 minutes. GlobalInsert, GlobalModify and GlobalDelete get a recurring pick-up entry every 5 minutes. The Supplier Foundation price update creates one entry per run when its page action is used. All other triggers get none.
+7. Job Queue: Scheduled gets a recurring entry every 60 minutes. GlobalInsert, GlobalModify and GlobalDelete get a recurring pick-up entry every 5 minutes. Supplier Foundation's price update and order sending, and its Start steps, create one entry per run when used. All other triggers get none.
 
 Before 27.0.40 only Manual and SubFlow flows needed a Code, with their own messages.
 
@@ -86,5 +86,5 @@ Before 27.0.40 only Manual and SubFlow flows needed a Code, with their own messa
 - **`tableNo`** (integer): the watched table. It is stored on the trigger registration at publish. For record triggers, `0` means the flow never fires.
 - **`filters`**: `[{ "fieldNo": int, "filter": "text" }]`, used by every record, document and page trigger. Each filter is a standard Business Central filter expression on one field of the triggering record. It is applied literally, so `{{…}}` placeholders are **not** resolved. Max. 250 characters. Rows with `fieldNo` 0 are skipped, and a second row on the same field replaces the first. An invalid expression never errors; the record just does not match.
 - **`guiOnly`** (boolean, default `true`) on the interactive document triggers skips sessions without a UI.
-- **`timeoutSec`** (integer) on the synchronous triggers: 30 by default, 10 for the page triggers, 30 / 60 for the Supplier Foundation triggers (none for the queued price update). For Webhook and OnPdfPrint the limit is checked between steps (a running step is not interrupted), and `0` or less means no limit.
+- **`timeoutSec`** (integer) on the synchronous triggers: 30 by default, 10 for the page triggers, 30 / 60 for the Supplier Foundation triggers (none for the queued price update and order sending). For Webhook and OnPdfPrint the limit is checked between steps (a running step is not interrupted), and `0` or less means no limit.
 - Values that triggers emit as text (watch-field values, deleted-record fields) use a locale-invariant format, such as `1234.5` and `2026-10-23`.

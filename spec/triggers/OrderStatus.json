@@ -83,6 +83,7 @@
     "Publish: no trigger-specific checks and no Job Queue entry.",
     "The page action is shown only while at least one flow is published on the trigger.",
     "Outputs marked 'only when …' are not set when the condition fails; a {{trigger_<name>}} token for them then stays in the text verbatim.",
-    "Re-entrancy guard: a flow that fires its own trigger again is skipped, not recursed into."
+    "Re-entrancy guard: a flow that fires its own trigger again is skipped, not recursed into.",
+    "Started from another flow by Start order status update (action 5564018), the runs are queued instead of inline: background execution with a Job Queue entry, commit per step, no timeout (timeoutSec is ignored), Sleep allowed, a failed run keeps earlier steps' work. Write flows so both modes work."
   ]
 }

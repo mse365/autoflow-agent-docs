@@ -1,6 +1,6 @@
 # AutoFlow Supplier Foundation
 
-**AutoFlow Supplier Foundation** is a separate Business Central app on top of AutoFlow. It adds page actions for supplier work (search supplier items, update items and prices, send purchase orders, track order status, accept supplier documents) and fires a trigger for each of them. **The flows do the supplier-specific work**: Supplier Foundation knows no supplier, API or file format. It brings the actions, the triggers, three steps, the fields and tables the flows write to, and setup tables that tell the flows which vendor a supplier is and how the supplier's categories map to item templates and item categories.
+**AutoFlow Supplier Foundation** is a separate Business Central app on top of AutoFlow. It adds page actions for supplier work (search supplier items, update items and prices, send purchase orders, track order status, accept supplier documents) and fires a trigger for each of them. **The flows do the supplier-specific work**: Supplier Foundation knows no supplier, API or file format. It brings the actions, the triggers, seven steps, the fields and tables the flows write to, and setup tables that tell the flows which vendor a supplier is and how the supplier's categories map to item templates and item categories.
 
 Use this page to understand how the pieces fit together. Each trigger and step has its own reference page.
 
@@ -25,26 +25,27 @@ Use this page to understand how the pieces fit together. Each trigger and step h
 
 A page action is shown only while at least one flow is published on its trigger. Accept and Reject are always shown: accepting is the user's decision, and the flows only add what should happen because of it.
 
-The three action steps:
+The action steps:
 
 - [Add search result](../actions/AddSearchResult.md) (`"action": 5564012`). The step picker offers it only in flows on When an item search is performed.
 - [Get supplier item category](../actions/GetSuppItemCat.md) (`"action": 5564013`) maps a supplier's category to an item template and an item category. Offered for every trigger.
 - [Set supplier price](../actions/SetSupplierPrice.md) (`"action": 5564014`) writes a supplier's purchase price into Business Central's purchase prices. Offered for every trigger.
+- Four **Start** steps run a page action's trigger from any other flow, for one record, in the background (fire and forget): [Start price and availability update](../actions/StartPriceUpdate.md) (`5564015`, item), [Start item update](../actions/StartItemUpdate.md) (`5564016`, item), [Start sending purchase order](../actions/StartPOSend.md) (`5564017`) and [Start order status update](../actions/StartOrderStatus.md) (`5564018`). Use them for a nightly flow over open orders, or to send an order as soon as it is released. Offered for every trigger.
 
 ## How the flows run
 
-All eight triggers share these rules, except where **the price update** is noted: its runs are queued (see the last item).
+All eight triggers share these rules, except where **queued runs** are noted (see the last item): the price update and sending orders are always queued, and every trigger started by a Start step is queued.
 
 - **Inline, while the user waits.** The page action fires the trigger for one record at a time. Every flow published on the trigger runs in the user's session, one after the other, with the same outputs. There is no Job Queue entry and no background run.
 - **One transaction per record.** Nothing is committed while the flows run. The flows for one record, and what Supplier Foundation writes afterwards (the status of a supplier document), are committed together before the next record.
 - **An error stops at that record.** Its changes are rolled back, the records before it keep theirs, and the user sees the flow's message. Use an **Error** step to tell the user why something did not work.
-- **`timeoutSec`** is the only trigger setting: 30 seconds for the item search, 60 for the others except the price update, which has none. It is checked between steps. When it has passed, the run fails with "The flow %1 did not finish within %2 seconds and was stopped. Nothing it did has been kept."
+- **`timeoutSec`** is the only trigger setting: 30 seconds for the item search, 60 for the others except the price update and the order sending, which have none. It is checked between steps. When it has passed, the run fails with "The flow %1 did not finish within %2 seconds and was stopped. Nothing it did has been kept."
 - **No Sleep.** A step that defers the run fails it, as in every synchronous flow.
 - **Outputs that don't apply are not set.** For example `SalesHeader` when the search was started from the Item List, or `ItemVendor` when the item has no Item Vendor entry. A `{{trigger_…}}` token for such an output stays in the text verbatim, so branch on an output that is always set (`Context`, `Source`, `DocumentType`, `ExistingItemNo`).
 - **No recursion.** A flow that fires its own trigger again (through another page action) is skipped.
 - **Enum outputs are value names**, never translated captions: `SalesDocument`, `PurchaseLine`, `OrderConfirmation`, `InStock`. Compare against those, and a flow works in every language.
 - **Publish** has no trigger-specific checks.
-- **The price update is queued.** [When a price update is requested](../triggers/PriceUpdate.md) does not run inline. For each line or item, every flow on it gets its own execution with a Job Queue entry, and the user follows them in a progress window. These are ordinary background runs: they commit after every step, have no `timeoutSec` (its configuration is `{}`), may use Sleep, and one failing run does not stop the others.
+- **Queued runs.** [When a price update is requested](../triggers/PriceUpdate.md) and [When a purchase order is sent](../triggers/POSent.md) never run inline. For each record, every flow on them gets its own execution with a Job Queue entry, and the user follows them in a progress window. Their configuration is `{}` (no `timeoutSec`). A Start step queues the same way for any of four triggers, including When an item is updated and When an order status is updated, without a progress window. Queued runs are ordinary background runs: they commit after every step, have no timeout, may use Sleep, keep what earlier steps wrote when a later one fails, and one failing run does not stop the others. So a flow on ItemUpdate or OrderStatus may run either inline or queued: avoid Sleep, and write what marks success last.
 
 ## Typical flow set for one supplier
 
@@ -54,7 +55,7 @@ All eight triggers share these rules, except where **the price update** is noted
 | Import | SearchSelected | Decision on `{{trigger_ExistingItemNo}} = ''` → Parser on `{{trigger_Payload}}` → Get supplier item category → Insert Record Item + Insert Record Item Vendor, or Modify Record `{{trigger_Item}}` → Decision on `{{trigger_Context}} = SalesDocument` → Insert Record Sales Line |
 | Item master data | ItemUpdate | HTTP Request → Parser → Modify Record `{{trigger_Item}}` and `{{trigger_ItemVendor}}` |
 | Price and stock (queued) | PriceUpdate | HTTP Request → Parser → Set supplier price → Modify Record `{{trigger_ItemVendor}}` (stock) → Case on `{{trigger_Source}}` → Modify Record on the line (stock) |
-| Send order | POSent | Find Records (order lines) → HTTP Request or Send Email → Modify Record `{{trigger_PurchaseHeader}}` (Sent Via, Order Status = `Sent`) |
+| Send order (queued) | POSent | Find Records (order lines) → HTTP Request or Send Email → Modify Record `{{trigger_PurchaseHeader}}` (Sent Via, Order Status = `Sent`) |
 | Order status | OrderStatus | HTTP Request → Parser → Modify Record `{{trigger_PurchaseHeader}}` → For Each new confirmation: Insert Record supplier document header + lines |
 | Accept | DocAccepted | Case on `{{trigger_DocumentType}}` → Find Records (document lines) → For Each → Modify Record on the purchase line |
 
@@ -158,7 +159,7 @@ Item Vendor's own key fields are Vendor No. (`2`), Item No. (`1`) and Variant Co
 | `5564015` | Availability Updated At | DateTime | `mse365afsfavailupdatedat` |
 | `5564017` | Supplier | Text[100], FlowField (vendor name of Supplier No.) | `mse365afsfsuppliername`; read-only, do not write |
 
-Supplier No. decides which vendor the price update asks for this line; when it is empty, the item's Vendor No. is used. The sales line subforms show the supplier's name (field `5564017`), its stock colour-coded against the line's quantity, and a read-only *Supplier Price*. That price is not a field: it is calculated from Supplier No.'s purchase prices, so it only shows while Supplier No. is set. Purchase lines show *Supplier Price* next to *Direct Unit Cost* and let the user take it over.
+Supplier No. decides which vendor the price update asks for this line; when it is empty, the item's Vendor No. is used. The sales line subforms show the supplier's name (field `5564017`), its stock colour-coded against the line's quantity, and a read-only *Supplier Price*. That price is not a field: it is calculated from Supplier No.'s purchase prices, so it only shows while Supplier No. is set. Purchase lines show *Supplier Price* next to *Direct Unit Cost* and let the user take it over, and colour supplier stock and status the same way as sales lines (read-only there).
 
 ### Purchase Line (39)
 

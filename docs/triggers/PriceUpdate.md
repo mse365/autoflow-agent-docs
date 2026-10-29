@@ -18,6 +18,7 @@ Runs once for each sales line, purchase line or item whose price and availabilit
 - **Update price and availability** on Sales Quote, Sales Order and Sales Invoice: every item line of the document. On their line subforms: the selected lines. `Source` = `SalesLine`.
 - The same action on Purchase Quote, Purchase Order and Purchase Invoice and their line subforms. `Source` = `PurchaseLine`.
 - The same action on the Item Card and the Item List (selected items). `Source` = `Item`.
+- The step [Start price and availability update](../actions/StartPriceUpdate.md) in any other flow, for one item. `Source` = `Item`. No progress window.
 
 ## What it does
 

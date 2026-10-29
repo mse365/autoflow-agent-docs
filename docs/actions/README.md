@@ -15,6 +15,10 @@ Machine-readable list: [`spec/index.json`](../../spec/index.json).
 | Add search result | `5564012` |  |  | [AddSearchResult](AddSearchResult.md) |
 | Get supplier item category | `5564013` |  |  | [GetSuppItemCat](GetSuppItemCat.md) |
 | Set supplier price | `5564014` |  |  | [SetSupplierPrice](SetSupplierPrice.md) |
+| Start item update | `5564016` |  |  | [StartItemUpdate](StartItemUpdate.md) |
+| Start order status update | `5564018` |  |  | [StartOrderStatus](StartOrderStatus.md) |
+| Start price and availability update | `5564015` |  |  | [StartPriceUpdate](StartPriceUpdate.md) |
+| Start sending purchase order | `5564017` |  |  | [StartPOSend](StartPOSend.md) |
 
 ## Control
 

@@ -346,6 +346,16 @@
       "availability": "ga"
     },
     {
+      "name": "StartItemUpdate",
+      "id": 5564016,
+      "caption": "Start item update",
+      "category": "AutoFlow Supplier Foundation",
+      "terminating": false,
+      "group": false,
+      "availability": "ga",
+      "app": "AutoFlow Supplier Foundation"
+    },
+    {
       "name": "StartManualFlow",
       "id": 5564424,
       "caption": "Start flow",
@@ -353,6 +363,36 @@
       "terminating": false,
       "group": false,
       "availability": "ga"
+    },
+    {
+      "name": "StartOrderStatus",
+      "id": 5564018,
+      "caption": "Start order status update",
+      "category": "AutoFlow Supplier Foundation",
+      "terminating": false,
+      "group": false,
+      "availability": "ga",
+      "app": "AutoFlow Supplier Foundation"
+    },
+    {
+      "name": "StartPOSend",
+      "id": 5564017,
+      "caption": "Start sending purchase order",
+      "category": "AutoFlow Supplier Foundation",
+      "terminating": false,
+      "group": false,
+      "availability": "ga",
+      "app": "AutoFlow Supplier Foundation"
+    },
+    {
+      "name": "StartPriceUpdate",
+      "id": 5564015,
+      "caption": "Start price and availability update",
+      "category": "AutoFlow Supplier Foundation",
+      "terminating": false,
+      "group": false,
+      "availability": "ga",
+      "app": "AutoFlow Supplier Foundation"
     },
     {
       "name": "SubFlowOutput",

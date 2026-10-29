@@ -1,0 +1,79 @@
+{
+  "kind": "action",
+  "name": "StartPriceUpdate",
+  "id": 5564015,
+  "caption": "Start price and availability update",
+  "category": "AutoFlow Supplier Foundation",
+  "app": "AutoFlow Supplier Foundation",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "reference",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "record",
+      "description": "SmartField reference to the item (table 27), written as exactly one placeholder, e.g. \"{{trigger_Item}}\" or the current record of a For Each. Resolved like Modify Record's reference: an undotted name is looked up in the flow context, a dotted path is walked through the SmartField definitions."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "FlowsQueued",
+      "type": "value",
+      "tableNo": null,
+      "when": "always - number of flows queued, as an invariant integer ('0' when no flow is published on the trigger)"
+    }
+  ],
+  "rules": [
+    {
+      "id": "StartPriceUpdate.reference-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "The configuration dialog refuses to save while Item is empty.",
+      "message": "Please fill in the highlighted fields.",
+      "machine": {
+        "type": "required",
+        "key": "reference"
+      }
+    },
+    {
+      "id": "StartPriceUpdate.reference-placeholder",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "configuration.reference must be a single SmartField placeholder that resolves to a record in the flow context.",
+      "message": "Reference \"%1\" cannot be resolved to a record.",
+      "machine": {
+        "type": "regex",
+        "key": "reference",
+        "pattern": "\\s*\\{\\{\\s*[^{}]*\\S[^{}]*\\s*\\}\\}\\s*"
+      }
+    },
+    {
+      "id": "StartPriceUpdate.wrong-record",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The resolved record is not an Item (table 27).",
+      "message": "The record of \"%1\" must be an item."
+    },
+    {
+      "id": "StartPriceUpdate.no-flow",
+      "severity": "info",
+      "stage": "runtime",
+      "check": "No flow (other than the calling one) is published on PriceUpdate; nothing is queued, FlowsQueued = 0, an Info entry is logged and the flow continues.",
+      "message": "No flow is published for \"%1\" - nothing was started."
+    }
+  ],
+  "notes": [
+    "Requires the AutoFlow Supplier Foundation app. See docs/apps/SupplierFoundation.md.",
+    "Offered in the step picker for every trigger.",
+    "Fire and forget: queues every flow published on PriceUpdate (5564015) for the record, with the outputs the page action 'Update price and availability' would give them, each as its own execution with a Job Queue entry. The calling flow continues at once and never learns how the runs end.",
+    "The calling flow itself is never queued (so a flow on that trigger cannot start itself over and over). Two flows that start each other's triggers are not guarded.",
+    "Business Central starts a Job Queue entry only after the transaction that created it commits. In a background flow that is the end of this step; in an inline or synchronous flow it is the end of the caller's transaction, and if that transaction rolls back, nothing is started.",
+    "Logs an Info entry '%1 flow(s) started for %2.'",
+    "`Source` is `Item`; `SalesLine` and `PurchaseLine` are not set. The flows normally write the price with Set supplier price and the stock to the Item Vendor entry."
+  ]
+}

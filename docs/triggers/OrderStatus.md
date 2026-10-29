@@ -16,10 +16,13 @@ Runs for each purchase order whose status the user updates from the supplier. Us
 ## Where it fires
 
 - **Update order status** on the Purchase Order and the Purchase Order List (every selected order; only document type Order).
+- The step [Start order status update](../actions/StartOrderStatus.md) in any other flow, for one order (queued, see below).
 
 ## What it does
 
 One run per order, inline, one transaction per order, committed before the next one. An error stops at that order.
+
+**Started by a step, the run is queued instead.** [Start order status update](../actions/StartOrderStatus.md) in another flow queues this trigger's flows for one order in the background, like the price update: commit per step, no timeout, Sleep allowed, and a failed run keeps the work of the steps before the error. Nobody waits for it and no message reaches a user; check the executions. A flow on this trigger can therefore run either way. Write it so that both are fine: no Sleep, and the writes that mark success last.
 
 Supplier Foundation writes nothing by itself. The flow sets *Supplier Order Status* (field `5564013`) and *Order Status Updated At* (`5564014`) and inserts supplier documents (tables `5564013` header, `5564014` lines). A user then accepts or rejects each document, which fires [When a supplier document is accepted](DocAccepted.md) or [rejected](DocRejected.md).
 

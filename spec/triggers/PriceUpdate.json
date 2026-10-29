@@ -64,6 +64,7 @@
     "Publish: no trigger-specific checks and no Job Queue entry at publish; entries are created when the action is used.",
     "The page action is shown only while at least one flow is published on the trigger.",
     "Outputs marked 'only when …' are not set when the condition fails; a {{trigger_<name>}} token for them then stays in the text verbatim.",
-    "Write the price with Set supplier price (action 5564014); Item Vendor no longer has a supplier price field."
+    "Write the price with Set supplier price (action 5564014); Item Vendor no longer has a supplier price field.",
+    "Also started for one item by the step Start price and availability update (action 5564015), with Source = Item and without a progress dialog."
   ]
 }

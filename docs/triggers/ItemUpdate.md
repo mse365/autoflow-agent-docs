@@ -16,10 +16,13 @@ Runs for each item the user updates from the supplier. Use it to fetch the item'
 ## Where it fires
 
 - **Update from supplier** on the Item Card (that item) and the Item List (every selected item).
+- The step [Start item update](../actions/StartItemUpdate.md) in any other flow, for one item (queued, see below).
 
 ## What it does
 
 One run per item. For each item, every flow on this trigger runs inline, in the user's session, in one transaction that is committed before the next item. An error stops at that item: its changes are rolled back, the items before it keep theirs, and the user sees the flow's message.
+
+**Started by a step, the run is queued instead.** [Start item update](../actions/StartItemUpdate.md) in another flow queues this trigger's flows for one item in the background, like the price update: commit per step, no timeout, Sleep allowed, and a failed run keeps the work of the steps before the error. Nobody waits for it and no message reaches a user; check the executions. A flow on this trigger can therefore run either way. Write it so that both are fine: no Sleep, and the writes that mark success last.
 
 The vendor is the item's *Vendor No.* The Item Vendor entry is the one for that vendor without a variant code.
 

@@ -8,18 +8,7 @@
   "availability": "ga",
   "terminating": false,
   "group": false,
-  "configuration": [
-    {
-      "key": "timeoutSec",
-      "type": "integer",
-      "required": true,
-      "default": 60,
-      "enum": null,
-      "maxLength": null,
-      "smart": "none",
-      "description": "Seconds the user waits for the flow at most (default 60). Checked between steps; when it has passed, the run fails and everything it did is rolled back. Missing, not an integer, or <= 0 means 60. Keep it between 1 and 600."
-    }
-  ],
+  "configuration": [],
   "outputs": [
     {
       "name": "PurchaseHeader",
@@ -36,53 +25,21 @@
   ],
   "rules": [
     {
-      "id": "POSent.timeout-required-editor",
-      "severity": "error",
-      "stage": "editor",
-      "check": "The configuration dialog refuses to save while the timeout is empty.",
-      "message": "Please fill in the highlighted fields.",
-      "machine": {
-        "type": "type",
-        "key": "timeoutSec",
-        "valueType": "integer"
-      }
-    },
-    {
-      "id": "POSent.timeout-default",
-      "severity": "info",
-      "stage": "runtime",
-      "check": "timeoutSec missing, not an integer or <= 0 is treated as 60.",
-      "message": "(no message)"
-    },
-    {
-      "id": "POSent.timeout",
-      "severity": "error",
-      "stage": "runtime",
-      "check": "The flow did not finish within timeoutSec. The run is stopped and rolled back; the user sees the message.",
-      "message": "The flow %1 did not finish within %2 seconds and was stopped. Nothing it did has been kept."
-    },
-    {
-      "id": "POSent.no-deferred-steps",
-      "severity": "error",
-      "stage": "runtime",
-      "check": "The flow runs synchronously, so a step that defers the run (Sleep) fails it.",
-      "message": "Step %1 (%2) requested a deferred resume, but the flow is running synchronously. Use Sleep or other time-based deferral steps only outside of synchronous frames (Webhook sync phase or SubFlow body)."
-    },
-    {
       "id": "POSent.flow-error",
       "severity": "error",
       "stage": "runtime",
-      "check": "An error in the flow (e.g. an Error step) rolls back this record's run and stops the page action at this record; the user sees the flow's message.",
-      "message": "(the flow's own error message)"
+      "check": "An error in a queued run fails that execution only. Steps before the error keep their work (commit per step); the runs for the other orders go on. When all runs have finished, the progress dialog asks whether to open the failed executions.",
+      "message": "%1 of %2 executions ended with an error. Do you want to open them?"
     }
   ],
   "notes": [
     "Requires the AutoFlow Supplier Foundation app, which depends on AutoFlow and AutoFlow Core. See docs/apps/SupplierFoundation.md.",
-    "Interactive: fired by a page action for one record at a time; every published flow on the trigger runs inline in the user's session, one after the other, with the same outputs.",
-    "No commits while the flows run. Each record's run (all flows) is one transaction, committed before the next record.",
-    "Publish: no trigger-specific checks and no Job Queue entry.",
+    "Queued, like PriceUpdate: Send to supplier creates one execution with a Job Queue entry per purchase order (document type Order only) and published flow, commits, and follows them in a progress dialog ('Sending purchase orders to the supplier'; gives up waiting after 5 minutes, the runs continue in the background).",
+    "Also started for one order by the step Start sending purchase order (action 5564017), without a progress dialog.",
+    "Each run is an ordinary background run: commit per step, no timeout, Sleep allowed; a failed run keeps what earlier steps wrote, so set Sent Via / Supplier Order Status last.",
+    "No configuration: write \"configuration\": {}. A timeoutSec left over from an earlier version is ignored.",
+    "Publish: no trigger-specific checks and no Job Queue entry at publish.",
     "The page action is shown only while at least one flow is published on the trigger.",
-    "Outputs marked 'only when …' are not set when the condition fails; a {{trigger_<name>}} token for them then stays in the text verbatim.",
-    "Re-entrancy guard: a flow that fires its own trigger again is skipped, not recursed into."
+    "Outputs marked 'only when …' are not set when the condition fails; a {{trigger_<name>}} token for them then stays in the text verbatim."
   ]
 }
