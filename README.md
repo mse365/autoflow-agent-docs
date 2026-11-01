@@ -50,6 +50,14 @@ Without the API, the same round trip works by hand:
 2. Let the agent edit it, then run the validator.
 3. Choose **Create from file** to import it as a draft: a new flow, or a new draft version of the flow that already has the file's `code` (after a confirmation). Review it in the editor, then **Publish changes**.
 
+## In-app use (AutoFlow AI Flow Builder)
+
+Since AutoFlow 27.0.41 these docs are also packed into the AutoFlow app itself: the AI Flow Builder
+inside Business Central serves `IN-APP.md`, `docs/` and `spec/` to the model through tools, and
+validates with an AL port of `tools/validate_flow.py`. `IN-APP.md` is the entry page for that
+setting (no files, no Python); `AGENTS.md` stays the entry page for external agents such as
+Claude Code. Both share the step pages and specs, so a change to a step is documented once.
+
 ## Scope and versioning
 
 - Verified against **AutoFlow 27.0.40**, released 23 October 2026. To see your version, open *Extension Management* in Business Central and look at the AutoFlow entry.
