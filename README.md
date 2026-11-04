@@ -52,8 +52,10 @@ Without the API, the same round trip works by hand:
 
 ## In-app use (AutoFlow AI Flow Builder)
 
-Since AutoFlow 27.0.41 these docs are also packed into the AutoFlow app itself: the AI Flow Builder
-inside Business Central serves `IN-APP.md`, `docs/` and `spec/` to the model through tools, and
+Since AutoFlow 27.0.41 the AI Flow Builder inside Business Central also uses these docs. Each
+AutoFlow build is pinned to one commit of this repo; on first use the app downloads that commit
+from GitHub (`codeload.github.com`) once and caches it, so the docs always match the installed
+version. It serves `IN-APP.md`, `docs/`, `spec/` and `examples/` to the model through tools, and
 validates with an AL port of `tools/validate_flow.py`. `IN-APP.md` is the entry page for that
 setting (no files, no Python); `AGENTS.md` stays the entry page for external agents such as
 Claude Code. Both share the step pages and specs, so a change to a step is documented once.
