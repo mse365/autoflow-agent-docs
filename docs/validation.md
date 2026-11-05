@@ -97,6 +97,7 @@ Inside Business Central, the AI Flow Builder runs the same checks as `tools/vali
 |---|---|---|
 | `action.unknown`, `trigger.unknown` | error | The ordinal is not a step installed in this environment (AutoFlow or any other app). |
 | `step.unavailable` | error | The step is installed but not available here: not licensed, or not allowed with this flow's trigger. The editor does not offer it and publish refuses it. Use another step. |
+| `step.trigger-response` | error | A reply step (Respond to webhook, Return sub-flow output, Return PDF, Set report file name, Set document field values, Prevent page close) in a flow that is not started by the trigger it answers. The editor only offers it with that trigger. |
 | `step.publish-check` | error | The publish check of the step's app rejects it in this flow (for example a step that needs a trigger that can wait). Publishing would fail at this step. |
 | `step.publish-warning` | warning | The publish check of the step's app warns about it; publish would ask for confirmation. |
 | `step.no-spec` | lint | The step's app documents no spec, so its configuration is not checked. Confirm the keys on its page and in existing flows. |
