@@ -101,6 +101,15 @@
       "availability": "ga"
     },
     {
+      "name": "CreateZipArchive",
+      "id": 5564425,
+      "caption": "Create ZIP archive",
+      "category": "Documents",
+      "terminating": false,
+      "group": false,
+      "availability": "ga"
+    },
+    {
       "name": "Decision",
       "id": 100,
       "caption": "Decision",
@@ -162,6 +171,16 @@
       "terminating": false,
       "group": true,
       "availability": "ga"
+    },
+    {
+      "name": "FormTask",
+      "id": 5564426,
+      "caption": "Form task",
+      "category": "Tasks",
+      "terminating": false,
+      "group": false,
+      "availability": "dark-launched",
+      "feature": "tasks"
     },
     {
       "name": "GetDimensions",
@@ -249,6 +268,15 @@
       "id": 5564419,
       "caption": "Prevent page close",
       "category": "Trigger Responses",
+      "terminating": false,
+      "group": false,
+      "availability": "ga"
+    },
+    {
+      "name": "ReadTaskRepeater",
+      "id": 5564427,
+      "caption": "Read task repeater",
+      "category": "Tasks",
       "terminating": false,
       "group": false,
       "availability": "ga"

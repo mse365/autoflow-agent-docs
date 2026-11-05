@@ -1,0 +1,451 @@
+{
+  "kind": "action",
+  "name": "FormTask",
+  "id": 5564426,
+  "caption": "Form task",
+  "category": "Tasks",
+  "availability": "dark-launched",
+  "feature": "tasks",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "instructions",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "What the person should fill in and why. Shown above the form. Supports SmartFields {{..}}, SmartFormulas [[..]] and SmartControls {#..#}. The task's subject is the step's description (fallback: the flow's description), not this text."
+    },
+    {
+      "key": "assignType",
+      "type": "integer",
+      "required": false,
+      "default": 0,
+      "enum": [
+        0,
+        1
+      ],
+      "maxLength": null,
+      "smart": "none",
+      "description": "0 = a single user, 1 = a task group (any member can complete it). The editor always writes it. Any value other than 1 is treated as a user. There is no 'user who started the flow' option (2) for form tasks."
+    },
+    {
+      "key": "assignee",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "assignType 0: a Business Central user name (or user security ID). assignType 1: a task group code. Matched case-insensitively after trimming. Can be a SmartField resolved when the step runs. Assigning needs no AutoFlow Tasks seat; completing does."
+    },
+    {
+      "key": "dueDate",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "Optional. A date (yyyy-mm-dd is safest) or a SmartDate. Overdue tasks are highlighted in the inbox. A value that does not resolve to a date is ignored silently."
+    },
+    {
+      "key": "sections",
+      "type": "array",
+      "required": false,
+      "default": [],
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Rows of { caption, name, kind, rowsFrom, allowAdd }. Optional: fields without a section go into a section without a heading at the top of the form. The editor always writes the array."
+    },
+    {
+      "key": "sections[].caption",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Heading of the section on the task card."
+    },
+    {
+      "key": "sections[].name",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "How fields (fields[].section) and outputs refer to the section; a repeater's outputs are <name> and <name>Count. Letters and digits, starting with a letter, at most 20 characters, unique across all field and section names (case-insensitive). Not checked when the flow is saved or published. The editor fills an empty name from the caption (camelCase)."
+    },
+    {
+      "key": "sections[].kind",
+      "type": "string",
+      "required": false,
+      "default": "normal",
+      "enum": [
+        "normal",
+        "repeater"
+      ],
+      "maxLength": null,
+      "smart": "none",
+      "description": "normal = fields one below the other; repeater = a table the person fills in row by row. Anything other than 'repeater' counts as normal."
+    },
+    {
+      "key": "sections[].rowsFrom",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "field",
+      "description": "Repeater only: exactly one SmartField placeholder '{{name}}' pointing to records or values (a reference, an array, an iterator), read in its raw form. One prefilled row per entry, at most 1,000. Empty: the repeater starts without rows."
+    },
+    {
+      "key": "sections[].allowAdd",
+      "type": "boolean",
+      "required": false,
+      "default": false,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Repeater only: true lets the person add and delete rows; false keeps the prefilled rows as they are."
+    },
+    {
+      "key": "fields",
+      "type": "array",
+      "required": true,
+      "default": [],
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Rows of { section, caption, name, type, required, value, options, freeText, tableNo, filters }. At least one field is needed (else the task cannot be created). The editor always writes the array and every column of a row."
+    },
+    {
+      "key": "fields[].section",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "The name of the section the field belongs to. Empty (or a name that does not exist) = the section without a heading at the top."
+    },
+    {
+      "key": "fields[].caption",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Label of the field on the task card."
+    },
+    {
+      "key": "fields[].name",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Output name of the field. Letters and digits, starting with a letter, at most 20 characters, unique across all field and section names (case-insensitive). Not checked when the flow is saved or published. The editor fills an empty name from the caption (camelCase: 'Delivery date' -> deliveryDate); always set it in hand-written JSON."
+    },
+    {
+      "key": "fields[].type",
+      "type": "string",
+      "required": false,
+      "default": "text",
+      "enum": [
+        "text",
+        "multiline",
+        "boolean",
+        "integer",
+        "decimal",
+        "date",
+        "datetime",
+        "dropdown",
+        "reference"
+      ],
+      "maxLength": null,
+      "smart": "none",
+      "description": "Field type. Empty counts as text."
+    },
+    {
+      "key": "fields[].required",
+      "type": "boolean",
+      "required": false,
+      "default": false,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "true: the task can only be completed once the field is filled in."
+    },
+    {
+      "key": "fields[].value",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "Prefill, SmartText resolved when the task is created (SmartFields, SmartFormulas, SmartDates). In a repeater, a prefill that starts with the section's rowsFrom name ({{FindCust_results.name}} for rowsFrom {{FindCust_results}}) is resolved per row; any other prefill is the same in every row. type reference: exactly one '{{name}}' placeholder holding a record (the first of an array); anything else prefills nothing."
+    },
+    {
+      "key": "fields[].options",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "type dropdown only: the values, separated by ';' or line breaks. SmartText; an entry that is exactly one SmartField holding an array adds each of its values."
+    },
+    {
+      "key": "fields[].freeText",
+      "type": "boolean",
+      "required": false,
+      "default": false,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "type dropdown only: true also accepts values that are not in the list."
+    },
+    {
+      "key": "fields[].tableNo",
+      "type": "integer",
+      "required": false,
+      "default": 0,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "type reference only: the table whose records the field offers (matching filters, primary-key order, at most 1,000). 0 for other types."
+    },
+    {
+      "key": "fields[].filters",
+      "type": "array",
+      "required": false,
+      "default": [],
+      "enum": null,
+      "maxLength": null,
+      "smart": "filter",
+      "description": "type reference only: [{ \"fieldNo\": <field no. of tableNo>, \"filter\": \"<filter expression>\" }]; filter supports SmartText and is resolved when the task is created. [] = no filter."
+    },
+    {
+      "key": "previewKind",
+      "type": "integer",
+      "required": false,
+      "default": 0,
+      "enum": [
+        0,
+        1,
+        2
+      ],
+      "maxLength": null,
+      "smart": "none",
+      "description": "0 = no preview, 1 = HTML (previewHtml), 2 = document (previewDocument)."
+    },
+    {
+      "key": "previewHtml",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "previewKind 1: HTML with SmartFields, rendered live on the card (not a snapshot). Can use earlier steps' outputs and the form's own fields as {{<slug>_<field>}}; a repeater's rows with {#for {{<slug>_<section>}} #}...{{<slug>_<section>.<column>}}...{#endfor#} and {{<slug>_<section>Count}}."
+    },
+    {
+      "key": "previewDocument",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "field",
+      "description": "previewKind 2: exactly one '{{name}}' placeholder pointing to an incoming document attachment or an AutoFlow document - can be one of the form's own record fields ({{<slug>_<field>}}), so the preview follows the person's choice."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "<field name>",
+      "type": "value",
+      "tableNo": null,
+      "when": "once completed - one per field of a normal section (including the top section), named by fields[].name; text in XML format (true/false, 12, 1.25, 2026-11-02, 2026-11-02T09:30:00)"
+    },
+    {
+      "name": "<field name>",
+      "type": "reference",
+      "tableNo": "<fields[].tableNo>",
+      "when": "once completed, when the record field was filled in - fields of type reference in a normal section; the chosen record"
+    },
+    {
+      "name": "<section name>",
+      "type": "reference",
+      "tableNo": 5564267,
+      "when": "once completed, when the repeater has rows - one per repeater section: its rows as SmartObjects (table 5564267 mse365 SK SmartObject), {{slug_section}} = the first row, {{slug_section[i]}} = the i-th (0-based); columns = the section's fields ({{slug_section.column}}). The declared output carries \"columns\": [{ name, type: value|reference, tableNo (reference only) }], one per field of the section in fields order - Read task repeater and For Each take them over"
+    },
+    {
+      "name": "<section name>Count",
+      "type": "value",
+      "tableNo": null,
+      "when": "once completed - one per repeater section: number of rows"
+    },
+    {
+      "name": "completedBy",
+      "type": "value",
+      "tableNo": null,
+      "when": "once completed - user name of who completed the task"
+    },
+    {
+      "name": "task",
+      "type": "reference",
+      "tableNo": 5564323,
+      "when": "once completed - the task record (table 5564323 mse365 AF-CO Task)"
+    }
+  ],
+  "rules": [
+    {
+      "id": "FormTask.instructions-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "The configuration dialog refuses to save while the instructions are empty. (The step's own check 'Enter the instructions for the person who fills in the form.' is not run.)",
+      "message": "Please fill in the highlighted fields.",
+      "machine": {
+        "type": "required",
+        "key": "instructions"
+      }
+    },
+    {
+      "id": "FormTask.assignee-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "The configuration dialog refuses to save while the assignee is empty. At runtime an empty assignee fails the step. (The step's own check 'Choose who completes the task: a user or a task group.' is not run.)",
+      "message": "Please fill in the highlighted fields.",
+      "machine": {
+        "type": "required",
+        "key": "assignee"
+      }
+    },
+    {
+      "id": "FormTask.tasks-not-enabled",
+      "severity": "error",
+      "stage": "publish",
+      "check": "AutoFlow Tasks (portal feature flag 'tasks') is not enabled for the environment. Hard error, not a 'publish anyway' warning. The step is also hidden from the step list.",
+      "message": "The task step '%1' cannot be published: AutoFlow Tasks is not enabled for this environment.",
+      "machine": {
+        "type": "feature",
+        "feature": "tasks"
+      }
+    },
+    {
+      "id": "FormTask.trigger-cannot-wait",
+      "severity": "error",
+      "stage": "publish",
+      "check": "The flow's trigger runs inline and cannot wait for a person: 5564529 record created or modified (interactive), 5564543 document released, 5564549 document posted, 5564409 document reopened, 5564407 page opened, 5564408 page closed, 5564405 PDF printed, 5564406 report file name, 5564404 SubFlow. Hard error. The step is also hidden from the step list in such flows.",
+      "message": "The task step '%1' cannot be used in this flow: its trigger runs while the user works on the record (or answers right away), so the flow cannot wait for a person there. Use a trigger that runs in the background, such as a record trigger, a schedule or a manual start.",
+      "machine": {
+        "type": "triggerNotIn",
+        "triggers": [
+          5564529,
+          5564543,
+          5564549,
+          5564409,
+          5564407,
+          5564408,
+          5564405,
+          5564406,
+          5564404
+        ]
+      }
+    },
+    {
+      "id": "FormTask.no-fields",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "fields is empty (or every field row is missing) when the task is created. (The step's own check 'Add at least one field to the form.' is not run in the editor.)",
+      "message": "The form has no fields.",
+      "machine": {
+        "type": "required",
+        "key": "fields"
+      }
+    },
+    {
+      "id": "FormTask.bad-filter",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "A reference field's filters cannot be applied to tableNo (unknown field no., or a resolved filter that does not fit the field type).",
+      "message": "The filter of the record field '%1' cannot be applied to field %2."
+    },
+    {
+      "id": "FormTask.runtime-not-enabled",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "AutoFlow Tasks was switched off after the flow was published",
+      "message": "AutoFlow Tasks is not enabled for this environment."
+    },
+    {
+      "id": "FormTask.runtime-inline",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The step runs inside an inline frame (backstop for the publish check, e.g. a flow published before it existed)",
+      "message": "Task steps cannot run in a trigger that runs while the user works on the record (for example when a document is released, posted or modified). Run the task from a flow with a background trigger instead."
+    },
+    {
+      "id": "FormTask.runtime-subflow",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The step runs in a flow executed as a sub-flow (the execution has a parent execution)",
+      "message": "Task steps cannot run inside a sub-flow. Put the task step into the calling flow."
+    },
+    {
+      "id": "FormTask.no-assignee",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "assignee resolves to an empty text",
+      "message": "The task has no assignee. Choose a user or a group in the step."
+    },
+    {
+      "id": "FormTask.user-not-found",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "assignType 0 and no Business Central user has that user name (or user security ID)",
+      "message": "The task cannot be assigned to user %1: the user does not exist."
+    },
+    {
+      "id": "FormTask.user-disabled",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "assignType 0 and the user is disabled",
+      "message": "The task cannot be assigned to user %1: the user is disabled."
+    },
+    {
+      "id": "FormTask.group-not-found",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "assignType 1 and no task group has that code",
+      "message": "The task cannot be assigned to group %1: the group does not exist."
+    },
+    {
+      "id": "FormTask.cancelled",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The task was cancelled (by an administrator, or because the run was deleted) while the flow waited",
+      "message": "Task %1 was cancelled by %2: %3"
+    }
+  ],
+  "notes": [
+    "Dark-launched: only available where AutoFlow Tasks (portal feature flag 'tasks') is enabled for the environment. Elsewhere the step is hidden in the editor and publish refuses it.",
+    "The flow waits in the background like the Approval task: parked, checked every poll interval (AutoFlow Setup 'Task Poll Interval (Min.)', default 5 minutes), and continued immediately when the user the flow runs as completes the task themselves. Each loop pass creates its own task; a retried run reuses the task it created.",
+    "Completing (and saving a draft of) a form task needs a paid AutoFlow licence and an AutoFlow Tasks seat. Assigning needs no seat.",
+    "In a Webhook flow with WaitForResponse, put the step after Respond to Webhook: in the synchronous phase the step cannot park and fails.",
+    "The form is a snapshot taken when the task is created: prefills, dropdown values, the records a record field offers (at most 1,000) and the prefilled repeater rows (at most 1,000). Only the preview is rendered live.",
+    "The step's own design-time checks are not run: 'The name '%1' is used more than once. Field and section names must be unique.', 'The name '%1' is not valid: use letters and digits only, at most %2 characters, starting with a letter.', 'The field '%1' is in section '%2', which does not exist.', 'Choose the table of the record field '%1'.', 'Enter the values of the dropdown '%1'.', 'The prefill of '%1' must use the rows of its section, for example {{%2.Name}}.', 'The repeater section '%1' has no fields.', 'Choose the document the preview shows.' Follow these rules anyway.",
+    "Fields of a repeater section have no outputs of their own: read them through the repeater output, a For Each over it, or Read task repeater. Output names are cut at 30 characters.",
+    "On the card, Complete checks required fields and refuses values it cannot read (dates, numbers), dropdown values not offered (unless freeText) and records not in the list. Save draft keeps the entries, the task stays open."
+  ]
+}

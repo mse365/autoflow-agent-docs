@@ -20,7 +20,9 @@ python3 tools/validate_flow.py my-flow.json --features tasks  # the user confirm
 
 It reports `error` (AutoFlow refuses the definition or it will certainly fail), `warning` (publish asks for confirmation) and `lint` (AutoFlow doesn't check this, but it's almost certainly a mistake).
 
-Early-access (dark-launched) steps get a `step.dark-launched` warning: they only work where their feature is enabled for the environment. Pass `--features <feature>` (e.g. `tasks`) once the user has confirmed it is.
+Early-access (dark-launched) steps get a `step.dark-launched` warning: they only work where their feature is enabled for the environment. Pass `--features <feature>` (e.g. `tasks`) once the user has confirmed it is. This warning exists only in the offline validator; inside Business Central the AI asks the environment instead (see [In-app checks](#in-app-checks-ai-flow-builder)).
+
+Actions whose spec lists `worksWithTriggers` get an `action.trigger-mismatch` lint in flows on any other trigger: they are accepted there, but do nothing.
 
 ## Import
 
@@ -86,6 +88,22 @@ These are the most common silent failures. The validator flags most of them.
 - **Steps under the wrong trigger.** The step picker hides trigger-specific steps such as Respond to Webhook, Return PDF and Set File Name, but publish doesn't reject them. They then do nothing or fail at runtime.
 - **Environment-specific references**: credential codes, flow Codes (Run SubFlow, Start flow) and SubFlow version pins, number series, dimension codes, table, field, page and report numbers from extensions. The JSON is accepted, but the target must exist in the environment.
 - **Synchronous contexts.** Steps that wait or defer, such as Sleep with a deferral, fail when they're reached in a synchronous run: the webhook wait phase, SubFlow bodies, and interactive triggers.
+
+## In-app checks (AI Flow Builder)
+
+Inside Business Central, the AI Flow Builder runs the same checks as `tools/validate_flow.py` on every edit, with these differences, because it knows the environment:
+
+| Rule | Severity | Meaning |
+|---|---|---|
+| `action.unknown`, `trigger.unknown` | error | The ordinal is not a step installed in this environment (AutoFlow or any other app). |
+| `step.unavailable` | error | The step is installed but not available here: not licensed, or not allowed with this flow's trigger. The editor does not offer it and publish refuses it. Use another step. |
+| `step.trigger-response` | error | A reply step (Respond to webhook, Return sub-flow output, Return PDF, Set report file name, Set document field values, Prevent page close) in a flow that is not started by the trigger it answers. The editor only offers it with that trigger. |
+| `step.publish-check` | error | The publish check of the step's app rejects it in this flow (for example a step that needs a trigger that can wait). Publishing would fail at this step. |
+| `step.publish-warning` | warning | The publish check of the step's app warns about it; publish would ask for confirmation. |
+| `step.no-spec` | lint | The step's app documents no spec, so its configuration is not checked. Confirm the keys on its page and in existing flows. |
+| `action.trigger-mismatch` | lint | As offline: the spec's `worksWithTriggers` does not include the flow's trigger. |
+
+The step specs come from the apps that own the steps ([app-step-docs.md](app-step-docs.md)), so steps of other apps are checked by their own rules. `step.dark-launched` and `--features` do not exist in-app: the environment decides which steps are available, and the AI only sees those.
 
 ## Preflight checklist for agents
 
