@@ -6,6 +6,7 @@ You are working with **AutoFlow** flow definitions: the JSON documents that *Exp
 
 1. **Read the format first**: [docs/flow-definition.md](docs/flow-definition.md). It covers the root object, the trigger and action step shapes, edges, ids, slugs, outputs and execution order.
 2. **Pick the trigger** from [docs/triggers/README.md](docs/triggers/README.md) and **the actions** from [docs/actions/README.md](docs/actions/README.md). Then open each step's page: it lists every configuration key, its type and default, the outputs it produces, its validation rules, and a valid example.
+   Steps with an `app` in [spec/index.json](spec/index.json) come from a separate app and only exist where that app is installed. Steps of apps that are not documented here (vendor apps, per-tenant extensions) have no page in this repo: ask the user for the step's configuration, or for an exported flow that uses it.
 3. **Wire data between steps** with `{{<slug>_<output>}}` tokens. The syntax (field paths, loop items, formulas, dates, conditions) is in [docs/references-and-smart-fields.md](docs/references-and-smart-fields.md).
 4. **Validate before you hand over**:
    ```sh
@@ -52,5 +53,10 @@ A `CERTIFICATE_VERIFY_FAILED` error while curl works means Python has no CA bund
 ## Machine-readable data
 
 - `spec/actions/*.json`, `spec/triggers/*.json`: per-step configuration, outputs, edges and rules ([format](spec/_FORMAT.md)).
-- `spec/index.json`: all steps with ordinals.
+- `spec/index.json`: all steps with ordinals (and `app` for steps of a separate app).
+- `spec/sources.json`: which app each step page and spec is generated from.
 - `spec/smart-syntax.json`: token grammar, built-in tokens, formula functions, date grammar, condition operators.
+
+## Step pages are generated
+
+The step pages and specs (`docs/actions/`, `docs/triggers/`, `spec/actions/`, `spec/triggers/`) are maintained in the app that owns each step and copied here for every release with `tools/sync_step_docs.py`. Do not edit them in this repo: a fix goes into the app, and the next sync brings it here. How an app documents its own steps for AutoFlow: [docs/app-step-docs.md](docs/app-step-docs.md).

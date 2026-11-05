@@ -1,0 +1,112 @@
+{
+  "kind": "action",
+  "name": "ReadTaskRepeater",
+  "id": 5564427,
+  "caption": "Read task repeater",
+  "category": "Tasks",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "input",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "field",
+      "description": "Exactly one SmartField placeholder '{{name}}' pointing to a Form task's repeater output ({{slug_section}}), one row of it ({{slug_section[2]}}), or a For Each currentItem / items over it. Read in its raw form."
+    },
+    {
+      "key": "columns",
+      "type": "array",
+      "required": true,
+      "default": [],
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Rows of { name, type: \"value\" | \"reference\", tableNo (reference only) } - the columns of the form task's repeater, one per field of the section in fields order. The editor copies them from the form task's repeater output (or a For Each over it) on save and refreshes them whenever another step is edited. Only these columns are read."
+    },
+    {
+      "key": "columns[].name",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "The repeater field's name (fields[].name of the Form task)."
+    },
+    {
+      "key": "columns[].type",
+      "type": "string",
+      "required": true,
+      "default": "value",
+      "enum": [
+        "value",
+        "reference"
+      ],
+      "maxLength": null,
+      "smart": "none",
+      "description": "value, or reference for a record field."
+    },
+    {
+      "key": "columns[].tableNo",
+      "type": "integer",
+      "required": false,
+      "default": null,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "reference columns: the record field's table (fields[].tableNo of the Form task)."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "<column name>",
+      "type": "value",
+      "tableNo": null,
+      "when": "when at least one row was read - one per value column: the first row's value; {{slug_column[i]}} holds row i (0-based, not declared)"
+    },
+    {
+      "name": "<column name>",
+      "type": "reference",
+      "tableNo": "<columns[].tableNo>",
+      "when": "when at least one row was read - one per reference column: the first row's record; {{slug_column[i]}} holds row i (0-based, not declared)"
+    },
+    {
+      "name": "count",
+      "type": "value",
+      "tableNo": null,
+      "when": "always - number of rows read; \"0\" when input resolved to nothing"
+    }
+  ],
+  "rules": [
+    {
+      "id": "ReadTaskRepeater.input-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "The configuration dialog refuses to save while the input is empty. (The step's own check 'Choose the repeater of a form task to read.' is not run.)",
+      "message": "Please fill in the highlighted fields.",
+      "machine": {
+        "type": "required",
+        "key": "input"
+      }
+    },
+    {
+      "id": "ReadTaskRepeater.not-a-repeater",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "input resolves to values, or to records that are not SmartObjects (rows of a form task repeater, table 5564267) or no longer exist. %1 = the raw input. An input that resolves to nothing is not an error (count = \"0\").",
+      "message": "%1 is not a repeater of a form task. Choose the repeater output of a Form task step, or one row of it."
+    }
+  ],
+  "notes": [
+    "Not gated itself, but only useful after a Form task, which is dark-launched (AutoFlow Tasks, portal feature flag 'tasks').",
+    "Typical use: For Each over {{formslug_section}}, then this step on the loop's currentItem, then the steps that use the row.",
+    "Read on the whole repeater, <column> is the first row only; use <column>[i] or a loop for the others.",
+    "The step's own check 'The step knows no columns of %1. Choose the repeater of a form task and save the step.' is not run: without columns the step only writes count. A column the form does not have reads as empty; a form field missing from columns is not read.",
+    "Output names are cut at 30 characters. Nothing is checked at publish time."
+  ]
+}
