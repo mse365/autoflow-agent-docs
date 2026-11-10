@@ -34,8 +34,7 @@
       "category": "Tasks",
       "terminating": false,
       "group": true,
-      "availability": "dark-launched",
-      "feature": "tasks"
+      "availability": "ga"
     },
     {
       "name": "AzureBlobGet",
@@ -164,6 +163,15 @@
       "availability": "ga"
     },
     {
+      "name": "FormTask",
+      "id": 5564426,
+      "caption": "Form task",
+      "category": "Tasks",
+      "terminating": false,
+      "group": false,
+      "availability": "ga"
+    },
+    {
       "name": "GetDimensions",
       "id": 5564559,
       "caption": "Get Dimensions",
@@ -254,6 +262,15 @@
       "availability": "ga"
     },
     {
+      "name": "ReadTaskRepeater",
+      "id": 5564427,
+      "caption": "Read task repeater",
+      "category": "Tasks",
+      "terminating": false,
+      "group": false,
+      "availability": "ga"
+    },
+    {
       "name": "RenameRecord",
       "id": 5564408,
       "caption": "Rename Record",
@@ -296,8 +313,7 @@
       "category": "Tasks",
       "terminating": false,
       "group": false,
-      "availability": "dark-launched",
-      "feature": "tasks"
+      "availability": "ga"
     },
     {
       "name": "SendEmail",

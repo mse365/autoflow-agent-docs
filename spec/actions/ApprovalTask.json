@@ -4,8 +4,7 @@
   "id": 5564560,
   "caption": "Approval task",
   "category": "Tasks",
-  "availability": "dark-launched",
-  "feature": "tasks",
+  "availability": "ga",
   "terminating": false,
   "group": true,
   "edges": {
@@ -74,7 +73,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "text",
-      "description": "Optional. A date (yyyy-mm-dd is safest) or a SmartDate such as [[TODAY+5D]]. Overdue tasks are highlighted in the inbox and can be sent as a digest. A value that does not resolve to a date is ignored silently (no due date)."
+      "description": "Optional. A date (yyyy-mm-dd is safest) or a SmartDate such as [@ calc(today, \"+5D\") @]. Overdue tasks are highlighted in the inbox and can be sent as a digest. A value that does not resolve to a date is ignored silently (no due date)."
     },
     {
       "key": "attachments",
@@ -187,17 +186,6 @@
       }
     },
     {
-      "id": "ApprovalTask.tasks-not-enabled",
-      "severity": "error",
-      "stage": "publish",
-      "check": "AutoFlow Tasks (portal feature flag 'tasks') is not enabled for the environment. Hard error, not a 'publish anyway' warning. The step is also hidden from the step list.",
-      "message": "The task step '%1' cannot be published: AutoFlow Tasks is not enabled for this environment.",
-      "machine": {
-        "type": "feature",
-        "feature": "tasks"
-      }
-    },
-    {
       "id": "ApprovalTask.trigger-cannot-wait",
       "severity": "error",
       "stage": "publish",
@@ -217,13 +205,6 @@
           5564404
         ]
       }
-    },
-    {
-      "id": "ApprovalTask.runtime-not-enabled",
-      "severity": "error",
-      "stage": "runtime",
-      "check": "AutoFlow Tasks was switched off after the flow was published",
-      "message": "AutoFlow Tasks is not enabled for this environment."
     },
     {
       "id": "ApprovalTask.runtime-inline",
@@ -290,7 +271,6 @@
     }
   ],
   "notes": [
-    "Dark-launched: only available where AutoFlow Tasks (portal feature flag 'tasks') is enabled for the environment. Elsewhere the step is hidden in the editor and publish refuses it.",
     "The flow waits in the background. The first run creates the task and parks the execution; it is checked again every poll interval (AutoFlow Setup 'Task Poll Interval (Min.)', default 5 minutes). When the user the flow runs as decides the task themselves, the run continues immediately. No session is held while waiting, so a task can stay open for days.",
     "Each pass of a loop creates its own task. A retried or restarted run finds the task it already created instead of creating a second one.",
     "In a Webhook flow with WaitForResponse, put the step after Respond to Webhook: in the synchronous phase the step cannot park and fails.",

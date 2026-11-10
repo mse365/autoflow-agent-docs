@@ -5,7 +5,7 @@ Mirrors the checks AutoFlow runs at import, publish and (where statically knowab
 runtime, plus the per-step rules recorded in ../spec. Standard library only.
 
 Usage:
-    python3 tools/validate_flow.py flow.json [more.json ...] [--json] [--strict] [--features tasks]
+    python3 tools/validate_flow.py flow.json [more.json ...] [--json] [--strict] [--features <feature>]
 
 --features names the dark-launched AutoFlow features (portal feature flags) the user confirmed are
 enabled for their environment; steps that need one of them are then not reported as early access.
@@ -529,7 +529,7 @@ def main(argv=None):
     ap.add_argument("--strict", action="store_true", help="treat warnings as failures")
     ap.add_argument("--no-lint", action="store_true", help="hide lint findings")
     ap.add_argument("--features", default="",
-                    help="comma-separated dark-launched features enabled for the environment (e.g. tasks)")
+                    help="comma-separated dark-launched features enabled for the environment")
     args = ap.parse_args(argv)
 
     specs = load_specs()
