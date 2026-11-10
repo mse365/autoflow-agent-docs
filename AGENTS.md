@@ -30,7 +30,8 @@ You are working with **AutoFlow** flow definitions: the JSON documents that *Exp
 - Configuration keys are case-sensitive. Some are capitalised: `Message` (Log, Send Notification) and `Error` (Error).
 - Editor-stage rules are **not** checked at publish. Satisfy them anyway; they are what makes the step work.
 - Publish warnings block a non-interactive (API) publish.
-- Steps marked **early access** (e.g. the AutoFlow Tasks steps *Approval task* and *Selection task*) are dark-launched: they only work where their feature is enabled for the environment, and are refused at publish everywhere else. Use them only when the user asks for them or confirms the feature is enabled, then validate with `--features <feature>`. Task steps also need a trigger that can wait – never an interactive document or page trigger, a PDF/report-file-name trigger or a SubFlow.
+- Task steps (*Approval task*, *Selection task*, *Form task*) wait for a person, so they need a trigger that can wait – never an interactive document or page trigger, a PDF/report-file-name trigger or a SubFlow. Publish refuses them there. Tell the user which users or task groups the flow assigns tasks to.
+- A step whose page starts with an **Early access** callout is dark-launched: it only works where its feature is enabled for the environment, and is refused at publish everywhere else. Use it only when the user asks for it or confirms the feature is enabled, then validate with `--features <feature>`.
 
 ## Modifying an existing flow
 

@@ -4,8 +4,6 @@
 
 Asks a user or a task group to approve or reject, waits in the background until the task is decided, and continues along the Approved or Rejected branch.
 
-> **Early access.** This step is part of AutoFlow Tasks and ships with the release after 27.0.40. AutoFlow Tasks is rolled out in stages: it is switched on for selected customers first (portal feature flag `tasks`) and for everyone else a few weeks later. Until it is switched on for an environment, the step is hidden in the editor and publishing refuses it. Only use it when the user confirms AutoFlow Tasks is enabled for them.
-
 | | |
 |---|---|
 | Enum name | `ApprovalTask` |
@@ -13,7 +11,7 @@ Asks a user or a task group to approve or reject, waits in the background until 
 | Category | Tasks |
 | Terminating | `false` |
 | Group / edges | Yes: two fixed edges, `"true"` (Approved) and `"false"` (Rejected) |
-| Availability | Dark-launched (AutoFlow Tasks). Background triggers only; see [Where it can be used](#where-it-can-be-used). |
+| Availability | Generally available from the release after 27.0.40 (part of AutoFlow Tasks). Background triggers only; see [Where it can be used](#where-it-can-be-used). |
 
 ## What it does
 
@@ -61,7 +59,7 @@ Anyone can be an assignee or a group member: any enabled Business Central user, 
 | `assignType` | integer | no | `0` | `0` = user, `1` = task group. Any other value counts as user. |
 | `assignee` | string | yes | – | Type 0: a Business Central **user name** (or user security ID). Type 1: a **task group code**. Case-insensitive and trimmed. Can be a SmartField resolved at runtime, e.g. `{{trigger_Rec.assignedUserId}}`. |
 | `requiredApprovals` | integer | no | `1` | Groups only: how many different members must approve. Values below 1 count as 1. More than 1 needs `assignType` 1 and at least that many group members. |
-| `dueDate` | string | no | `""` | A date (`yyyy-mm-dd` is safest) or a SmartDate such as `[[TODAY+5D]]`. If it doesn't resolve to a date, it is ignored silently. Overdue tasks are highlighted in the inbox. |
+| `dueDate` | string | no | `""` | A date (`yyyy-mm-dd` is safest) or a SmartDate such as `[@ calc(today, "+5D") @]`. If it doesn't resolve to a date, it is ignored silently. Overdue tasks are highlighted in the inbox. |
 | `attachments` | array | no | `[]` | Rows of `{ "type", "reference", "url", "caption" }`, described below. The editor always writes the array. |
 
 Attachment rows:
@@ -101,16 +99,14 @@ The outputs are written only once the task is decided.
 | stage | severity | rule | message |
 |---|---|---|---|
 | editor | error | `instructions` or `assignee` is empty | `Please fill in the highlighted fields.` |
-| publish | error | AutoFlow Tasks is not enabled for the environment | `The task step '%1' cannot be published: AutoFlow Tasks is not enabled for this environment.` |
 | publish | error | The trigger is one of those listed under [Where it can be used](#where-it-can-be-used) | `The task step '%1' cannot be used in this flow: its trigger runs while the user works on the record (or answers right away), so the flow cannot wait for a person there. Use a trigger that runs in the background, such as a record trigger, a schedule or a manual start.` |
 
-`%1` is the step **id**. Both publish checks are hard errors, not "publish anyway" warnings. The step's own messages (`Enter the instructions for the approver.`, `Choose who approves: a user or a task group.`, `At least one approval is needed.`, `More than one approval needs a task group as the assignee.`) are not run.
+`%1` is the step **id**. The publish check is a hard error, not a "publish anyway" warning. The step's own messages (`Enter the instructions for the approver.`, `Choose who approves: a user or a task group.`, `At least one approval is needed.`, `More than one approval needs a task group as the assignee.`) are not run.
 
 ## Runtime errors
 
 | condition | message |
 |---|---|
-| AutoFlow Tasks was switched off after publishing | `AutoFlow Tasks is not enabled for this environment.` |
 | Running inline (backstop for the publish check) | `Task steps cannot run in a trigger that runs while the user works on the record (for example when a document is released, posted or modified). Run the task from a flow with a background trigger instead.` |
 | The flow runs as a SubFlow | `Task steps cannot run inside a sub-flow. Put the task step into the calling flow.` |
 | `assignee` resolves to empty | `The task has no assignee. Choose a user or a group in the step.` |
@@ -137,7 +133,7 @@ The outputs are written only once the task is decided.
     "assignType": 1,
     "assignee": "PURCHASING",
     "requiredApprovals": 1,
-    "dueDate": "[[TODAY+3D]]",
+    "dueDate": "[@ calc(today, \"+3D\") @]",
     "attachments": [
       { "type": "record", "reference": "{{trigger_Rec}}", "url": "", "caption": "Purchase order" }
     ]

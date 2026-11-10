@@ -4,8 +4,6 @@
 
 Hands a list to a user or a task group, waits in the background until they have chosen one or more rows, and continues with the chosen records (or values) and their count. The list can be the records of a reference, array or iterator, or a list of plain values.
 
-> **Early access.** This step is part of AutoFlow Tasks and ships with the release after 27.0.40. AutoFlow Tasks is rolled out in stages: it is switched on for selected customers first (portal feature flag `tasks`) and for everyone else a few weeks later. Until it is switched on for an environment, the step is hidden in the editor and publishing refuses it. Only use it when the user confirms AutoFlow Tasks is enabled for them.
-
 | | |
 |---|---|
 | Enum name | `SelectionTask` |
@@ -13,7 +11,7 @@ Hands a list to a user or a task group, waits in the background until they have 
 | Category | Tasks |
 | Terminating | `false` |
 | Group / edges | No |
-| Availability | Dark-launched (AutoFlow Tasks). Background triggers only, the same list as the [Approval task](ApprovalTask.md#where-it-can-be-used). |
+| Availability | Generally available from the release after 27.0.40 (part of AutoFlow Tasks). Background triggers only, the same list as the [Approval task](ApprovalTask.md#where-it-can-be-used). |
 
 ## What it does
 
@@ -47,7 +45,7 @@ Anyone can be an assignee or a group member, with no seat needed. **Completing**
 | `valueCaption` | string | no | `""` | Values only: caption above the values. Empty: the input's name. |
 | `multiSelect` | boolean | no | `false` | `true`: one or more rows. `false`: exactly one. |
 | `onEmpty` | integer | no | `0` | Empty list: `0` = fail the step, `1` = continue with `count` `"0"` and no `results`. |
-| `dueDate` | string | no | `""` | A date (`yyyy-mm-dd` is safest) or a SmartDate such as `[[TODAY+5D]]`. If it doesn't resolve to a date, it is ignored silently. |
+| `dueDate` | string | no | `""` | A date (`yyyy-mm-dd` is safest) or a SmartDate such as `[@ calc(today, "+5D") @]`. If it doesn't resolve to a date, it is ignored silently. |
 
 A column whose SmartFields all start with the input is resolved against the row alone, which is fast. Columns that also use other SmartFields work too, but each row then resolves against the whole flow context.
 
@@ -67,7 +65,6 @@ The outputs are written once the task is completed. Write `results` with `"type"
 | stage | severity | rule | message |
 |---|---|---|---|
 | editor | error | `instructions` or `input` is empty, or `assignee` is empty with `assignType` 0/1 | `Please fill in the highlighted fields.` |
-| publish | error | AutoFlow Tasks is not enabled for the environment | `The task step '%1' cannot be published: AutoFlow Tasks is not enabled for this environment.` |
 | publish | error | The trigger cannot wait (see [Approval task](ApprovalTask.md#where-it-can-be-used)) | `The task step '%1' cannot be used in this flow: its trigger runs while the user works on the record (or answers right away), so the flow cannot wait for a person there. Use a trigger that runs in the background, such as a record trigger, a schedule or a manual start.` |
 
 `%1` is the step **id**. The step's own messages, including the column check `The column '%1' must use the list to choose from, for example {{%2.Name}}.`, are not run. A column that does not use the input shows the same value in every row.
@@ -80,7 +77,7 @@ The outputs are written once the task is completed. Write `results` with `"type"
 | The input holds records and values | `The list to choose from (%1) holds both records and values. Choose a list of records or a list of values.` |
 | `assignType` 2 and the run has no user | `The task cannot be assigned to the user who started the flow: the run has no user.` |
 | Assignee empty / user missing / user disabled / group missing | The same messages as the [Approval task](ApprovalTask.md#runtime-errors). |
-| Tasks switched off, inline frame, SubFlow, cancelled task | The same messages as the [Approval task](ApprovalTask.md#runtime-errors). |
+| Inline frame, SubFlow, cancelled task | The same messages as the [Approval task](ApprovalTask.md#runtime-errors). |
 
 ## Example
 

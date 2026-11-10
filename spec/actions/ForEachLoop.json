@@ -95,6 +95,7 @@
     "When an array output is also a record reference (e.g. find-records results), the array path is preferred, so each array entry becomes one item.",
     "For a record reference that is not an array, all records in the reference's current filter view are iterated.",
     "outputs[]: the editor emits items/currentItem as {type:'reference', tableNo:N} when the selector resolves to a record reference, otherwise as {type:'value'}. Hand-written JSON should do the same so downstream steps can bind record fields of currentItem.",
+    "When the selector is the rows output of a Form task repeater, items/currentItem are references to table 5564267 and also carry that output's \"columns\" array unchanged; a Read task repeater step on currentItem takes its columns from there.",
     "The step also emits a runtime-only 'result' value ('for-each' while there are items). This is what the engine routes on. It is not declared in outputs[].",
     "Outputs of steps INSIDE the loop body are deleted each time control returns to the loop step and after the loop finishes. Reference them only inside the body; collect results into a collection step if you need them later."
   ]
