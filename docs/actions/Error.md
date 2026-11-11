@@ -23,6 +23,8 @@ When the flow reaches this step, it resolves the configured message and raises i
 |---|---|---|---|---|
 | `Error` | string | yes | – | The error message. Note the capital `E`, because keys are case-sensitive. Supports SmartFields `{{..}}`, SmartFormulas `[[..]]` and SmartControls `{#..#}`. |
 
+**Translatable** ([translations](../flow-definition.md#translations)): `Error`.
+
 ## Outputs
 
 | name | type | tableNo | notes |

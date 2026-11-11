@@ -25,6 +25,8 @@ The "page is closed" trigger runs synchronously in the user's session before the
 | `asDialog` | boolean | no | `true` | `true` = dialog, `false` = notification bar on the page. Only used when `showMessage` is true. |
 | `message` | string | when `showMessage` is true | `""` | What the user is told. Say what to change, not just that something is wrong. Supports SmartFields `{{..}}`, SmartFormulas `[[..]]` and SmartControls `{#..#}`. Cut to 2048 characters. |
 
+**Translatable** ([translations](../flow-definition.md#translations)): `message`.
+
 ## Outputs
 
 None.

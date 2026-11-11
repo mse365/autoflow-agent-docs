@@ -36,6 +36,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "text",
+      "translatable": true,
       "description": "What the user is told. Supports SmartFields {{..}}, SmartFormulas [[..]] and SmartControls {#..#}. Shown only when showMessage is true (or absent); cut to 2048 characters. An empty message means the page stays open without a word."
     }
   ],

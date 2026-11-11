@@ -16,6 +16,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "text",
+      "translatable": true,
       "description": "What the person should choose, and why. Shown on the task card. Supports SmartFields {{..}}, SmartFormulas [[..]] and SmartControls {#..#}. The task's subject is the step's description (fallback: the flow's description)."
     },
     {
@@ -93,6 +94,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
+      "translatable": true,
       "description": "Column caption."
     },
     {
@@ -113,6 +115,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
+      "translatable": true,
       "description": "Values only: the caption above the values. Empty: the input's name."
     },
     {

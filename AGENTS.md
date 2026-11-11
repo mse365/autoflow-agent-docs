@@ -28,6 +28,7 @@ You are working with **AutoFlow** flow definitions: the JSON documents that *Exp
 - A `{{token}}` that doesn't resolve is left in the text verbatim, with no error. Publish only warns when the **slug** is unknown, not a wrong output name or field. The validator checks output names and scope for you.
 - Leaf field names in paths are lower case with punctuation removed: `{{trigger_Rec.selltocustomerno}}`. Hops into related tables need a `smartFieldDefs` reference definition.
 - Configuration keys are case-sensitive. Some are capitalised: `Message` (Log, Send Notification) and `Error` (Error).
+- Other languages go into `translations` maps next to the default text (flow: `name`; step: `description`, `configuration.<prose key>`, `edge:<id>`), never into the default fields. Only keys a step page marks *Translatable* are offered to users; write `src` as `""` when you cannot compute the hash. See [docs/flow-definition.md#translations](docs/flow-definition.md#translations).
 - Editor-stage rules are **not** checked at publish. Satisfy them anyway; they are what makes the step work.
 - Publish warnings block a non-interactive (API) publish.
 - Task steps (*Approval task*, *Selection task*, *Form task*) wait for a person, so they need a trigger that can wait – never an interactive document or page trigger, a PDF/report-file-name trigger or a SubFlow. Publish refuses them there. Tell the user which users or task groups the flow assigns tasks to.

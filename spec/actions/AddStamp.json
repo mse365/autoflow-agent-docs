@@ -26,6 +26,7 @@
       "enum": null,
       "maxLength": 250,
       "smart": "text",
+      "translatable": true,
       "description": "The stamp text, e.g. \"Checked\" or \"G/L Account: {{glAccount}}\". SmartFields are resolved; the result is trimmed and must be 1-250 characters (longer fails the step, it is not cut)."
     }
   ],

@@ -16,6 +16,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "text",
+      "translatable": true,
       "description": "The error message raised when the flow reaches this step. The key is case-sensitive and capitalised ('Error'). Supports SmartFields {{..}}, SmartFormulas [[..]] and SmartControls {#..#}."
     }
   ],

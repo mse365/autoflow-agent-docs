@@ -30,6 +30,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "text",
+      "translatable": true,
       "description": "The yes/no question. Supports SmartFields {{..}}, SmartFormulas [[..]] and SmartControls {#..#}. The copy kept for answering a background run is cut to 2048 characters; the interactive dialog shows the full text."
     },
     {

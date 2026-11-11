@@ -34,6 +34,7 @@ Every trigger and action has two files:
       "enum": null,                 // allowed values if constrained (list), else null
       "maxLength": null,            // if a length limit applies
       "smart": "text",              // none | text | filter | formula | date | code | sorting | field | record – how references inside are interpreted
+      "translatable": true,         // optional: the key holds prose the Translations worksheet offers (see docs/flow-definition.md#translations); omitted = technical value
       "description": "Target URL. Supports {{slug_output}} placeholders."
     }
   ],

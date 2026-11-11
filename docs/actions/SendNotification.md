@@ -38,6 +38,8 @@ Action rows (`actions[]`):
 | `filterTableNo` | integer | Open list only: the table the filters belong to. Must equal the page's source table (`0` = unchecked). |
 | `filterDisplay` | string | Display text only. |
 
+**Translatable** ([translations](../flow-definition.md#translations)): `Message`, `actions[].label`.
+
 ## Outputs
 
 None.
