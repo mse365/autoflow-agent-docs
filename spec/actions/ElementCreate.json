@@ -16,7 +16,7 @@
       "enum": null,
       "maxLength": 30,
       "smart": "none",
-      "description": "Name of the element (a single-slot variable). Becomes the step's single output name: {{<slug>_<elementName>}}. Plain text. The run time truncates it to 30 characters, so keep it at most 30 characters or the declared output and the runtime value will not match."
+      "description": "Name of the element (a single-slot variable). Since 27.0.41 it is the step's output name as written, with no slug prefix: downstream steps address it as {{<elementName>}}. Grammar [A-Za-z][A-Za-z0-9-]*, at most 30 characters, unique (case-insensitively) against every other output name in the flow, i.e. every <slug>_<output> and every other Create Element / Create Collection name. Plain text. Before 27.0.41 the output was addressed as {{<slug>_<elementName>}} and the name was silently truncated to 30 characters at run time."
     },
     {
       "key": "elementType",
@@ -50,25 +50,47 @@
     }
   ],
   "outputs": [
-    { "name": "<elementName>", "type": "value", "tableNo": null, "when": "elementType = 0 and elementName non-empty" },
-    { "name": "<elementName>", "type": "reference", "tableNo": "<tableNo>", "when": "elementType = 1 and elementName non-empty" }
+    { "name": "<elementName>", "type": "value", "tableNo": null, "unprefixed": true, "nameKey": "elementName", "when": "elementType = 0 and elementName non-empty" },
+    { "name": "<elementName>", "type": "reference", "tableNo": "<tableNo>", "unprefixed": true, "nameKey": "elementName", "when": "elementType = 1 and elementName non-empty" }
   ],
   "rules": [
     {
       "id": "ElementCreate.elementName-required",
       "severity": "error",
       "stage": "editor",
-      "check": "configuration.elementName must be non-empty (required field in the configuration dialog). Without a name the step produces no output and does nothing at run time.",
+      "check": "configuration.elementName must be non-empty (required field in the configuration dialog). Without a name the step produces no output and does nothing at run time. The name guard lets an empty name pass; nothing re-checks it at publish.",
       "message": "Please fill in the highlighted fields.",
       "machine": { "type": "required", "key": "elementName" }
     },
     {
+      "id": "ElementCreate.elementName-grammar",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.elementName must match [A-Za-z][A-Za-z0-9-]* (letter first, then letters, digits or hyphens; no spaces, no underscore). The configuration dialog shows the message in its status line while you type and refuses to save, and the editor re-checks it when the step is persisted. Not checked at import or publish, so a hand-written file with an invalid name is accepted and the run-time key is then not addressable as a placeholder.",
+      "message": "The name \"%1\" cannot be used. Start with a letter and use only letters, digits or hyphens (no spaces or underscores, at most 30 characters).",
+      "machine": { "type": "regex", "key": "elementName", "pattern": "[A-Za-z][A-Za-z0-9-]*" }
+    },
+    {
       "id": "ElementCreate.elementName-maxLength",
-      "severity": "warning",
-      "stage": "runtime",
-      "check": "Not an AutoFlow check: an elementName longer than 30 characters is silently truncated at run time (the editor does not limit it), so the declared output and {{<slug>_<elementName>}} would not resolve.",
-      "message": "",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.elementName must be at most 30 characters (the run-time key of an element is 30 characters wide). Same status-line / persist check and message as the grammar rule. Before 27.0.41 the editor did not limit the length and the run time silently truncated the name.",
+      "message": "The name \"%1\" cannot be used. Start with a letter and use only letters, digits or hyphens (no spaces or underscores, at most 30 characters).",
       "machine": { "type": "maxLength", "key": "elementName", "max": 30 }
+    },
+    {
+      "id": "ElementCreate.elementName-unique",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.elementName must not equal (case-insensitively) any other output name in the flow: every <slug>_<output> of every other step (trigger keys as cut at 30 characters) and every other Create Element / Create Collection name, in all branches and loop bodies. Shown in the configuration dialog's status line, blocks Save, and is re-checked when the step is persisted. The validator reports it as publish.duplicate-output-name.",
+      "message": "The name \"%1\" is already used by another output in this flow. Choose a different name."
+    },
+    {
+      "id": "ElementCreate.duplicate-output-name",
+      "severity": "error",
+      "stage": "publish",
+      "check": "Publish stops (before the confirmable warnings) when an unprefixed output name is used by more than one output of the flow, compared case-insensitively against every resolved output name. Only collisions that involve a Create Element / Create Collection name are reported; <slug>_<output> names are unique through their slug. The same check runs on a Flow API import and on the API's validate call, where each name is returned as the issue 'The output name \"%1\" is used by more than one step output. Every name must be unique.' The validator reports it as publish.duplicate-output-name.",
+      "message": "This flow cannot be published because these names are used by more than one step output:\\%1\\Rename the Create Element or Create Collection step so that every name is unique."
     },
     {
       "id": "ElementCreate.tableNo-required-for-reference",
@@ -94,6 +116,10 @@
     }
   ],
   "notes": [
+    "Since 27.0.41 the output entry is { \"name\": \"<elementName>\", \"type\": ..., \"unprefixed\": true, \"nameKey\": \"elementName\" } and the element is referenced as {{<elementName>}} (field paths: {{<elementName>.<field>}}). The run time, the field picker, the dangling-reference check and the loop/branch cleanup all read the \"unprefixed\" flag from the stored outputs, so a hand-written file must include it. An output without the flag keeps the pre-27.0.41 behaviour: it registers as <slug>_<elementName>. The validator flags a missing flag as output.unprefixed-expected.",
+    "Before 27.0.41: the output was addressed as {{<slug>_<elementName>}}, the name was not checked against a grammar and was silently truncated to 30 characters at run time. Existing flows are not migrated by an upgrade; they keep working with their stored (prefixed) outputs. The migration happens when the Create Element step is saved in the flow editor: its outputs are regenerated as unprefixed and every {{<slug>_<elementName>...}} root in every step configuration of the flow is rewritten to {{<elementName>...}}. The editor rewrites references the same way when the name is changed later (hand-edited JSON gets no rewrite).",
+    "Duplicating the step (copy/paste) renames the copy's element to <name>2, <name>3, ... (shortened to stay within 30 characters), updates configuration.elementName through nameKey and rewrites references inside the copy.",
+    "ValidateConfiguration also rejects an invalid or empty name, but nothing in the product calls it; the editor checks above and the publish-time duplicate check are what is actually enforced.",
     "Value elements always write their slot at run time (empty when no initialValue), so downstream references resolve even before any Set Element step runs. Reference elements write the slot only when initialValue is given.",
     "The editor offers the reference picker for Reference elements but does not check that the initial reference's table matches tableNo; the run time does not check it either.",
     "If the step sits inside a loop/branch body, its slot is removed when that body is left. Create elements at the level where they must stay readable.",

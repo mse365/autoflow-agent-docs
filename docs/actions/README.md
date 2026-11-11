@@ -35,6 +35,7 @@ Machine-readable list: [`spec/index.json`](../../spec/index.json).
 | Azure Blob: List files | `5564420` |  |  | [AzureBlobList](AzureBlobList.md) |
 | Azure Blob: Upload file | `5564422` |  |  | [AzureBlobPut](AzureBlobPut.md) |
 | Create PDF | `5564410` |  |  | [PdfPrint](PdfPrint.md) |
+| Create ZIP archive | `5564425` |  |  | [CreateZipArchive](CreateZipArchive.md) |
 
 ## Records
 

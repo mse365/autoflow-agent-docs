@@ -46,7 +46,17 @@
       "enum": null,
       "maxLength": null,
       "smart": "code",
-      "description": "Request body (SmartText; the editor shows it only for POST/PUT/PATCH but it is sent for any method if present). If the raw body is exactly one {{slug_output.field}} placeholder (no format suffix, one level into a record reference) and that field is a BLOB, Media or MediaSet field, the bytes are sent unchanged. A binary responseBody of another HTTP Request step is sent as its base64 text, not as bytes. With a credential, the reserved tokens {{credential.username}} and {{credential.password}} are replaced (XML-escaped) at send time."
+      "description": "Request body (SmartText; the editor shows it only for POST/PUT/PATCH but it is sent for any method if present). Not sent at all when formData has at least one named row on a POST/PUT/PATCH (editor tooltip: 'Ignored when Form Data is filled in.'). If the raw body is exactly one {{slug_output.field}} placeholder (no format suffix, one level into a record reference) and that field is a BLOB, Media or MediaSet field, the bytes are sent unchanged. A binary responseBody of another HTTP Request step is sent as its base64 text, not as bytes. With a credential, the reserved tokens {{credential.username}} and {{credential.password}} are replaced (XML-escaped) at send time."
+    },
+    {
+      "key": "formData",
+      "type": "array",
+      "required": false,
+      "default": [],
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "Rows { \"name\": string, \"value\": string (SmartText), \"fileName\"?: string } sent as a form instead of body, in array order. Used only when method is POST, PUT or PATCH (case-insensitive) and at least one row has a non-empty name; otherwise ignored and body is sent. Encoding: an effective Content-Type header (step headers merged with credential default headers) containing 'application/x-www-form-urlencoded' sends name=value&... percent-encoded with the header kept; anything else sends multipart/form-data and REPLACES the Content-Type header with 'multipart/form-data; boundary=AutoFlowBoundary<32 hex>'. In multipart, a row whose raw value is exactly one SmartField naming an AutoFlow Document reference (e.g. {{CreatePdf_Document}}) or a BLOB/Media/MediaSet field one level into a record reference ({{trigger_Rec.picture}}) is a file part with the raw bytes; any row with fileName is a file part (text rows send their resolved text as file content). File name = fileName, else the document's name, else the row name. Part Content-Type = the document's stored type, else by extension (pdf, xml, json, txt, csv, png, jpg/jpeg, tif/tiff, gif), else application/octet-stream. In url-encoded mode fileName and binary sources are ignored (text only). Rows with an empty name are dropped by the editor and skipped at run time; names may repeat. Key absent before 27.0.41."
     },
     {
       "key": "credentialCode",
@@ -106,6 +116,28 @@
       "machine": { "type": "maxLength", "key": "credentialCode", "max": 20 }
     },
     {
+      "id": "HttpRequest.formData-type",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "configuration.formData, when present, should be an array of { name, value, fileName? } objects. A non-array value and non-object rows are silently ignored (no form is sent; body is used).",
+      "message": "",
+      "machine": { "type": "type", "key": "formData", "valueType": "array" }
+    },
+    {
+      "id": "HttpRequest.formData-name-required",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "Every formData row should have a non-empty name (formData[].name). The editor drops nameless rows on save; at run time they are skipped, and when no named row remains the raw body is sent instead of a form. No message.",
+      "message": ""
+    },
+    {
+      "id": "HttpRequest.formData-method",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "formData is only sent for method POST, PUT or PATCH (case-insensitive). On GET or DELETE the rows are ignored without a message and the editor hides the Form Data grid.",
+      "message": ""
+    },
+    {
       "id": "HttpRequest.url-allowed-by-credential-status",
       "severity": "warning",
       "stage": "editor",
@@ -149,7 +181,8 @@
     "The step does not fail on 4xx/5xx; branch on {{slug_responseStatus}} downstream.",
     "Header precedence with a credential: credential default headers < step headers < authentication headers. Authentication headers are removed from the execution log; API-key-in-query secrets are added after the URL is logged.",
     "Credentials, their base URLs, default headers and secrets live per company in Business Central, not in the flow JSON. Only the credential's code travels with the flow, so the same code must exist (with the right auth setup) in every target company/environment.",
-    "The editor's 'Send test request' button sends a real request; it is not part of the configuration (no key is stored).",
+    "Form data (since 27.0.41): formData rows replace body on POST/PUT/PATCH. Multipart parts use CRLF line endings and a UTF-8 body; a text row has no part Content-Type; '\"', CR and LF in a name or file name are percent-encoded (%22, %0D, %0A). A binary responseBody of another HTTP Request step is sent as base64 text, not as a file part. Before 27.0.41 the formData key did not exist and only body was sent.",
+    "The editor's 'Send test request' button sends a real request; it is not part of the configuration (no key is stored). It prompts for the SmartFields in url, headers, body and form-data values (not names/file names) and sends the form-data rows like the run time does, but without a flow context: a file part is sent with the typed text, never with document or field bytes.",
     "No publish-time step check exists; only the generic dangling-reference warning applies. The editor's URL allow-list status line is advisory and does not block saving.",
     "The resolved configuration (url, headers, body) is written to the execution log at debug level; only credential secrets are kept out of it."
   ]

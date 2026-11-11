@@ -29,7 +29,7 @@ python3 autoflow-agent-docs/tools/validate_flow.py my-flow.json
 
 Point your agent at `AGENTS.md`. For example, add it to your agent's instructions, or tell Claude Code: *"Read autoflow-agent-docs/AGENTS.md before editing flow JSON."*
 
-Round trip in Business Central, over the AutoFlow Flow API (the release after 27.0.40), signed in as you:
+Round trip in Business Central, over the AutoFlow Flow API (AutoFlow 27.0.41 and later), signed in as you:
 
 ```sh
 export AF_ENVIRONMENT=Production AF_COMPANY="CRONUS AG"
@@ -62,8 +62,8 @@ Claude Code. Both share the step pages and specs, so a change to a step is docum
 
 ## Scope and versioning
 
-- Verified against **AutoFlow 27.0.40**, released 23 October 2026. To see your version, open *Extension Management* in Business Central and look at the AutoFlow entry.
-- Where older releases behave differently in a way that matters for writing JSON, the page has a short **Before 27.0.40** note.
+- Verified against **AutoFlow 27.0.41**, released 10 November 2026. To see your version, open *Extension Management* in Business Central and look at the AutoFlow entry.
+- Where older releases behave differently in a way that matters for writing JSON, the page has a short **Before <version>** note, for example *Before 27.0.41*.
 - A step released in a staged rollout (switched on for selected customers first, for everyone a few weeks later) is marked **early access** on its page. It is part of the release the docs are verified against, but only works where its feature is already switched on. No step is in early access at the moment.
 - The docs describe behaviour, not internals. Where behaviour was inferred rather than confirmed, the step page says so.
 - The flow definition JSON is AutoFlow's own storage format, not a public API with compatibility guarantees. Always validate against the docs for your AutoFlow version.

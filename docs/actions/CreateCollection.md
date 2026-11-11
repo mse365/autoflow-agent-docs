@@ -15,13 +15,17 @@ Declares an empty, named list of text values or record references that later Add
 
 ## What it does
 
-The step declares a collection and publishes it as an output so that later steps can select it. It does nothing at run time, because an empty collection has no runtime form. The collection only exists once an [Add to Collection](AddToCollection.md) step has appended an item. Items are stored as `<slug>_<collectionName>[0]`, `[1]`, and so on.
+The step declares a collection and publishes it as an output so that later steps can select it. It does nothing at run time, because an empty collection has no runtime form. The collection only exists once an [Add to Collection](AddToCollection.md) step has appended an item. Items are stored as `<collectionName>[0]`, `[1]`, and so on.
+
+The collection is published under the **bare name you type**, not under `<slug>_<name>`: a collection called `Orders` is `{{Orders}}` everywhere in the flow, whatever the step's slug is. That is why the name must be unique across the whole flow.
+
+> **Before 27.0.41:** the output was addressed as `{{<slug>_<collectionName>}}` (for example `{{OrderList_Orders}}`), items were stored as `<slug>_<collectionName>[n]`, and the name was not checked against a grammar. See [Migration](#migration-from-the-prefixed-form) below.
 
 ## Configuration
 
 | key | type | required | default | description |
 |---|---|---|---|---|
-| `collectionName` | string | yes | `""` | Name of the collection and of the step's single output. Plain text, with no SmartText support. Use an identifier-like name (letters, digits, hyphens), because it is embedded in `{{...}}` placeholders. |
+| `collectionName` | string (max 30) | yes | `""` | Name of the collection and of the step's single output, written exactly as it is referenced: `{{<collectionName>}}`. Plain text, with no SmartText support. Grammar `[A-Za-z][A-Za-z0-9-]*`, 1–30 characters (letter first, then letters, digits or hyphens; no spaces, no underscore). Must be unique in the flow, compared case-insensitively against **every** other output name: every `<slug>_<output>` of every other step (trigger keys as cut at 30 characters) and every other Create Element / Create Collection name, in all branches and loop bodies. |
 | `collectionType` | integer | no | `0` | `0` = Value (a list of text values), `1` = Reference (a list of record references). A missing or unknown value is treated as `0`. |
 | `tableNo` | integer | if `collectionType` = 1 | `0` | Table that the references point to. The editor writes `0` for Value collections. It is copied into the output's `tableNo`. |
 
@@ -32,16 +36,31 @@ The step declares a collection and publishes it as an output so that later steps
 | `<collectionName>` | `value` | – | when `collectionType` = 0 |
 | `<collectionName>` | `reference` | `<tableNo>` | when `collectionType` = 1 |
 
-No output is generated while `collectionName` is empty. To reference the collection, use `{{<slug>_<collectionName>}}`, for example `{{OrderList_Orders}}`. Use that selector in Add to Collection, in For Each, and in aggregate SmartFormulas. A single item can be addressed as `{{OrderList_Orders[0]}}`.
+No output is generated while `collectionName` is empty. The output entry carries two extra keys that mark it as unprefixed:
+
+```json
+{ "name": "Names", "type": "value", "unprefixed": true, "nameKey": "collectionName" }
+{ "name": "Orders", "type": "reference", "tableNo": 36, "unprefixed": true, "nameKey": "collectionName" }
+```
+
+- `unprefixed: true` tells the run time, the field picker, the dangling-reference check and the loop/branch cleanup to use the bare name. **Write it**: an output without the flag registers as `<slug>_<collectionName>`, the pre-27.0.41 behaviour, and `{{<collectionName>}}` then doesn't resolve. The validator reports a missing flag as `output.unprefixed-expected`.
+- `nameKey` names the configuration key that holds the name (`collectionName`), so the editor can rename both when it duplicates the step.
+
+To reference the collection, use `{{<collectionName>}}`, for example `{{Orders}}`. Use that selector in Add to Collection, in For Each, and in aggregate SmartFormulas. A single item can be addressed as `{{Orders[0]}}`, a field of it as `{{Orders[0].no}}`.
 
 ## Validation
 
 | stage | severity | rule | message |
 |---|---|---|---|
 | editor | error | `collectionName` must be non-empty | Please fill in the highlighted fields. |
+| editor | error | `collectionName` matches `[A-Za-z][A-Za-z0-9-]*` and is at most 30 characters | The name "%1" cannot be used. Start with a letter and use only letters, digits or hyphens (no spaces or underscores, at most 30 characters). |
+| editor | error | `collectionName` is not used by any other output in the flow (case-insensitive, against every `<slug>_<output>` and every other element / collection name) | The name "%1" is already used by another output in this flow. Choose a different name. |
 | editor | error | `tableNo` must be non-zero when `collectionType` = 1 | Please fill in the highlighted fields. |
+| publish | error | no element / collection name is used by more than one output of the flow (case-insensitive). Hard stop ahead of the confirmable warnings; also returned by a Flow API import or validate call, one issue per name: *The output name "%1" is used by more than one step output. Every name must be unique.* | This flow cannot be published because these names are used by more than one step output:\\%1\\Rename the Create Element or Create Collection step so that every name is unique. |
 
-These are required-field checks in the configuration dialog. Publishing does not re-run them. At publish time only the generic warnings apply: a dangling `{{slug_…}}` reference, or a terminating step that has a successor.
+The first and fourth rules are required-field checks in the configuration dialog. The grammar and uniqueness rules appear in the dialog's status line while you type, block **Save**, and are checked again when the editor persists the step. Publishing re-runs only the uniqueness check (as the duplicate-name error) plus the generic warnings (a dangling `{{slug_…}}` reference, a terminating step with a successor); an invalid name in a hand-written file is accepted by import and publish, so keep to the grammar yourself. The validator checks all of them (`CreateCollection.collectionName-grammar`, `CreateCollection.collectionName-maxLength`, `publish.duplicate-output-name`).
+
+Because the name is a placeholder root, a `{{<collectionName>…}}` token is never mistaken for a `{{<slug>_…}}` reference by the dangling-reference warning, even when it contains no underscore at all.
 
 ## Runtime errors
 
@@ -64,14 +83,23 @@ None. The step never fails.
     "tableNo": 36
   },
   "outputs": [
-    { "name": "Orders", "type": "reference", "tableNo": 36 }
+    { "name": "Orders", "type": "reference", "tableNo": 36, "unprefixed": true, "nameKey": "collectionName" }
   ]
 }
 ```
 
+An [Add to Collection](AddToCollection.md) step then selects it with `"collectionSelector": "{{Orders}}"`, and a [For Each](ForEachLoop.md) step iterates it with `"selector": "{{Orders}}"`.
+
+## Migration from the prefixed form
+
+- No upgrade rewrites existing flows. A flow saved before 27.0.41 keeps its stored outputs (without `unprefixed`) and its `{{<slug>_<collectionName>}}` references, and keeps working as before.
+- The migration happens when the Create Collection step is **saved in the flow editor**: its outputs are regenerated with `unprefixed: true`, and the root of every `{{<slug>_<collectionName>…}}` token in every step configuration of the flow (all branches, dotted paths, indexes and `;format` suffixes included) is rewritten to `{{<collectionName>…}}`. The same rewrite runs whenever the name is changed later.
+- Import does not migrate. When you write or update a file by hand, be consistent: either the pre-27.0.41 form (outputs without the flag, `{{<slug>_<collectionName>}}` references) or the current form (flag set, bare references). Mixing them leaves the references unresolved.
+- Duplicating the step in the editor renames the copy's collection to `<name>2`, `<name>3`, … (shortened to stay within 30 characters), updates `collectionName` and rewrites the references inside the copy.
+
 ## Gotchas
 
-- Use the full output name in selectors: `{{<slug>_<collectionName>}}`, not just the collection name.
+- Use the bare name in selectors: `{{<collectionName>}}`, not `{{<slug>_<collectionName>}}` (that was the form before 27.0.41).
 - If no item is ever added, the collection does not exist at run time. Steps that iterate over it then see nothing.
-- When a loop or branch body is left, AutoFlow removes the runtime values of the steps inside that body. Put the Create Collection step at a level that stays readable for as long as you need the collection, typically before the loop that fills it.
-- The editor's default slug is the PascalCase form of the description, capped at 20 characters. "Create Orders Collection" becomes `CreateOrdersCollecti`. Choose a short custom slug instead.
+- When a loop or branch body is left, AutoFlow removes the runtime values of the steps inside that body, the bare `<collectionName>` / `<collectionName>[n]` rows included. Put the Create Collection step at a level that stays readable for as long as you need the collection, typically before the loop that fills it.
+- The editor's default slug is the PascalCase form of the description, capped at 20 characters. "Create Orders Collection" becomes `CreateOrdersCollecti`. The slug no longer appears in references, but it still has to be a valid, unique slug.

@@ -26,7 +26,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "Field filters applied with BC filter syntax before reading. Rows with fieldNo 0 are skipped; if two rows target the same fieldNo the later one wins. The editor saves each row as {fieldNo, filter} only, one row per field.",
+      "description": "Field filters applied before reading: a BC filter expression per row, or (Option/Enum fields) a single value chosen in filterMode 'fixed' / 'rules'. Rows with fieldNo 0 are skipped; if two rows target the same fieldNo the later one wins (in the earlier one's place). The editor saves each row as {fieldNo, filter, filterMode?, filterRules?}, one row per field; lineNo and fieldCaption keys are dropped.",
       "items": [
         {
           "key": "fieldNo",
@@ -41,12 +41,32 @@
         {
           "key": "filter",
           "type": "string",
-          "required": true,
+          "required": false,
           "default": "",
           "enum": null,
           "maxLength": 250,
           "smart": "text",
-          "description": "Business Central filter expression as used in SETFILTER / the filter pane, e.g. '10000..20000', '<>0', 'A*|B*', '@*gmbh*', '' (= empty). {{SmartFields}} are resolved against the flow context (never against the records being searched) before the filter is set. The text is cut to 250 characters. For a RecordId field, a value that is exactly one reference SmartField filters on that record directly."
+          "description": "Without filterMode (or with any value other than 'fixed' / 'rules'): a Business Central filter expression as used in SETFILTER / the filter pane, e.g. '10000..20000', '<>0', 'A*|B*', '@*gmbh*', '' (= empty). {{SmartFields}} are resolved against the flow context (never against the records being searched) before the filter is set. The text is cut to 250 characters. For a RecordId field, a value that is exactly one reference SmartField filters on that record directly. With filterMode 'fixed': the Option/Enum value NAME to filter on (SetRange on its ordinal; empty -> the field is not filtered). With filterMode 'rules': ignored."
+        },
+        {
+          "key": "filterMode",
+          "type": "string",
+          "required": false,
+          "default": "smarttext",
+          "enum": ["fixed", "smarttext", "rules"],
+          "maxLength": null,
+          "smart": "none",
+          "description": "'fixed' = filter the field on the one value named in 'filter'; 'rules' = on the value of the first filterRules rule whose condition is true, else 'otherwise' (nothing -> the field is not filtered); 'smarttext' or absent = 'filter' is a free BC filter expression. Compared case-insensitively. Fixed and rules match the name like a field value (exact name, exact caption, case-insensitive name/caption, then an ordinal number) and only work on Option/Enum fields. The editor offers the modes only for those fields and omits the key in SmartText mode."
+        },
+        {
+          "key": "filterRules",
+          "type": "object",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "maxLength": null,
+          "smart": "filter",
+          "description": "Only with filterMode 'rules': { \"rules\": [ { \"condition\": \"<SmartFilter condition>\", \"value\": \"<value name>\" }, ... ], \"otherwise\": \"<value name>\" }. Conditions use the SmartFilter grammar of the Decision step and are evaluated against the flow context ({{...}} substituted before the step runs), not per record. A rule with a blank condition or an empty value never matches; 'otherwise' may be omitted or empty. Also accepted as a JSON string holding that object."
         }
       ]
     },
@@ -166,6 +186,20 @@
       "message": ""
     },
     {
+      "id": "FindRecords.filter-enum-value",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "A filters[] row with filterMode 'fixed' or 'rules' that yields a value: the value must be a name, caption (case-insensitive fallback) or ordinal number of the field's values, and the field must be an Option/Enum field (on any other field the same error is raised with an empty Allowed list).",
+      "message": "'%1' is not a value of %2. Allowed: %3."
+    },
+    {
+      "id": "FindRecords.filter-rule-incomplete",
+      "severity": "warning",
+      "stage": "editor",
+      "check": "Status line of the config canvas: every rule in a filters[] row with filterMode 'rules' needs a non-blank condition and a non-empty value. Advisory only (does not block saving); at runtime such a rule never matches.",
+      "message": "%1, row %2: %3 (e.g. Filters, row 2: Rule 1 needs a condition and a value.)"
+    },
+    {
       "id": "FindRecords.limit-type",
       "severity": "warning",
       "stage": "runtime",
@@ -233,6 +267,8 @@
     "The SmartFilter evaluator is position-based: without parentheses, '=' is matched before '&' / '|', so 'A = 1 & B = 2' does not work - write '(A = 1) & (B = 2)'. Literal &, |, ( or ) inside operands break parsing.",
     "In smartFilter a '.' inside {{...}} is a path separator and ';' starts a format suffix, so record fields whose AL name contains a dot (e.g. 'No.', 'External Document No.') cannot be referenced as {{FieldName}}; filter on them with filters[] instead.",
     "Field filter SmartFields resolve against the flow context only; to filter by a value of the record being found, use smartFilter.",
+    "Option/Enum fields: prefer filterMode 'fixed' with the value NAME ('Order', 'Pending Approval') - it is language-independent and filters on the ordinal. A free expression ('filter' without filterMode) is needed for ranges or alternatives ('Open|Released', '<>Open') and is parsed by Business Central, so captions there depend on the session language. A rules row where no rule matches and 'otherwise' is empty does not filter the field at all.",
+    "Before 27.0.41: filterMode / filterRules did not exist; every row was a free filter expression (a hand-written filterMode was ignored) and the editor saved rows as {fieldNo, filter} only.",
     "'results' is a reference ARRAY: use it as the source of a For Each loop, or {{slug_results}} / {{slug_results[0]}} for the first record. When nothing matched, no 'results' value exists and 'count' is '0'.",
     "The step reads only; it does not lock records.",
     "Publish-time dangling-reference check: any {{...}} containing an underscore is treated as {{slug_output}}. A record field name with an underscore used in smartFilter (e.g. {{My_Field}}) therefore triggers a publish warning about an unknown slug."

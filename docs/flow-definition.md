@@ -131,7 +131,7 @@ They must be unique across all steps **and** edges in the definition, because lo
 
 ## Slugs
 
-A slug names a step so other steps can reference its outputs (`{{<slug>_<output>}}`).
+A slug names a step so other steps can reference its outputs (`{{<slug>_<output>}}`). Create Element and Create Collection are the exception: their output is referenced by the bare element / collection name (`{{Amount}}`), see [Outputs](#outputs).
 
 - Grammar: `^[A-Za-z][A-Za-z0-9-]{0,19}$`. Letter first, letters/digits/hyphens, max **20** characters, **no underscore**, because `_` separates the slug from the output name.
 - Unique within the definition. Generated slugs are compared case-insensitively, so treat `SendMail` and `sendmail` as a collision.
@@ -150,6 +150,15 @@ Full reference syntax: [references-and-smart-fields.md](references-and-smart-fie
 
 - `value`: a scalar or text value.
 - `reference`: a record reference into BC table `tableNo`. Downstream steps can navigate its fields. See [references-and-smart-fields.md](references-and-smart-fields.md).
+
+Downstream steps reference an output as `{{<slug>_<name>}}`. [Create Element](actions/ElementCreate.md) and [Create Collection](actions/CreateCollection.md) (since 27.0.41) publish their output under the bare name instead, and mark it with two extra keys:
+
+```json
+{ "name": "Amount", "type": "value", "unprefixed": true, "nameKey": "elementName" }
+{ "name": "Orders", "type": "reference", "tableNo": 36, "unprefixed": true, "nameKey": "collectionName" }
+```
+
+Such an output is referenced as `{{Amount}}` / `{{Orders}}`. Its name must match `[A-Za-z][A-Za-z0-9-]*`, be at most 30 characters and be unique (case-insensitively) against every other output key in the flow; publish refuses a flow with a duplicate. Without `"unprefixed": true` the output behaves as before 27.0.41 (`{{<slug>_<name>}}`).
 
 The editor regenerates `outputs` from `configuration` every time a step is saved. If you write JSON by hand, produce exactly what the step's page documents. Stale outputs show up as dangling references or broken field pickers.
 

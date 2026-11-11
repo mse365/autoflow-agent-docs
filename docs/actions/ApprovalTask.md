@@ -11,7 +11,7 @@ Asks a user or a task group to approve or reject, waits in the background until 
 | Category | Tasks |
 | Terminating | `false` |
 | Group / edges | Yes: two fixed edges, `"true"` (Approved) and `"false"` (Rejected) |
-| Availability | Generally available from the release after 27.0.40 (part of AutoFlow Tasks). Background triggers only; see [Where it can be used](#where-it-can-be-used). |
+| Availability | Generally available from AutoFlow 27.0.41 (part of AutoFlow Tasks). Background triggers only; see [Where it can be used](#where-it-can-be-used). |
 
 ## What it does
 
