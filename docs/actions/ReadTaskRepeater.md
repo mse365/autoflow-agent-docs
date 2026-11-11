@@ -11,7 +11,7 @@ Reads the rows a person entered in a repeater section of a [Form task](FormTask.
 | Category | Tasks |
 | Terminating | `false` |
 | Group / edges | No |
-| Availability | Generally available from the release after 27.0.40 (part of AutoFlow Tasks). Creates no task and does not wait, so it has no trigger restriction of its own. |
+| Availability | Generally available from AutoFlow 27.0.41 (part of AutoFlow Tasks). Creates no task and does not wait, so it has no trigger restriction of its own. |
 
 ## What it does
 

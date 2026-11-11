@@ -31,6 +31,9 @@ SPEC_DIR = ROOT / "spec"
 GUID_RE = re.compile(r"^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$")
 SLUG_RE = re.compile(r"^[A-Za-z][A-Za-z0-9-]{0,19}$")
 CODE_RE = re.compile(r"^[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)?$")
+# 27.0.41: Create Element (202) and Create Collection (200) publish their output under the bare name
+# held by this configuration key; the output entry carries "unprefixed": true and "nameKey".
+UNPREFIXED_OUTPUT_ACTIONS = {202: "elementName", 200: "collectionName"}
 NOTE_COLORS = {"yellow", "pink", "blue", "green", "lavender", "grey"}
 JSON_TYPES = {
     "string": str,
@@ -106,9 +109,9 @@ def iter_strings(node):
             yield from iter_strings(v)
 
 
-def placeholder_slugs(text):
-    """Same algorithm as AutoFlow's dangling-reference check: for every {{...}} take the part
-    before the first underscore as the slug (placeholders without an underscore are ignored)."""
+def placeholder_roots(text):
+    """Yield (root, body) for every {{...}} in text. The root is the body up to the first '.', '['
+    or ';', trimmed - what AutoFlow's dangling-reference check and its rename cascade look at."""
     out = []
     rest = text
     while True:
@@ -120,10 +123,25 @@ def placeholder_slugs(text):
         if e < 0:
             return out
         inner = rest[:e]
-        u = inner.find("_")
-        if u > 0:
-            out.append((inner[:u], inner[u + 1:]))
+        out.append((re.split(r"[.\[;]", inner, maxsplit=1)[0].strip(), inner))
         rest = rest[e + 2:]
+
+
+def placeholder_slugs(text, bare_names=frozenset()):
+    """Same algorithm as AutoFlow's dangling-reference check (27.0.41): the ROOT of every {{...}}
+    is split at its first underscore into (slug, rest). A root without an underscore (built-ins,
+    loop variables) is skipped, and so is a root that equals a bare output name of a Create
+    Element / Create Collection step (compared case-insensitively) - that is never a slug
+    reference. An underscore further down the path ({{Invoices.Customer_No}}) does not count."""
+    out = []
+    for root, inner in placeholder_roots(text):
+        if root.lower() in bare_names:
+            continue
+        u = root.find("_")
+        if u > 0:
+            lead = len(inner) - len(inner.lstrip())
+            out.append((root[:u], inner[lead + u + 1:]))
+    return out
 
 
 # --------------------------------------------------------------------------- walking
@@ -214,7 +232,10 @@ def check_steps(doc, specs, r, strict_outputs, features=()):
     steps = doc["steps"]
     ids = {}
     slugs = {}  # lower -> original
-    slug_outputs = {}  # slug -> set(output names)
+    slug_outputs = {}  # slug -> set(output names addressed as <slug>_<name>)
+    bare_outputs = {}  # lower(name) -> (name, slug, where) of unprefixed outputs (Create Element / Create Collection)
+    bare_by_slug = {}  # slug -> set(lower(name)) of its unprefixed outputs
+    all_names = []  # every resolved output name in the flow (what an unprefixed name must not collide with)
     action_count = 0
 
     trig = steps[0]
@@ -282,12 +303,21 @@ def check_steps(doc, specs, r, strict_outputs, features=()):
             names = set()
             for o in step.get("outputs") or [] if isinstance(step.get("outputs"), list) else []:
                 if isinstance(o, dict) and isinstance(o.get("name"), str):
-                    if stype == "trigger":
+                    if o.get("unprefixed") is True:
+                        # 27.0.41: an output flagged "unprefixed" (Create Element / Create Collection)
+                        # is addressed by its bare name, which must be unique across the flow
+                        bare = o["name"]
+                        all_names.append(bare)
+                        bare_outputs.setdefault(bare.lower(), (bare, slug, where))
+                        bare_by_slug.setdefault(slug, set()).add(bare.lower())
+                    elif stype == "trigger":
                         # trigger outputs are registered as <slug>_<name>, cut at 30 characters,
                         # so only the truncated name resolves
                         names.add(o["name"][:max(0, 30 - len(slug) - 1)])
+                        all_names.append(f"{slug}_{o['name']}"[:30])
                     else:
                         names.add(o["name"])
+                        all_names.append(f"{slug}_{o['name']}")
             slug_outputs[slug] = names
 
         if not isinstance(step.get("configuration"), dict):
@@ -296,17 +326,41 @@ def check_steps(doc, specs, r, strict_outputs, features=()):
         if not isinstance(outs, list):
             r.add("error", "step.outputs", where, "'outputs' must be an array ([] when none).")
         else:
+            unprefixed_step = stype == "action" and step.get("action") in UNPREFIXED_OUTPUT_ACTIONS
             for o_i, o in enumerate(outs):
                 ow = f"{where}.outputs[{o_i}]"
                 if not isinstance(o, dict) or not isinstance(o.get("name"), str) or o.get("type") not in ("value", "reference"):
-                    r.add("error", "output.shape", ow, "Output must be {name, type: \"value\"|\"reference\"[, tableNo]}.")
-                elif o["type"] == "reference" and not (isinstance(o.get("tableNo"), int) and o["tableNo"] > 0):
+                    r.add("error", "output.shape", ow, "Output must be {name, type: \"value\"|\"reference\"[, tableNo][, unprefixed, nameKey]}.")
+                    continue
+                if o["type"] == "reference" and not (isinstance(o.get("tableNo"), int) and o["tableNo"] > 0):
                     r.add("error", "output.tableNo", ow, "A reference output needs a positive integer 'tableNo'.")
+                if unprefixed_step:
+                    name_key = UNPREFIXED_OUTPUT_ACTIONS[step["action"]]
+                    if o.get("unprefixed") is not True or o.get("nameKey") != name_key:
+                        r.add("lint", "output.unprefixed-expected", ow,
+                              f"Since AutoFlow 27.0.41 this step publishes its output under the bare name: write "
+                              f"{{\"name\": \"{o['name']}\", \"type\": \"{o['type']}\", \"unprefixed\": true, \"nameKey\": \"{name_key}\"}}. "
+                              f"Without \"unprefixed\": true it is addressed as {{{{{slug}_{o['name']}}}}} (the pre-27.0.41 form).")
+                    elif isinstance(step.get("configuration"), dict) and o["name"] != step["configuration"].get(name_key):
+                        r.add("lint", "output.unprefixed-expected", ow,
+                              f"Output name '{o['name']}' differs from configuration.{name_key}; the two must be identical.")
 
     # publish: at least one action
     if action_count == 0:
         r.add("error", "publish.empty-flow", "$.steps",
               "A flow must contain at least one action step before it can be published. Add a step after the trigger and try again.")
+
+    bare_names = frozenset(bare_outputs)
+
+    # publish: an unprefixed output name shared with any other output makes every reference to it
+    # ambiguous - a hard stop at publish (mirrors AutoFlow's duplicate-output-name check)
+    lowered = [n.lower() for n in all_names]
+    for low, (name, slug, where) in bare_outputs.items():
+        if lowered.count(low) > 1:
+            r.add("error", "publish.duplicate-output-name", where,
+                  f'The output name "{name}" is used by more than one step output. Every name must be unique. '
+                  f"(Compared case-insensitively against every <slug>_<output> and every other Create Element / "
+                  f"Create Collection name in the flow.)")
 
     # lint: references to steps that are not in scope at this point of the path
     if len(steps) > 1:
@@ -314,25 +368,37 @@ def check_steps(doc, specs, r, strict_outputs, features=()):
             if not isinstance(step.get("configuration"), dict):
                 continue
             for s in iter_strings(step["configuration"]):
-                for ref_slug, _ in placeholder_slugs(s):
+                for ref_slug, _ in placeholder_slugs(s, bare_names):
                     if ref_slug in slug_outputs and ref_slug not in visible:
                         r.add("lint", "reference.out-of-scope", where,
                               f"'{ref_slug}' is not in scope here: it runs later, on another branch, or inside a group "
                               f"whose branch outputs are discarded when the group finishes.")
+                for root, _ in placeholder_roots(s):
+                    owner = bare_outputs.get(root.lower())
+                    if owner and owner[1] not in visible:
+                        r.add("lint", "reference.out-of-scope", where,
+                              f"'{root}' (output of step '{owner[1]}') is not in scope here: it runs later, on another "
+                              f"branch, or inside a group whose branch outputs are discarded when the group finishes.")
 
     # publish: dangling references (mirrors AutoFlow) + lint: unknown output names
     for step, where, *_ in walk_steps(steps, "$.steps"):
         if not isinstance(step, dict) or not isinstance(step.get("configuration"), dict):
             continue
         for s in iter_strings(step["configuration"]):
-            for ref_slug, rest in placeholder_slugs(s):
+            for ref_slug, rest in placeholder_slugs(s, bare_names):
                 if ref_slug not in slug_outputs:
                     r.add("warning", "publish.dangling-reference", where,
                           f'Step "{step.get("description", "")}" references unknown slug "{ref_slug}".')
                 elif strict_outputs:
                     out_name = re.split(r"[.\[|:;]", rest, maxsplit=1)[0]  # ;<format> suffix
                     known = slug_outputs[ref_slug]
-                    if known and out_name not in known | {"iteration"}:  # engine adds 'iteration' to every action
+                    if out_name in known or out_name == "iteration":  # engine adds 'iteration' to every action
+                        continue
+                    if out_name.lower() in bare_by_slug.get(ref_slug, ()):
+                        r.add("lint", "reference.unknown-output", where,
+                              f"'{{{{{ref_slug}_{rest}}}}}': since AutoFlow 27.0.41 step '{ref_slug}' publishes '{out_name}' "
+                              f"under its bare name - write '{{{{{rest}}}}}' (before 27.0.41: '{{{{{ref_slug}_{rest}}}}}').")
+                    elif known:
                         r.add("lint", "reference.unknown-output", where,
                               f"'{{{{{ref_slug}_{rest}}}}}': step '{ref_slug}' has no output named '{out_name}' (has: {', '.join(sorted(known))}).")
 

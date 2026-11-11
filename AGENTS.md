@@ -1,12 +1,12 @@
 # AutoFlow flow definitions: instructions for AI agents
 
-You are working with **AutoFlow** flow definitions: the JSON documents that *Export current version* produces and *Create from file* imports into Microsoft Dynamics 365 Business Central. This repository is your reference, verified against AutoFlow 27.0.40. Use it in place of guessing. If the user's AutoFlow is older, follow the **Before 27.0.40** notes; if it is newer, say that these docs may be out of date.
+You are working with **AutoFlow** flow definitions: the JSON documents that *Export current version* produces and *Create from file* imports into Microsoft Dynamics 365 Business Central. This repository is your reference, verified against AutoFlow 27.0.41. Use it in place of guessing. If the user's AutoFlow is older, follow the **Before <version>** notes; if it is newer, say that these docs may be out of date.
 
 ## Workflow
 
 1. **Read the format first**: [docs/flow-definition.md](docs/flow-definition.md). It covers the root object, the trigger and action step shapes, edges, ids, slugs, outputs and execution order.
 2. **Pick the trigger** from [docs/triggers/README.md](docs/triggers/README.md) and **the actions** from [docs/actions/README.md](docs/actions/README.md). Then open each step's page: it lists every configuration key, its type and default, the outputs it produces, its validation rules, and a valid example.
-3. **Wire data between steps** with `{{<slug>_<output>}}` tokens. The syntax (field paths, loop items, formulas, dates, conditions) is in [docs/references-and-smart-fields.md](docs/references-and-smart-fields.md).
+3. **Wire data between steps** with `{{<slug>_<output>}}` tokens; an element or collection from Create Element / Create Collection is `{{<name>}}` without a slug (since 27.0.41). The syntax (field paths, loop items, formulas, dates, conditions) is in [docs/references-and-smart-fields.md](docs/references-and-smart-fields.md).
 4. **Validate before you hand over**:
    ```sh
    python3 tools/validate_flow.py flow.json --strict

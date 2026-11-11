@@ -76,7 +76,7 @@
           "enum": null,
           "maxLength": null,
           "smart": "text",
-          "description": "Value text. SmartFields ({{slug_output}}), SmartFormulas ([[...]]) and SmartControls are resolved first, then the text is converted to the field type (see inputFormat). Values longer than 2048 characters are supported (e.g. base64 for Blob/Media fields)."
+          "description": "Value text. SmartFields ({{slug_output}}), SmartFormulas ([[...]]) and SmartControls are resolved first, then the text is converted to the field type (see inputFormat). Values longer than 2048 characters are supported (e.g. base64 for Blob/Media fields). With valueMode 'fixed' it holds an Option/Enum value NAME (e.g. 'Order'); an empty fixed value skips the row. With valueMode 'rules' it is ignored. For Option/Enum fields in SmartText mode the name, the caption in the session language or an ordinal number are accepted (exact name, exact caption, case-insensitive name/caption, then a number that is one of the field's ordinals; a number that is no ordinal is assigned as given)."
         },
         {
           "key": "validate",
@@ -97,6 +97,36 @@
           "maxLength": 30,
           "smart": "none",
           "description": "How the value text is parsed into the field type. Empty/absent = the session's regional format (locale-sensitive). \"9\" or \"xml\" (case-insensitive) = invariant XML notation (1000.00, 2026-07-16, true). Otherwise a date/time pattern built from the fixed-width tokens yyyy, yy, MM, dd, HH, mm, ss (each at most once) plus non-alphanumeric separators, e.g. yyyyMMdd, dd.MM.yyyy, yyyy-MM-dd HH:mm:ss. Patterns need a complete date (yyyy|yy + MM + dd) or at least HH+mm; ss needs mm, mm needs HH. Patterns are only allowed for Date, Time and DateTime fields. Omitted by the editor when empty."
+        },
+        {
+          "key": "valueMode",
+          "type": "string",
+          "required": false,
+          "default": "smarttext",
+          "enum": ["fixed", "smarttext", "rules"],
+          "maxLength": null,
+          "smart": "none",
+          "description": "How 'value' is read. 'fixed' = value is an Option/Enum value name picked from the field's list (empty -> the row is skipped). 'rules' = the value comes from valueRules (first rule whose condition is true, else otherwise; nothing -> the row is skipped and the field keeps its current value). 'smarttext' or absent = the SmartText in 'value'. Compared case-insensitively; any other text counts as smarttext. The editor offers the modes only for Option and Enum fields and omits the key in SmartText mode; the runtime reads it on any row."
+        },
+        {
+          "key": "valueRules",
+          "type": "object",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "maxLength": null,
+          "smart": "filter",
+          "description": "Only with valueMode 'rules': { \"rules\": [ { \"condition\": \"<SmartFilter condition>\", \"value\": \"<value name>\" }, ... ], \"otherwise\": \"<value name>\" }. Conditions use the SmartFilter grammar of the Decision step; {{...}} tokens in them are substituted before the step runs. Rules are tried in order; a rule with a blank condition or an empty value never matches. 'otherwise' may be omitted or empty (then a non-matching row is skipped). Also accepted as a JSON string holding that object. The editor writes it only in rules mode and drops blank rules."
+        },
+        {
+          "key": "optional",
+          "type": "boolean",
+          "required": false,
+          "default": false,
+          "enum": null,
+          "maxLength": null,
+          "smart": "none",
+          "description": "true = skip the row (and write a Debug log line) when its value is empty, so the field keeps its current value instead of failing the conversion or being cleared. Empty means: the resolved text is '' (any field type); Date/Time/DateTime also 0D/0T/0DT and Guid the null GUID; Blob/Media a bare binary SmartField with an empty payload; RecordId no resolvable reference and empty text. An explicit 0 / false in a numeric, Boolean, Duration or Option field is a real value and is applied; a non-empty value that cannot be converted still fails. Absent, null or non-boolean -> false (the row is applied as before)."
         }
       ]
     }
@@ -228,6 +258,27 @@
       "message": "Cannot convert value \"%1\" to %2 for field \"%3\". | Cannot convert value \"%1\" to %2 for field \"%3\" using input format \"%4\"."
     },
     {
+      "id": "ModifyRecord.values-option-value",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "An Option/Enum field's resolved value (fixed name, rules result or SmartText) must be one of the field's value names or captions (case-insensitive fallback) or a number. Checked when the row is converted.",
+      "message": "Cannot convert value \"%1\" to %2 for field \"%3\". Allowed: %4."
+    },
+    {
+      "id": "ModifyRecord.values-rule-incomplete",
+      "severity": "warning",
+      "stage": "editor",
+      "check": "Status line of the config canvas: every rule in a values[] row with valueMode 'rules' needs a non-blank condition and a non-empty value. Advisory only (does not block saving); at runtime such a rule never matches.",
+      "message": "%1, row %2: %3 (e.g. Field Values, row 2: Rule 1 needs a condition and a value.)"
+    },
+    {
+      "id": "ModifyRecord.values-optional-skipped",
+      "severity": "info",
+      "stage": "runtime",
+      "check": "A values[] row with optional = true whose value is empty is skipped; one Debug log line per skipped row. Modify(triggers) still runs.",
+      "message": "Field \"%1\" skipped: it is optional and its value is empty."
+    },
+    {
       "id": "ModifyRecord.values-lineNo-unique",
       "severity": "error",
       "stage": "runtime",
@@ -254,7 +305,9 @@
     "Output 'rec' points at the same record as the input reference; it is mainly useful to pass a typed reference on.",
     "An empty values array is allowed: the record is then modified unchanged (Modify(triggers) still runs).",
     "Primary-key fields in values[] fail the step at runtime; the editor's field lookup hides them.",
-    "See Insert Record for value conversion details (inputFormat, Option names, Blob/Media, RecordId fields).",
+    "See Insert Record for value conversion details (inputFormat, Option names, Blob/Media, RecordId fields) and for the valueMode / valueRules / optional row keys.",
+    "Rows that yield no value leave the field as it is: valueMode 'fixed' with an empty value, valueMode 'rules' where no rule matches and 'otherwise' is empty or absent, and optional = true with an empty value (the last one logs a Debug line).",
+    "Before 27.0.41: valueMode, valueRules and optional did not exist (a hand-written valueMode was ignored and the row read as SmartText; an empty value was always assigned, clearing text fields and failing on typed fields). Option names/captions were matched case-sensitively and mapped by list position.",
     "Writing step: a Confirm dialog placed after this step (in document order) produces a publish warning, because Business Central cannot open a dialog once the flow has written to the database."
   ]
 }

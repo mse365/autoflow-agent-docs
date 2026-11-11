@@ -15,7 +15,7 @@ A terminating response step for interactive document flows. It writes field valu
 
 ## What it does
 
-The step does not write to the database itself. It resolves the configured `values` to literal text inside the flow and hands them back to the waiting interactive document trigger. The trigger then applies them to the live document record (Validate or direct assignment per row) right before Business Central continues with its own save, release, reopen or post.
+The step does not write to the database itself. It resolves the configured `values` to literal text inside the flow – a Rules row is evaluated here and becomes its winning value name; a row that yields no value (Fixed with an empty `value`, or Rules with no match and no `otherwise`) is left out, so the document keeps that field – and hands them back to the waiting interactive document trigger. The trigger then applies them to the live document record (Validate or direct assignment per row) right before Business Central continues with its own save, release, reopen or post.
 
 `skipStandard` changes the behaviour in *released* and *reopened* flows only: Business Central does **not** release or reopen the document, and AutoFlow saves it with these values instead (e.g. Status = Pending Approval for a custom approval). In that case warehouse requests are not released or reopened either. To prevent the document action altogether, end the flow with an Error step instead.
 
@@ -27,7 +27,7 @@ The picker and the editor's default description show "Set Field Values".
 |---|---|---|---|---|
 | `tableNo` | integer | no | `0` | Table of the trigger's document. It only scopes the editor's field lookup, and the editor derives it from the trigger output. At runtime the values always go to the trigger's record. |
 | `skipStandard` | boolean | no | `false` | Skip standard processing. It only has an effect in *released* and *reopened* flows. |
-| `values` | array | yes | `[]` | At least one row `{lineNo, fieldNo, value, validate?, inputFormat?}`, the same shape as in [Insert Record](InsertRecord.md#values-row-shared-by-insert--modify--rename--set-document-field-values). **Non-key fields only.** |
+| `values` | array | yes | `[]` | At least one row `{lineNo, fieldNo, value, validate?, inputFormat?, valueMode?, valueRules?}`, the same shape as in [Insert Record](InsertRecord.md#values-row-shared-by-insert--modify--rename--set-document-field-values). **Non-key fields only.** Option/Enum fields such as *Status* take a value name in `valueMode: "fixed"` or conditions in `valueMode: "rules"` ([details](InsertRecord.md#option-and-enum-fields-valuemode)). The `optional` flag of Insert / Modify is **not** supported here: the editor has no such column and the key is dropped when the values are handed to the trigger. |
 
 ## Outputs
 
@@ -38,6 +38,7 @@ None.
 | stage | severity | rule | message |
 |---|---|---|---|
 | runtime | warning | `values` is empty: nothing is written | (no message) |
+| editor (status line) | warning | A `values` row in Rules mode has a rule with a blank condition or an empty value. Advisory, does not block saving; at runtime such a rule never matches. | `Field Values, row 2: Rule 1 needs a condition and a value.` |
 | publish | warning | the step has a successor (terminating steps must end their path) | `Step "%1" is a terminating step but has a successor – terminating steps must end the path.` |
 
 The step's own check for an empty `values` list (`Add at least one field to set on the record.`) is not run (27.0.40), and the editor does not require a row. Always set at least one field.
@@ -52,6 +53,7 @@ These errors surface in the user's session when the trigger applies the values, 
 | `fieldNo` not in the document table | `Field %1 does not exist in table %2.` |
 | Invalid input format | `"%1" is not a valid input format. Leave it empty for the regional format, enter 9 or xml for the invariant XML notation, or enter a date/time pattern such as yyyyMMdd (tokens yyyy, yy, MM, dd, HH, mm, ss plus separators).` |
 | Value not convertible | `Cannot convert value "%1" to %2 for field "%3".` / `… using input format "%4".` |
+| Option/Enum value is neither a value name, a caption nor a number | `Cannot convert value "%1" to %2 for field "%3". Allowed: %4.` |
 | Field validation fails | Business Central's own error |
 
 ## Example
@@ -69,14 +71,14 @@ These errors surface in the user's session when the trigger applies the values, 
     "tableNo": 36,
     "skipStandard": true,
     "values": [
-      { "lineNo": 10000, "fieldNo": 120, "value": "Pending Approval", "validate": false }
+      { "lineNo": 10000, "fieldNo": 120, "value": "Pending Approval", "valueMode": "fixed", "validate": false }
     ]
   },
   "outputs": []
 }
 ```
 
-(In a *When a document is released* flow, this sets the Sales Header status to *Pending Approval* instead of releasing.)
+(In a *When a document is released* flow, this sets the Sales Header status to *Pending Approval* instead of releasing. `Pending Approval` is the enum value **name** of field 120; the editor stores names, not captions.)
 
 ## Gotchas
 
@@ -84,3 +86,5 @@ These errors surface in the user's session when the trigger applies the values, 
 - The picker offers it only in the four interactive document flows. Don't use it in other flows.
 - The editor fills `tableNo` from the trigger output only for the supported document tables (18, 23, 27, 36, 37, 38, 39, 167, 1001, 1003, 5050, 8052, 8062). The runtime ignores `tableNo`.
 - Use `validate: false` for fields such as *Status*, whose validation would block a direct change.
+- Rules conditions (`valueRules`) are evaluated inside the flow, with the flow's SmartFields; the trigger only receives the resulting literal value names.
+- Before 27.0.41: `valueMode` / `valueRules` did not exist (a hand-written `valueMode` was ignored and the row read as SmartText), and Option names were matched case-sensitively by list position.

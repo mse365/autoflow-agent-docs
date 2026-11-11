@@ -100,6 +100,15 @@
       "availability": "ga"
     },
     {
+      "name": "CreateZipArchive",
+      "id": 5564425,
+      "caption": "Create ZIP archive",
+      "category": "Documents",
+      "terminating": false,
+      "group": false,
+      "availability": "ga"
+    },
+    {
       "name": "Decision",
       "id": 100,
       "caption": "Decision",

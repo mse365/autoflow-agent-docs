@@ -5,7 +5,7 @@ This page is the reference for how a value inside a step's `configuration` point
 The machine-readable companion is [`spec/smart-syntax.json`](../spec/smart-syntax.json). It holds the regexes, built-in tokens, operators, functions and messages.
 
 > **The short version**
-> - A step output is referenced as `{{<slug>_<outputName>}}`. Walk into a record reference with dots: `{{trigger_Rec.no}}`.
+> - A step output is referenced as `{{<slug>_<outputName>}}`. Walk into a record reference with dots: `{{trigger_Rec.no}}`. The one exception: an element or collection declared by Create Element / Create Collection is referenced by its bare name, `{{<name>}}` (since 27.0.41).
 > - A leaf segment matches either a SmartField definition name or a BC field name. BC field names are compared case-insensitively and ignore punctuation, so for `"Sell-to Customer No."` you write `selltocustomerno`.
 > - A token that doesn't resolve is **left in the text verbatim**. The flow doesn't fail, and nothing is written to the execution log.
 > - Format a value inline with `;`: `{{today;9}}` gives `2026-10-23`, and `{{x;<Precision,2:2><Standard Format,9>}}` sets two decimals.
@@ -37,6 +37,7 @@ index      := digits                               // 0-based
 | Root | Kind | Example | Notes |
 |---|---|---|---|
 | `<slug>_<outputName>` | output of an earlier step (or the trigger) | `{{findCustomer_results}}`, `{{trigger_Rec}}` | The main case. The slug and the output name are joined by a single `_`. |
+| `<elementName>`, `<collectionName>` | output of a [Create Element](actions/ElementCreate.md) / [Create Collection](actions/CreateCollection.md) step | `{{Amount}}`, `{{Orders[0].no}}` | The bare name, no slug. Such outputs carry `"unprefixed": true` in the step's `outputs`. Before 27.0.41 they were `{{<slug>_<name>}}` like every other output. |
 | `today` | value | `{{today}}` | Today's date in the session's date format. Use `{{today;9}}` for ISO. |
 | `workdate` | value | `{{workdate;9}}` | The work date of the session that **started** the execution. In design-time previews it is the current work date. |
 | `currentDateTime` | value | `{{currentDateTime;9}}` | Current date-time. |
@@ -49,7 +50,12 @@ The editor's field picker lists the outputs of every step on the path from the t
 
 At runtime the context holds the outputs of the steps that have already run. When the flow leaves a group step's branch or loop body, the outputs of every step inside that group are removed. Only the trigger, earlier steps on the path and the enclosing group steps can therefore be referenced reliably, which is exactly what the picker offers.
 
-**Trigger outputs** are registered under `trigger_<name>`, and the whole key is capped at 30 characters. The output name is therefore truncated to 22 characters (`trigger_` takes 8), and a reference must use the truncated form. **Action outputs** are registered under keys of up to 250 characters, so they are not truncated in practice.
+**Output reference keys** come in two forms:
+
+- **Step outputs** are registered under `<slug>_<name>`. **Trigger outputs** are registered under `trigger_<name>`, and the whole key is capped at 30 characters. The output name is therefore truncated to 22 characters (`trigger_` takes 8), and a reference must use the truncated form. **Action outputs** are registered under keys of up to 250 characters, so they are not truncated in practice.
+- **Element and collection outputs** (Create Element, Create Collection) are registered under the **bare name** the step declares, with no slug prefix: `{{Amount}}`, `{{Orders}}`, `{{Orders[1]}}`, `{{Orders.no}}`. The output entry carries `"unprefixed": true` and `"nameKey"` (see the step pages), and only an output with that flag resolves this way. Because there is no slug to make the name unique, it must match `[A-Za-z][A-Za-z0-9-]*`, be at most 30 characters and be unique, case-insensitively, against **every** other output key in the flow: every `<slug>_<name>` (trigger keys as truncated) and every other element / collection name, in every branch and loop body. The editor enforces this when the step is saved; publish refuses a flow in which such a name is used by more than one output. Before 27.0.41 these outputs were `{{<slug>_<name>}}` like every other output; a flow saved before that keeps that form until its Create step is saved again in the editor, which rewrites every reference in the flow (hand-edited JSON is not rewritten).
+
+The dangling-reference check at publish knows both forms: a token whose root (the body up to the first `.`, `[` or `;`) equals an element or collection name, case-insensitively, is never read as a `{{<slug>_…}}` reference.
 
 Common output names:
 
@@ -59,6 +65,8 @@ Common output names:
 | Webhook trigger | `{{trigger_Payload}}`, `{{trigger_Method}}`, `{{trigger_Headers}}`, `{{trigger_Query}}` |
 | Find Records | `{{<slug>_results}}` (reference array), `{{<slug>_results[0].no}}`, `{{<slug>_results.no}}` (= first element) |
 | For Each | `{{<slug>_currentItem}}`, `{{<slug>_currentItem.<field>}}`, `{{<slug>_iteration}}`, `{{<slug>_total}}`, `{{<slug>_items}}` |
+| Create Element | `{{<elementName>}}`, `{{<elementName>.<field>}}` (reference element). Before 27.0.41: `{{<slug>_<elementName>}}` |
+| Create Collection | `{{<collectionName>}}`, `{{<collectionName>[0]}}`, `{{<collectionName>[0].<field>}}`. Before 27.0.41: `{{<slug>_<collectionName>}}` |
 
 The individual step pages list every step's outputs.
 
@@ -145,8 +153,8 @@ Some configuration keys don't take text. They take a **selector**: exactly one b
 
 - The value must be `{{…}}` with nothing else around it. Whitespace around it and inside the braces is trimmed. `{{}}` and an unbraced name are rejected.
 - Allowed forms:
-  - a flat reference: `{{trigger_Rec}}`
-  - a reference array, which means its first element where a single record is needed: `{{find_results}}`
+  - a flat reference: `{{trigger_Rec}}`, or a reference element by its bare name: `{{Customer}}`
+  - a reference array, which means its first element where a single record is needed: `{{find_results}}`, or a collection by its bare name: `{{Orders}}`
   - an indexed element: `{{find_results[1]}}`
   - a **dotted relation** through `reference` SmartField definitions: `{{trigger_Rec.SalesLines}}`. When the step loops, this iterates every related record.
 - The step resolves the selector itself. Because references are never substituted (1.4), the token arrives unchanged.
@@ -207,7 +215,7 @@ How names and definitions behave:
 
 ## 2. Slugs
 
-Every step has a `slug`. Downstream steps reference its outputs as `{{<slug>_<output>}}`.
+Every step has a `slug`. Downstream steps reference its outputs as `{{<slug>_<output>}}`. The outputs of Create Element and Create Collection are the exception: they are referenced by their bare name (1.2), so a slug change never affects them, but their names share the slug's uniqueness rules in spirit and the same `_`-free alphabet.
 
 ### 2.1 Grammar
 
@@ -243,6 +251,7 @@ When a slug is changed in the step editor:
   `The slug "%1" cannot be applied. A slug must start with a letter, contain only letters, digits or hyphens (no underscore), be at most 20 characters long, and be unique within the flow.`
 - **Rewriting references.** After a rename, every string value in every step's `configuration` (all depths, all branches) has the literal `{{<old>_` replaced by `{{<new>_`. Text outside braces and tokens without the `_` directly after the slug are left alone.
 - **What isn't rewritten.** Keys outside `configuration` aren't rewritten. A hand-edited JSON file gets **no** automatic rewrite, so update the references yourself.
+- **Element and collection names** are renamed the same way when a Create Element / Create Collection step is saved with a new name (and, once, when a pre-27.0.41 step is first saved, from `{{<slug>_<name>` to `{{<name>`): the root of every token (up to `.`, `[`, `;` or `}}`) that equals the old name, case-insensitively, becomes the new name, in every configuration string of the flow. Again, hand-edited JSON is not rewritten.
 
 ---
 
@@ -496,6 +505,7 @@ A step's own page lists the kind of each key.
 | | Value output | Reference output |
 |---|---|---|
 | Declared in `outputs` | `{ "name": "total", "type": "value" }` | `{ "name": "Rec", "type": "reference", "tableNo": 36 }` |
+| Declared by Create Element / Create Collection | `{ "name": "Amount", "type": "value", "unprefixed": true, "nameKey": "elementName" }` → `{{Amount}}` | `{ "name": "Orders", "type": "reference", "tableNo": 36, "unprefixed": true, "nameKey": "collectionName" }` → `{{Orders}}` |
 | Holds at runtime | text | a **record id**: the table number plus the primary-key values of one record |
 | In SmartText | substituted, with formatting | **not substituted**: stays as `{{slug_Rec}}`. Walk to a field (`{{slug_Rec.no}}`) to get text. |
 | As a step input | any text key | selector keys (1.6): the step resolves the token to the record |

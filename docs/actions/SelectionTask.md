@@ -11,7 +11,7 @@ Hands a list to a user or a task group, waits in the background until they have 
 | Category | Tasks |
 | Terminating | `false` |
 | Group / edges | No |
-| Availability | Generally available from the release after 27.0.40 (part of AutoFlow Tasks). Background triggers only, the same list as the [Approval task](ApprovalTask.md#where-it-can-be-used). |
+| Availability | Generally available from AutoFlow 27.0.41 (part of AutoFlow Tasks). Background triggers only, the same list as the [Approval task](ApprovalTask.md#where-it-can-be-used). |
 
 ## What it does
 
