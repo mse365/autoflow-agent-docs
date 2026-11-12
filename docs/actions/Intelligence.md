@@ -22,6 +22,8 @@ Two modes. **prompt** sends a prompt (with values of the flow, and optional file
 
 In the editor the questions are cards: the question, "Answer with" (One of a list / Yes or no / A rating), the answers or levels inside the card, the name in later steps (filled from the question) and a box that says what each output holds.
 
+With the debug log level, the execution log shows per list question the entries and the answers read, and the JSON request to TypeSafe Jev and its answers.
+
 Every run is logged as a session under **AutoFlow Intelligence Setup → Sessions** (model, tokens, estimated cost, input and answer; files only by name, type and size). The execution log line says `Intelligence session <no.>`. A failing request fails the step; the step does not commit, so it can run inside the triggering user's transaction.
 
 ## Configuration
@@ -46,7 +48,7 @@ Question rows:
 | `allowNone` | `choice` only, default `true`: `<id>` is `none` when no answer fits. Switch off only when the answers surely cover every input. |
 | `answersFrom` | `choice` only: `fixed` (default, the `answers`) or `list` – the answers are read from a list of an earlier step every time the flow runs. |
 | `list` | `answersFrom` `list`: the list as a braced selector, records or values, e.g. `{{FindProjects_results}}`. |
-| `listAnswer` | `answersFrom` `list`: SmartText of one entry that is the answer, with the list's own name, e.g. `{{FindProjects_results.No.}}`. Empty: a record's primary key, or a value list's value. |
+| `listAnswer` | `answersFrom` `list`: SmartText of one entry that is the answer, with the list's own name, e.g. `{{FindProjects_results.No}}`. Empty: a record's primary key, or a value list's value. |
 | `listDescription` | `answersFrom` `list`, optional: SmartText of one entry that says when to pick it, e.g. `{{FindProjects_results.Description}}`. |
 
 A list question from a list reads the list like the Selection task does (references, arrays, iterators, value lists; at most 255 entries, repeated answers once). An empty list answers `none` without asking – or fails the step when `allowNone` is off.
@@ -99,6 +101,7 @@ Reference them as `{{<slug>_<output>}}`, for example `{{Classify_category}}`, `{
 | no suitable profile | `The prompt mode of Intelligence needs a language model profile …` / `The classify mode of Intelligence needs a TypeSafe profile …` |
 | profile of the other kind | `Profile %1 is a TypeSafe classification profile; the prompt mode needs a language model profile.` (and vice versa) |
 | list empty, `allowNone` off | `Question %1: the list %2 is empty, so there is nothing to choose from. …` |
+| list has entries, but `listAnswer` gives an answer for none (e.g. an unknown SmartField – it stays a `{{token}}`) | `Question %1: the list %2 has %3 entries, but "Answer from each entry" (%4) gives no answer for any of them. …` |
 | list longer than 255 | `Question %1: the list %2 has %3 entries; a question can choose from at most %4.` |
 | unsupported file | `Intelligence cannot read the attachment '%1': only PNG, JPEG, GIF and WebP images and PDF files are supported.` |
 | files over 20 MB | `The attachments are too large for one request (%1 MB, at most %2 MB).` |
@@ -147,7 +150,7 @@ Which of the customer's projects an e-mail is about – the answers come from a 
 ```json
 { "id": "project", "type": "choice", "instructions": "Which project is the e-mail about?", "allowNone": true,
   "answersFrom": "list", "list": "{{FindProjects_results}}",
-  "listAnswer": "{{FindProjects_results.No.}}", "listDescription": "{{FindProjects_results.Description}}" }
+  "listAnswer": "{{FindProjects_results.No}}", "listDescription": "{{FindProjects_results.Description}}" }
 ```
 
 Then a Case step on `{{Classify_category}}` with edges `invoice`, `credit_memo`, `reminder`, `none`, and a Decision on `{{Classify_urgency_level}}` >= 3.
