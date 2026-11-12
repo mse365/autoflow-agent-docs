@@ -51,7 +51,7 @@ Without the API, the same round trip works by hand:
 2. Let the agent edit it, then run the validator.
 3. Choose **Create from file** to import it as a draft: a new flow, or a new draft version of the flow that already has the file's `code` (after a confirmation). Review it in the editor, then **Publish changes**.
 
-## In-app use (AutoFlow AI Flow Builder)
+## In-app use (AutoFlow Intelligence Flow Builder)
 
 Since AutoFlow 27.0.41 the AI Flow Builder inside Business Central also uses these docs. Each
 AutoFlow build is pinned to one commit of this repo; on first use the app downloads that commit

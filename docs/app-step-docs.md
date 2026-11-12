@@ -1,8 +1,8 @@
-# Documenting your own steps for AutoFlow AI
+# Documenting your own steps for AutoFlow Intelligence
 
 For publishers of Business Central apps – vendor apps and per-tenant extensions – that add their own triggers or actions to AutoFlow.
 
-The AutoFlow AI Flow Builder inside Business Central works with every trigger and action installed in the environment, not only with AutoFlow's. Before it configures a step, it reads that step's **page** (markdown) and **spec** (JSON). AutoFlow does not take these from this repository: it asks the app that owns the step, through two events. AutoFlow's own steps answer the same way – the pages in [actions/](actions/README.md) and [triggers/](triggers/README.md) are copies of what AutoFlow hands to its AI.
+The AutoFlow Intelligence Flow Builder inside Business Central works with every trigger and action installed in the environment, not only with AutoFlow's. Before it configures a step, it reads that step's **page** (markdown) and **spec** (JSON). AutoFlow does not take these from this repository: it asks the app that owns the step, through two events. AutoFlow's own steps answer the same way – the pages in [actions/](actions/README.md) and [triggers/](triggers/README.md) are copies of what AutoFlow hands to its AI.
 
 ## What the AI does with your step
 
@@ -48,7 +48,7 @@ Rules for the subscriber:
 - AutoFlow asks only when the AI needs the step and keeps the answer for the session. Nothing is stored, and a catalogue rebuild never raises the events.
 - Build long texts with a `TextBuilder` from text literals of at most 1,000 characters each. That compiles with every Business Central version AutoFlow supports.
 
-To read the answer the way AutoFlow AI does – for example in a test – call `GetActionAgentDocs(Action, Docs, Spec)` or `GetTriggerAgentDocs(EventTrigger, Docs, Spec)` on the same codeunit. They clear `Docs` and `Spec`, raise the event and return `true` when a page came back.
+To read the answer the way AutoFlow Intelligence does – for example in a test – call `GetActionAgentDocs(Action, Docs, Spec)` or `GetTriggerAgentDocs(EventTrigger, Docs, Spec)` on the same codeunit. They clear `Docs` and `Spec`, raise the event and return `true` when a page came back.
 
 ## Example
 
