@@ -29,7 +29,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "Code of an AI provider profile of the AutoFlow Intelligence Setup. Empty = the default language model profile (prompt) / the first TypeSafe profile (classify). A profile of the wrong kind fails the run."
+      "description": "Code of an AI provider profile of the AutoFlow Intelligence Setup. Empty = the default language model profile (prompt) / the first TypeSafe profile (classify). The profile must be of the mode's kind (TypeSafe for classify, a language model otherwise) - publishing refuses another kind or an unknown code."
     },
     {
       "key": "prompt",
@@ -112,7 +112,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "mode classify: 1 to 32 rows { id, type, instructions, answers, allowNone }."
+      "description": "mode classify: 1 to 32 rows { id, type, instructions, answers, allowNone, answersFrom, list, listAnswer, listDescription }."
     },
     {
       "key": "questions[].id",
@@ -156,7 +156,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "choice: the possible answers (2–255). rating: the levels, lowest first (2–10). Not stored for yesno. Rows { value, description }."
+      "description": "choice with answersFrom fixed: the possible answers (2–255). rating: the levels, lowest first (2–10). Not stored for yesno or a choice from a list. Rows { value, description }."
     },
     {
       "key": "questions[].answers[].value",
@@ -187,6 +187,49 @@
       "maxLength": null,
       "smart": "none",
       "description": "choice only, default true: when none of the answers fits, <id> is \"none\" (a separate fit question is asked in the same request). Switch off only when the answers surely cover every input; an answer may then not be called none."
+    },
+    {
+      "key": "questions[].answersFrom",
+      "type": "string",
+      "required": false,
+      "default": "fixed",
+      "enum": [
+        "fixed",
+        "list"
+      ],
+      "maxLength": null,
+      "smart": "none",
+      "description": "choice only. fixed = the answers are typed into answers. list = the answers are read from a list of an earlier step every time the flow runs (list, listAnswer, listDescription)."
+    },
+    {
+      "key": "questions[].list",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "answersFrom list: the list as a braced selector, records or values, e.g. {{FindProjects_results}}. Stored unresolved; read at run time like the Selection task's input."
+    },
+    {
+      "key": "questions[].listAnswer",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "answersFrom list: SmartText of one entry that is the answer, using the list's own name, e.g. {{FindProjects_results.No.}}. Empty = a record's primary key (or a value list's value)."
+    },
+    {
+      "key": "questions[].listDescription",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "answersFrom list, optional: SmartText of one entry that says when to pick it, e.g. {{FindProjects_results.Description}}. Needs listAnswer."
     }
   ],
   "outputs": [
@@ -200,7 +243,7 @@
       "name": "<id>",
       "type": "value",
       "tableNo": null,
-      "when": "mode classify, one per question: choice → the chosen answer's value, or none when allowNone and no answer fits; yesno → true / false; rating → the value of the most likely level"
+      "when": "mode classify, one per question: choice → the chosen answer's value (for a list: the entry's listAnswer), or none when allowNone and no answer fits or the list is empty; yesno → true / false; rating → the value of the most likely level"
     },
     {
       "name": "<id>_level",
@@ -342,6 +385,27 @@
       "message": "Question %1: 'none' is already the answer when nothing fits. Remove it from the list, or switch off \"Answer none when no answer fits\"."
     },
     {
+      "id": "Intelligence.list-missing",
+      "severity": "error",
+      "stage": "publish",
+      "check": "choice with answersFrom list: list not empty",
+      "message": "Question %1: pick the list the answers come from."
+    },
+    {
+      "id": "Intelligence.list-answer-missing",
+      "severity": "error",
+      "stage": "publish",
+      "check": "answersFrom list: listDescription needs listAnswer",
+      "message": "Question %1: say which field of the list is the answer, or leave \"When to pick it\" empty too."
+    },
+    {
+      "id": "Intelligence.profile-kind",
+      "severity": "error",
+      "stage": "publish",
+      "check": "profile exists and is of the mode's kind (wrapped: The Intelligence step '%1': …)",
+      "message": "The profile %1 does not exist. / The profile %1 is a language model profile. Answering questions needs a TypeSafe profile. / The profile %1 is a TypeSafe profile. Writing an answer needs a language model profile."
+    },
+    {
       "id": "Intelligence.classify-attachments",
       "severity": "error",
       "stage": "publish",
@@ -368,6 +432,20 @@
       "stage": "publish",
       "check": "the trigger runs while the user works on the record (record created/modified interactive, document released/posted/reopened, page opened/closed, PDF printed, report file name, SubFlow): the user waits for the answer",
       "message": "The Intelligence step '%1' runs while the user works on the record: the user waits until the model has answered (up to the timeout of the AutoFlow Intelligence Setup)."
+    },
+    {
+      "id": "Intelligence.list-empty",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "answersFrom list: the list is empty at run time and allowNone is off (with allowNone the question answers none without asking)",
+      "message": "Question %1: the list %2 is empty, so there is nothing to choose from. To answer \"none\" instead, switch on \"Answer none when no answer fits\"."
+    },
+    {
+      "id": "Intelligence.list-too-long",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "answersFrom list: more than 255 entries at run time",
+      "message": "Question %1: the list %2 has %3 entries; a question can choose from at most %4."
     },
     {
       "id": "Intelligence.unsupported-file",
@@ -407,6 +485,7 @@
   ],
   "notes": [
     "Prefer ONE classify step with many questions over several steps: the input is sent once, each extra question costs only its own tokens.",
+    "To choose among records of the flow (e.g. which of the customer's projects an e-mail is about), use a choice with answersFrom list: a Find Records step before, list = {{FindProjects_results}}, listAnswer = {{FindProjects_results.No.}}, listDescription = {{FindProjects_results.Description}}. The answer is the entry's No.; look the record up again with Find Records if later steps need it.",
     "Branch on a choice with a Case step on {{<slug>_<id>}} (one edge per answer, plus none), or a Decision step. A yesno is true / false. A rating: compare {{<slug>_<id>_level}} as a number, e.g. >= 2.",
     "For risky actions also check {{<slug>_<id>_confidence}}, e.g. >= 80.",
     "Each run is logged as a session (AutoFlow Intelligence Setup → Sessions); the execution log line names the session no. A failed run fails the step.",

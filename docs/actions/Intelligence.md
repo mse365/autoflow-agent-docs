@@ -29,11 +29,11 @@ Every run is logged as a session under **AutoFlow Intelligence Setup → Session
 | key | type | required | default | description |
 |---|---|---|---|---|
 | `mode` | string | yes | `"prompt"` | `"prompt"` or `"classify"`. Only the active mode's keys are stored. |
-| `profile` | string | no | `""` | Profile code. Empty = default language model profile (prompt) / first TypeSafe profile (classify). |
+| `profile` | string | no | `""` | Profile code. Empty = default language model profile (prompt) / first TypeSafe profile (classify). Must be of the mode's kind; the editor offers only those. |
 | `prompt` | string | prompt | `""` | SmartText. What the model should do. |
 | `attachments` | array | no | `[]` | prompt only. Rows `{ "type", "reference", "filename", "contentBase64" }` exactly as in [Send Email](SendEmail.md#configuration). PNG, JPEG, GIF, WebP and PDF; at most 20 MB together. The type is read from the file's first bytes. |
 | `input` | string | classify | `""` | SmartText. The text all questions are about. Put everything the questions need into it, with labels (`Vendor: {{…}}`). |
-| `questions` | array | classify | `[]` | 1–32 rows `{ "id", "type", "instructions", "answers", "allowNone" }`. |
+| `questions` | array | classify | `[]` | 1–32 rows `{ "id", "type", "instructions", "answers", "allowNone", "answersFrom", "list", "listAnswer", "listDescription" }`. |
 
 Question rows:
 
@@ -44,6 +44,12 @@ Question rows:
 | `instructions` | SmartText. The question, e.g. `What kind of document is this?` |
 | `answers` | `choice` / `rating` only: rows `{ "value", "description" }`. `value` is what `<id>` returns; `description` (optional) says when to pick it / what the level means. |
 | `allowNone` | `choice` only, default `true`: `<id>` is `none` when no answer fits. Switch off only when the answers surely cover every input. |
+| `answersFrom` | `choice` only: `fixed` (default, the `answers`) or `list` – the answers are read from a list of an earlier step every time the flow runs. |
+| `list` | `answersFrom` `list`: the list as a braced selector, records or values, e.g. `{{FindProjects_results}}`. |
+| `listAnswer` | `answersFrom` `list`: SmartText of one entry that is the answer, with the list's own name, e.g. `{{FindProjects_results.No.}}`. Empty: a record's primary key, or a value list's value. |
+| `listDescription` | `answersFrom` `list`, optional: SmartText of one entry that says when to pick it, e.g. `{{FindProjects_results.Description}}`. |
+
+A list question from a list reads the list like the Selection task does (references, arrays, iterators, value lists; at most 255 entries, repeated answers once). An empty list answers `none` without asking – or fails the step when `allowNone` is off.
 
 ## Outputs
 
@@ -77,6 +83,9 @@ Reference them as `{{<slug>_<output>}}`, for example `{{Classify_category}}`, `{
 | publish | error | rating levels | `Question %1: a rating needs 2 to %2 levels.` |
 | publish | error | answer twice | `Question %1: the answer '%2' is listed twice.` |
 | publish | error | an answer called none with allowNone | `Question %1: 'none' is already the answer when nothing fits. Remove it from the list, or switch off "Answer none when no answer fits".` |
+| publish | error | list question without a list | `Question %1: pick the list the answers come from.` |
+| publish | error | list description without answer field | `Question %1: say which field of the list is the answer, or leave "When to pick it" empty too.` |
+| publish | error | profile of the other kind / unknown | `The profile %1 is a language model profile. Answering questions needs a TypeSafe profile.` (and vice versa) / `The profile %1 does not exist.` |
 | publish | error | attachments in classify | `Answering questions does not read files yet: images follow in a later release. Only a prompt reads files for now.` |
 | publish | error | no profile for the mode | `The Intelligence step '%1': the prompt mode needs Intelligence switched on and a language model profile.` (classify: `… a TypeSafe profile.`) |
 | publish | warning | trigger keeps the user waiting (record created/modified interactive, document released/posted/reopened, page opened/closed, PDF printed, report file name, SubFlow) | `The Intelligence step '%1' runs while the user works on the record: the user waits until the model has answered (up to the timeout of the AutoFlow Intelligence Setup).` |
@@ -89,6 +98,8 @@ Reference them as `{{<slug>_<output>}}`, for example `{{Classify_category}}`, `{
 |---|---|
 | no suitable profile | `The prompt mode of Intelligence needs a language model profile …` / `The classify mode of Intelligence needs a TypeSafe profile …` |
 | profile of the other kind | `Profile %1 is a TypeSafe classification profile; the prompt mode needs a language model profile.` (and vice versa) |
+| list empty, `allowNone` off | `Question %1: the list %2 is empty, so there is nothing to choose from. …` |
+| list longer than 255 | `Question %1: the list %2 has %3 entries; a question can choose from at most %4.` |
 | unsupported file | `Intelligence cannot read the attachment '%1': only PNG, JPEG, GIF and WebP images and PDF files are supported.` |
 | files over 20 MB | `The attachments are too large for one request (%1 MB, at most %2 MB).` |
 | answer cut off | `The answer was cut off at %1 output tokens. Raise "Max. Output Tokens" on provider profile %2, or ask for a shorter answer.` |
@@ -131,6 +142,14 @@ Classify an incoming document, then branch on the answers:
 }
 ```
 
+Which of the customer's projects an e-mail is about – the answers come from a Find Records step (`FindProjects`) before:
+
+```json
+{ "id": "project", "type": "choice", "instructions": "Which project is the e-mail about?", "allowNone": true,
+  "answersFrom": "list", "list": "{{FindProjects_results}}",
+  "listAnswer": "{{FindProjects_results.No.}}", "listDescription": "{{FindProjects_results.Description}}" }
+```
+
 Then a Case step on `{{Classify_category}}` with edges `invoice`, `credit_memo`, `reminder`, `none`, and a Decision on `{{Classify_urgency_level}}` >= 3.
 
 A prompt step: `"configuration": { "mode": "prompt", "profile": "", "prompt": "Write a two-sentence summary of: {{trigger_Description}}", "attachments": [] }`, output `answer`.
@@ -138,6 +157,7 @@ A prompt step: `"configuration": { "mode": "prompt", "profile": "", "prompt": "W
 ## Gotchas
 
 - One classify step per input, with all questions – not one step per question.
+- To choose among records of the flow, use `answersFrom` `list` – never copy record numbers into `answers`.
 - A choice returns one of its answers, or `none` with `allowNone`. Branch on it with a Case step that has a `none` edge.
 - A rating's `<id>` is a level name; compare levels with `<id>_level` (a number, 1 = lowest).
 - `<id>_confidence` is 0–100; check it before risky actions.
