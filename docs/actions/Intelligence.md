@@ -3,7 +3,7 @@
 
 [← All actions](README.md)
 
-Two modes. **prompt** sends a prompt (with values of the flow, and optional files) to a language model and stores its text answer. **classify** sends one input and up to 32 typed questions (choice, score, yes/no) to TypeSafe Jev in **one** request; every question gets its own outputs.
+Two modes. **prompt** sends a prompt (with values of the flow, and optional files) to a language model and stores its text answer. **classify** sends one text and up to 32 questions (one of a list, yes/no, a rating) to TypeSafe Jev in **one** request; every question gets its own outputs.
 
 | | |
 |---|---|
@@ -11,14 +11,16 @@ Two modes. **prompt** sends a prompt (with values of the flow, and optional file
 | Ordinal | `"action": 5564430` |
 | Category | Intelligence |
 | Terminating | `false` |
-| Group / edges | no – branch with Condition steps on the outputs |
+| Group / edges | no – branch with Case / Decision steps on the outputs |
 | Availability | GA. Offered while Intelligence is switched on and a profile exists for at least one mode: a language model profile (Anthropic, OpenAI, Azure OpenAI) for prompt, a TypeSafe profile for classify. |
 
 ## What it does
 
 **prompt:** fills in the SmartFields of `prompt`, resolves `attachments` like Send Email, and makes one request to the language model profile – no tools, no conversation. The model is told that its answer is stored as a value of a flow, so it answers without preamble. The text answer is the output `answer`.
 
-**classify:** builds the TypeSafe state `{"input": <input>, "<field name>": <value>, …}` and one question per `questions` row, plus – for every choice with `checkFit` – a yes/no question "does any option apply". All of it goes to TypeSafe Jev in one request. Jev does not write text: it returns the chosen option, a score or a yes-probability, with calibrated probabilities. The input is sent once, so ten questions in one step cost little more than one; prefer one step with all questions about the same input over several steps.
+**classify:** sends the TypeSafe state `{"input": <input>}` and one question per `questions` row – a `choice` becomes a Jev choice over its `answers`, a `rating` a Jev score over its levels, a `yesno` a Jev yes/no – plus, for every `choice` with `allowNone`, a yes/no question "does any answer apply". All of it goes to TypeSafe Jev in one request. Jev does not write text: it returns the chosen answer, the level or yes/no, with calibrated probabilities. The input is sent once, so ten questions in one step cost little more than one; prefer one step with all questions about the same input over several steps.
+
+In the editor the questions are cards: the question, "Answer with" (One of a list / Yes or no / A rating), the answers or levels inside the card, the name in later steps (filled from the question) and a box that says what each output holds.
 
 Every run is logged as a session under **AutoFlow Intelligence Setup → Sessions** (model, tokens, estimated cost, input and answer; files only by name, type and size). The execution log line says `Intelligence session <no.>`. A failing request fails the step; the step does not commit, so it can run inside the triggering user's transaction.
 
@@ -30,62 +32,56 @@ Every run is logged as a session under **AutoFlow Intelligence Setup → Session
 | `profile` | string | no | `""` | Profile code. Empty = default language model profile (prompt) / first TypeSafe profile (classify). |
 | `prompt` | string | prompt | `""` | SmartText. What the model should do. |
 | `attachments` | array | no | `[]` | prompt only. Rows `{ "type", "reference", "filename", "contentBase64" }` exactly as in [Send Email](SendEmail.md#configuration). PNG, JPEG, GIF, WebP and PDF; at most 20 MB together. The type is read from the file's first bytes. |
-| `input` | string | classify | `""` | SmartText. The content all questions are about. |
-| `fields` | array | no | `[]` | classify. Rows `{ "name", "value" }` – further named parts of the state (value SmartText, always text). Name: letters, digits, `_`, starting with a letter; not `input` / `attachments`. |
-| `questions` | array | classify | `[]` | 1–32 rows `{ "id", "type", "instructions", "threshold", "checkFit" }`. |
-| `options` | array | classify | `[]` | Rows `{ "question", "value", "description" }` – the options of choice questions, the levels of score questions (in order, first row = level 0), optional true/false descriptions of yes/no questions. |
+| `input` | string | classify | `""` | SmartText. The text all questions are about. Put everything the questions need into it, with labels (`Vendor: {{…}}`). |
+| `questions` | array | classify | `[]` | 1–32 rows `{ "id", "type", "instructions", "answers", "allowNone" }`. |
 
 Question rows:
 
 | key | description |
 |---|---|
-| `id` | Question name, letters/digits/`_`, starting with a letter, at most 18 characters, unique. Names the outputs. |
-| `type` | `choice` (pick one option, 1–255 options), `score` (rate on 1–10 ordered levels) or `noul` (yes/no). |
-| `instructions` | SmartText. The question. Refer to a named field with backticks: ``Is `vendor` a known supplier?`` |
-| `threshold` | `noul` only. Decimal 0–1, default 0.5: `<id>` is `true` from this probability on. |
-| `checkFit` | `choice` only. Default `true`: also asks whether any option applies (`<id>_fits`). A choice always picks an option, even when none fits – keep it on unless the options surely cover every input. |
+| `id` | Name in later steps: letters/digits/`_`, starting with a letter, at most 19 characters, unique. Names the outputs. |
+| `type` | `choice` (pick one of `answers`, 2–255), `yesno`, or `rating` (place the input on the levels in `answers`, lowest first, 2–10). |
+| `instructions` | SmartText. The question, e.g. `What kind of document is this?` |
+| `answers` | `choice` / `rating` only: rows `{ "value", "description" }`. `value` is what `<id>` returns; `description` (optional) says when to pick it / what the level means. |
+| `allowNone` | `choice` only, default `true`: `<id>` is `none` when no answer fits. Switch off only when the answers surely cover every input. |
 
 ## Outputs
 
 | output | when | value |
 |---|---|---|
 | `answer` | prompt | the model's text |
-| `<id>` | choice | the chosen option's `value` |
-| `<id>` | score | probability-weighted level, decimal with a point (`1.7` lies between level 1 and 2) |
-| `<id>` | noul | `true` / `false` at `threshold` |
-| `<id>_confidence` | choice, score | 0–1, decimal with a point |
-| `<id>_fits` | choice with `checkFit` | `true` / `false` (probability ≥ 0.5) |
-| `<id>_level` | score | `value` of the most probable level row |
-| `<id>_probability` | noul | 0–1, probability of yes |
+| `<id>` | choice | the chosen answer's `value`, or `none` (with `allowNone`) |
+| `<id>` | yesno | `true` / `false` |
+| `<id>` | rating | the `value` of the most likely level |
+| `<id>_level` | rating | the number of that level, `1` = the first (lowest) |
+| `<id>_confidence` | every classify question | how sure, a whole number `0`–`100` (yesno: of the given answer) |
 
-Reference them as `{{<slug>_<output>}}`, for example `{{Classify_category}}`, `{{Classify_category_fits}}`.
+Reference them as `{{<slug>_<output>}}`, for example `{{Classify_category}}`, `{{Classify_urgency_level}}`.
 
 ## Validation
 
 | stage | severity | rule | message |
 |---|---|---|---|
-| publish | error | mode | `Choose the mode: prompt or classify.` |
+| publish | error | mode | `Choose what Intelligence should do: write an answer to a prompt, or answer questions.` |
 | publish | error | prompt empty (prompt) | `Enter the prompt.` |
-| publish | error | input empty (classify) | `Enter the input the questions are about.` |
+| publish | error | input empty (classify) | `Enter the text Intelligence should look at.` |
 | publish | error | no question | `Add at least one question.` |
-| publish | error | more than 32 questions | `One step answers at most %1 questions. Put further questions into a second Intelligence step.` |
-| publish | error | bad question name | `Question name '%1': use letters, digits and _ only, at most %2 characters, starting with a letter.` |
-| publish | error | name twice | `The question name '%1' is used twice.` |
-| publish | error | output name twice | `The question name '%1' is also an output of question '%2'. Choose another name.` |
-| publish | error | type | `Question '%1': choose the type choice, score or yes/no.` |
-| publish | error | no instructions | `Question '%1': enter the question.` |
-| publish | error | choice options | `Question '%1': a choice needs 1 to %2 options.` |
-| publish | error | score levels | `Question '%1': a score needs 1 to %2 levels.` |
-| publish | error | option twice / empty | `Question '%1': the option '%2' is listed twice.` / `Question '%1': an option has no value.` |
-| publish | error | noul options | `Question '%1': a yes/no question only takes descriptions for the values true and false.` |
-| publish | error | threshold | `Question '%1': the threshold must lie between 0 and 1.` |
-| publish | error | option of an unknown question | `The option '%1' belongs to question '%2', which does not exist.` |
-| publish | error | field name / twice | `Field name '%1': use letters, digits and _ only, starting with a letter; 'input' and 'attachments' are taken.` / `The field name '%1' is used twice.` |
-| publish | error | attachments in classify | `The classify mode does not read attachments yet: images for TypeSafe follow in a later release. Only the prompt mode reads files for now.` |
+| publish | error | more than 32 questions | `One step answers at most %1 questions. Ask further questions in a second Intelligence step.` |
+| publish | error | no name | `Question %1: enter a name for later steps.` |
+| publish | error | bad name | `Question %1: the name '%2' may only use letters, digits and _, must start with a letter and have at most %3 characters.` |
+| publish | error | name twice | `Questions %1 and %2 have the same name '%3'. Give each question its own name.` |
+| publish | error | output name twice | `Question %1: the name '%2' is already used by a result of question %3. Choose another name.` |
+| publish | error | type | `Question %1: choose how Intelligence should answer – one of a list, yes or no, or a rating.` |
+| publish | error | no question text | `Question %1: enter the question.` |
+| publish | error | choice answers | `Question %1: enter at least two possible answers.` / `Question %1: a list takes at most %2 answers.` |
+| publish | error | rating levels | `Question %1: a rating needs 2 to %2 levels.` |
+| publish | error | answer twice | `Question %1: the answer '%2' is listed twice.` |
+| publish | error | an answer called none with allowNone | `Question %1: 'none' is already the answer when nothing fits. Remove it from the list, or switch off "Answer none when no answer fits".` |
+| publish | error | attachments in classify | `Answering questions does not read files yet: images follow in a later release. Only a prompt reads files for now.` |
 | publish | error | no profile for the mode | `The Intelligence step '%1': the prompt mode needs Intelligence switched on and a language model profile.` (classify: `… a TypeSafe profile.`) |
 | publish | warning | trigger keeps the user waiting (record created/modified interactive, document released/posted/reopened, page opened/closed, PDF printed, report file name, SubFlow) | `The Intelligence step '%1' runs while the user works on the record: the user waits until the model has answered (up to the timeout of the AutoFlow Intelligence Setup).` |
 
-All publish errors of a step come as one message: `The Intelligence step '%1': <problems>`.
+`%1` of the question rules is the question's number (1 = the first row). All publish errors of a step come as one message: `The Intelligence step '%1': <problems>`.
 
 ## Runtime errors
 
@@ -114,37 +110,37 @@ Classify an incoming document, then branch on the answers:
   "configuration": {
     "mode": "classify",
     "profile": "",
-    "input": "{{trigger_Description}}",
-    "fields": [ { "name": "vendor", "value": "{{trigger_Buy-from Vendor Name}}" } ],
+    "input": "Vendor: {{trigger_Buy-from Vendor Name}}\nText: {{trigger_Description}}",
     "questions": [
-      { "id": "category", "type": "choice", "instructions": "What kind of document is this?", "threshold": "", "checkFit": true },
-      { "id": "urgency", "type": "score", "instructions": "How urgent is it?", "threshold": "", "checkFit": false },
-      { "id": "known_vendor", "type": "noul", "instructions": "Is `vendor` named in the document?", "threshold": "0.8", "checkFit": false }
-    ],
-    "options": [
-      { "question": "category", "value": "invoice", "description": "A bill asking for payment" },
-      { "question": "category", "value": "credit_memo", "description": "A credit note" },
-      { "question": "category", "value": "reminder", "description": "A payment reminder" },
-      { "question": "urgency", "value": "can_wait", "description": "" },
-      { "question": "urgency", "value": "this_week", "description": "" },
-      { "question": "urgency", "value": "today", "description": "" }
+      { "id": "category", "type": "choice", "instructions": "What kind of document is this?", "allowNone": true,
+        "answers": [
+          { "value": "invoice", "description": "A bill asking for payment" },
+          { "value": "credit_memo", "description": "A credit note" },
+          { "value": "reminder", "description": "A payment reminder" }
+        ] },
+      { "id": "urgency", "type": "rating", "instructions": "How urgent is it?",
+        "answers": [ { "value": "low", "description": "" }, { "value": "medium", "description": "" }, { "value": "high", "description": "Due today" } ] },
+      { "id": "vendor_named", "type": "yesno", "instructions": "Is the vendor named in the text?" }
     ]
   },
   "outputs": [
-    { "name": "category", "type": "value" }, { "name": "category_confidence", "type": "value" }, { "name": "category_fits", "type": "value" },
+    { "name": "category", "type": "value" }, { "name": "category_confidence", "type": "value" },
     { "name": "urgency", "type": "value" }, { "name": "urgency_level", "type": "value" }, { "name": "urgency_confidence", "type": "value" },
-    { "name": "known_vendor", "type": "value" }, { "name": "known_vendor_probability", "type": "value" }
+    { "name": "vendor_named", "type": "value" }, { "name": "vendor_named_confidence", "type": "value" }
   ]
 }
 ```
+
+Then a Case step on `{{Classify_category}}` with edges `invoice`, `credit_memo`, `reminder`, `none`, and a Decision on `{{Classify_urgency_level}}` >= 3.
 
 A prompt step: `"configuration": { "mode": "prompt", "profile": "", "prompt": "Write a two-sentence summary of: {{trigger_Description}}", "attachments": [] }`, output `answer`.
 
 ## Gotchas
 
 - One classify step per input, with all questions – not one step per question.
-- A choice always returns one of its options. Check `<id>_fits` (and `<id>_confidence`) before acting on it.
-- `<id>` of a score is a decimal and may lie between levels; compare it with `>=`, or use `<id>_level`.
+- A choice returns one of its answers, or `none` with `allowNone`. Branch on it with a Case step that has a `none` edge.
+- A rating's `<id>` is a level name; compare levels with `<id>_level` (a number, 1 = lowest).
+- `<id>_confidence` is 0–100; check it before risky actions.
 - TypeSafe profiles never answer the prompt mode or build flows; language model profiles never classify.
 - The prompt answer is text. Ask for JSON in the prompt and use a Parser step when later steps need fields.
-- Values of `fields` and the files go to the provider of the profile on every run.
+- The input and the files go to the provider of the profile on every run.

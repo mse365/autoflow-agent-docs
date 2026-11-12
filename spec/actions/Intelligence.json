@@ -19,7 +19,7 @@
       ],
       "maxLength": null,
       "smart": "none",
-      "description": "prompt = a language model answers the prompt with text (output answer). classify = TypeSafe Jev answers all questions about input in ONE request; every question has its own outputs."
+      "description": "prompt = a language model answers the prompt with text (output answer). classify = TypeSafe Jev answers all questions about input in ONE request; every question has its own outputs. The editor shows them as \"Write an answer to a prompt\" / \"Answer questions about a text\"."
     },
     {
       "key": "profile",
@@ -102,37 +102,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "text",
-      "description": "mode classify: the content every question is about (sent once as state.input). SmartText."
-    },
-    {
-      "key": "fields",
-      "type": "array",
-      "required": false,
-      "default": [],
-      "enum": null,
-      "maxLength": null,
-      "smart": "none",
-      "description": "mode classify: extra named parts of the state, rows { name, value }. Questions refer to them by name in backticks, e.g. `vendor`."
-    },
-    {
-      "key": "fields[].name",
-      "type": "string",
-      "required": true,
-      "default": "",
-      "enum": null,
-      "maxLength": null,
-      "smart": "none",
-      "description": "Letters, digits and _, starting with a letter; not input or attachments; unique."
-    },
-    {
-      "key": "fields[].value",
-      "type": "string",
-      "required": false,
-      "default": "",
-      "enum": null,
-      "maxLength": null,
-      "smart": "text",
-      "description": "SmartText. Always sent as text."
+      "description": "mode classify: the text every question is about (sent once as state.input). SmartText. Put everything the questions need into it, with labels, e.g. \"Vendor: {{…}}\\nText: {{…}}\"."
     },
     {
       "key": "questions",
@@ -142,7 +112,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "mode classify: 1 to 32 rows { id, type, instructions, threshold, checkFit }."
+      "description": "mode classify: 1 to 32 rows { id, type, instructions, answers, allowNone }."
     },
     {
       "key": "questions[].id",
@@ -150,9 +120,9 @@
       "required": true,
       "default": "",
       "enum": null,
-      "maxLength": 18,
+      "maxLength": 19,
       "smart": "none",
-      "description": "Question name: letters, digits and _, starting with a letter, at most 18 characters, unique. It names the outputs."
+      "description": "Name in later steps: letters, digits and _, starting with a letter, at most 19 characters, unique. It names the outputs (<id>, <id>_confidence, rating also <id>_level)."
     },
     {
       "key": "questions[].type",
@@ -161,12 +131,12 @@
       "default": "",
       "enum": [
         "choice",
-        "score",
-        "noul"
+        "yesno",
+        "rating"
       ],
       "maxLength": null,
       "smart": "none",
-      "description": "choice = pick one option; score = rate on ordered levels; noul = yes/no."
+      "description": "choice = pick one answer from answers; yesno = yes or no; rating = place the input on the levels in answers (lowest first)."
     },
     {
       "key": "questions[].instructions",
@@ -176,67 +146,47 @@
       "enum": null,
       "maxLength": null,
       "smart": "text",
-      "description": "The question itself. SmartText."
+      "description": "The question itself, e.g. \"What kind of document is this?\". SmartText."
     },
     {
-      "key": "questions[].threshold",
-      "type": "number",
-      "required": false,
-      "default": 0.5,
-      "enum": null,
-      "maxLength": null,
-      "smart": "none",
-      "description": "noul only: the output <id> is true when the probability is at least this value (0–1)."
-    },
-    {
-      "key": "questions[].checkFit",
-      "type": "boolean",
-      "required": false,
-      "default": true,
-      "enum": null,
-      "maxLength": null,
-      "smart": "none",
-      "description": "choice only: also ask whether any option applies at all (output <id>_fits). On by default – a choice always picks an option, even when none fits."
-    },
-    {
-      "key": "options",
+      "key": "questions[].answers",
       "type": "array",
       "required": false,
       "default": [],
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "mode classify: rows { question, value, description }. choice: the options (1–255). score: the levels in order, the first row is level 0 (1–10). noul: optional descriptions with value true / false."
+      "description": "choice: the possible answers (2–255). rating: the levels, lowest first (2–10). Not stored for yesno. Rows { value, description }."
     },
     {
-      "key": "options[].question",
+      "key": "questions[].answers[].value",
       "type": "string",
       "required": true,
       "default": "",
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "The id of the question the row belongs to."
+      "description": "The answer / level name, unique per question. This is what <id> returns – use the wording later steps compare with, e.g. invoice."
     },
     {
-      "key": "options[].value",
-      "type": "string",
-      "required": true,
-      "default": "",
-      "enum": null,
-      "maxLength": null,
-      "smart": "none",
-      "description": "Option name / level name (noul: true or false). Option names are what <id> returns."
-    },
-    {
-      "key": "options[].description",
+      "key": "questions[].answers[].description",
       "type": "string",
       "required": false,
       "default": "",
       "enum": null,
       "maxLength": null,
-      "smart": "text",
-      "description": "Optional description that helps the model; an option without description is judged by its name."
+      "smart": "none",
+      "description": "Optional: when to pick this answer / what the level means. Helps the model; without it the answer is judged by its wording."
+    },
+    {
+      "key": "questions[].allowNone",
+      "type": "boolean",
+      "required": false,
+      "default": true,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "choice only, default true: when none of the answers fits, <id> is \"none\" (a separate fit question is asked in the same request). Switch off only when the answers surely cover every input; an answer may then not be called none."
     }
   ],
   "outputs": [
@@ -250,31 +200,19 @@
       "name": "<id>",
       "type": "value",
       "tableNo": null,
-      "when": "mode classify, one per question: choice → the chosen option value; score → the probability-weighted level as a decimal with a point (can lie between two levels); noul → true / false at the question's threshold"
-    },
-    {
-      "name": "<id>_confidence",
-      "type": "value",
-      "tableNo": null,
-      "when": "choice and score questions: 0–1 with a point"
-    },
-    {
-      "name": "<id>_fits",
-      "type": "value",
-      "tableNo": null,
-      "when": "choice questions with checkFit: true when one of the options applies (probability ≥ 0.5)"
+      "when": "mode classify, one per question: choice → the chosen answer's value, or none when allowNone and no answer fits; yesno → true / false; rating → the value of the most likely level"
     },
     {
       "name": "<id>_level",
       "type": "value",
       "tableNo": null,
-      "when": "score questions: the value of the most probable level row"
+      "when": "rating questions: the number of the most likely level, 1 = the first (lowest) level"
     },
     {
-      "name": "<id>_probability",
+      "name": "<id>_confidence",
       "type": "value",
       "tableNo": null,
-      "when": "noul questions: the probability of yes, 0–1 with a point"
+      "when": "every classify question: how sure the answer is, a whole number 0–100 (yesno: of the given answer, not of yes)"
     }
   ],
   "rules": [
@@ -283,7 +221,7 @@
       "severity": "error",
       "stage": "publish",
       "check": "mode must be prompt or classify",
-      "message": "Choose the mode: prompt or classify.",
+      "message": "Choose what Intelligence should do: write an answer to a prompt, or answer questions.",
       "machine": {
         "type": "enum",
         "key": "mode",
@@ -311,7 +249,7 @@
       "severity": "error",
       "stage": "publish",
       "check": "mode classify: input must not be empty",
-      "message": "Enter the input the questions are about.",
+      "message": "Enter the text Intelligence should look at.",
       "machine": {
         "type": "requiredIf",
         "key": "input",
@@ -331,112 +269,84 @@
       "severity": "error",
       "stage": "publish",
       "check": "mode classify: at most 32 questions; put more into a second Intelligence step",
-      "message": "One step answers at most %1 questions. Put further questions into a second Intelligence step."
+      "message": "One step answers at most %1 questions. Ask further questions in a second Intelligence step."
     },
     {
-      "id": "Intelligence.question-id",
+      "id": "Intelligence.question-name-missing",
       "severity": "error",
       "stage": "publish",
-      "check": "questions[].id: letters, digits and _, starting with a letter, at most 18 characters",
-      "message": "Question name '%1': use letters, digits and _ only, at most %2 characters, starting with a letter."
+      "check": "questions[].id not empty",
+      "message": "Question %1: enter a name for later steps."
     },
     {
-      "id": "Intelligence.question-id-duplicate",
+      "id": "Intelligence.question-name",
+      "severity": "error",
+      "stage": "publish",
+      "check": "questions[].id: letters, digits and _, starting with a letter, at most 19 characters",
+      "message": "Question %1: the name '%2' may only use letters, digits and _, must start with a letter and have at most %3 characters."
+    },
+    {
+      "id": "Intelligence.question-name-duplicate",
       "severity": "error",
       "stage": "publish",
       "check": "questions[].id unique",
-      "message": "The question name '%1' is used twice."
+      "message": "Questions %1 and %2 have the same name '%3'. Give each question its own name."
     },
     {
       "id": "Intelligence.output-clash",
       "severity": "error",
       "stage": "publish",
-      "check": "no output name twice (e.g. a question named a_fits next to a choice a with checkFit)",
-      "message": "The question name '%1' is also an output of question '%2'. Choose another name."
+      "check": "no output name twice (e.g. a question named a_confidence next to a question a)",
+      "message": "Question %1: the name '%2' is already used by a result of question %3. Choose another name."
     },
     {
       "id": "Intelligence.question-type",
       "severity": "error",
       "stage": "publish",
-      "check": "questions[].type is choice, score or noul",
-      "message": "Question '%1': choose the type choice, score or yes/no."
+      "check": "questions[].type is choice, yesno or rating",
+      "message": "Question %1: choose how Intelligence should answer – one of a list, yes or no, or a rating."
     },
     {
       "id": "Intelligence.question-instructions",
       "severity": "error",
       "stage": "publish",
       "check": "questions[].instructions not empty",
-      "message": "Question '%1': enter the question."
+      "message": "Question %1: enter the question."
     },
     {
-      "id": "Intelligence.choice-options",
+      "id": "Intelligence.choice-answers",
       "severity": "error",
       "stage": "publish",
-      "check": "choice: 1 to 255 options rows",
-      "message": "Question '%1': a choice needs 1 to %2 options."
+      "check": "choice: 2 to 255 non-empty answers",
+      "message": "Question %1: enter at least two possible answers. / Question %1: a list takes at most %2 answers."
     },
     {
-      "id": "Intelligence.score-levels",
+      "id": "Intelligence.rating-levels",
       "severity": "error",
       "stage": "publish",
-      "check": "score: 1 to 10 level rows",
-      "message": "Question '%1': a score needs 1 to %2 levels."
+      "check": "rating: 2 to 10 non-empty levels",
+      "message": "Question %1: a rating needs 2 to %2 levels."
     },
     {
-      "id": "Intelligence.option-duplicate",
+      "id": "Intelligence.answer-duplicate",
       "severity": "error",
       "stage": "publish",
-      "check": "option values unique per question",
-      "message": "Question '%1': the option '%2' is listed twice."
+      "check": "answer values unique per question",
+      "message": "Question %1: the answer '%2' is listed twice."
     },
     {
-      "id": "Intelligence.option-empty",
+      "id": "Intelligence.none-answer",
       "severity": "error",
       "stage": "publish",
-      "check": "option value not empty",
-      "message": "Question '%1': an option has no value."
-    },
-    {
-      "id": "Intelligence.noul-options",
-      "severity": "error",
-      "stage": "publish",
-      "check": "noul option rows only use the values true / false",
-      "message": "Question '%1': a yes/no question only takes descriptions for the values true and false."
-    },
-    {
-      "id": "Intelligence.threshold",
-      "severity": "error",
-      "stage": "publish",
-      "check": "noul threshold between 0 and 1",
-      "message": "Question '%1': the threshold must lie between 0 and 1."
-    },
-    {
-      "id": "Intelligence.orphan-option",
-      "severity": "error",
-      "stage": "publish",
-      "check": "every options row belongs to an existing question",
-      "message": "The option '%1' belongs to question '%2', which does not exist."
-    },
-    {
-      "id": "Intelligence.field-name",
-      "severity": "error",
-      "stage": "publish",
-      "check": "fields[].name: letters, digits and _, starting with a letter; not input / attachments",
-      "message": "Field name '%1': use letters, digits and _ only, starting with a letter; 'input' and 'attachments' are taken."
-    },
-    {
-      "id": "Intelligence.field-duplicate",
-      "severity": "error",
-      "stage": "publish",
-      "check": "fields[].name unique",
-      "message": "The field name '%1' is used twice."
+      "check": "choice with allowNone: no answer may be called none",
+      "message": "Question %1: 'none' is already the answer when nothing fits. Remove it from the list, or switch off \"Answer none when no answer fits\"."
     },
     {
       "id": "Intelligence.classify-attachments",
       "severity": "error",
       "stage": "publish",
       "check": "mode classify takes no attachments yet",
-      "message": "The classify mode does not read attachments yet: images for TypeSafe follow in a later release. Only the prompt mode reads files for now."
+      "message": "Answering questions does not read files yet: images follow in a later release. Only a prompt reads files for now."
     },
     {
       "id": "Intelligence.no-language-profile",
@@ -497,9 +407,10 @@
   ],
   "notes": [
     "Prefer ONE classify step with many questions over several steps: the input is sent once, each extra question costs only its own tokens.",
-    "Act on the answers with Condition steps, e.g. {{<slug>_category}} = 'invoice' and {{<slug>_category_fits}} = 'true'. Check <id>_confidence / <id>_probability for risky actions.",
+    "Branch on a choice with a Case step on {{<slug>_<id>}} (one edge per answer, plus none), or a Decision step. A yesno is true / false. A rating: compare {{<slug>_<id>_level}} as a number, e.g. >= 2.",
+    "For risky actions also check {{<slug>_<id>_confidence}}, e.g. >= 80.",
     "Each run is logged as a session (AutoFlow Intelligence Setup → Sessions); the execution log line names the session no. A failed run fails the step.",
     "The prompt answer is text. When later steps need structured data, ask for JSON in the prompt and read it with a Parser step.",
-    "Field values and attachments go to the provider configured in the profile."
+    "The input and attachments go to the provider configured in the profile."
   ]
 }
