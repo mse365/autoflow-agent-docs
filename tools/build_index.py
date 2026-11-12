@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
-"""Regenerate docs/actions/README.md and spec/index.json from the spec files."""
+"""Regenerate docs/actions/README.md, docs/validation-rules.md and spec/index.json from the spec files.
+
+The step specs and pages themselves are generated from the apps that own the steps by
+tools/sync_step_docs.py, which runs this script at the end.
+"""
 import json
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def load(kind):
+def load(root, kind):
     out = []
-    for f in sorted((ROOT / "spec" / kind).glob("*.json")):
+    for f in sorted((root / "spec" / kind).glob("*.json")):
         s = json.loads(f.read_text(encoding="utf-8"))
         out.append(s)
     return out
@@ -21,7 +26,7 @@ def esc(t):
     return (t or "").replace("|", "\\|").replace("\n", " ")
 
 
-def write_rules_catalog(actions, triggers):
+def write_rules_catalog(root, actions, triggers):
     lines = [
         "# Validation rule catalog",
         "",
@@ -40,18 +45,20 @@ def write_rules_catalog(actions, triggers):
         if not rows:
             continue
         lines += [f"## Stage: {stage}", "", "| Step | Severity | Check | Message | Auto-checked |", "|---|---|---|---|:---:|"] + rows + [""]
-    (ROOT / "docs" / "validation-rules.md").write_text("\n".join(lines), encoding="utf-8")
+    (root / "docs" / "validation-rules.md").write_text("\n".join(lines), encoding="utf-8")
 
 
-def main():
-    actions = load("actions")
-    triggers = load("triggers")
+def build(root=ROOT):
+    """Write the generated files under root; returns (number of actions, number of triggers)."""
+    root = Path(root)
+    actions = load(root, "actions")
+    triggers = load(root, "triggers")
 
     index = {
-        "actions": [{k: s.get(k) for k in ("name", "id", "caption", "category", "terminating", "group", "availability", "feature") if k != "feature" or s.get(k)} for s in actions],
-        "triggers": [{k: s.get(k) for k in ("name", "id", "caption", "category", "availability")} for s in triggers],
+        "actions": [{k: s.get(k) for k in ("name", "id", "caption", "category", "terminating", "group", "availability", "feature", "app") if (k not in ("feature", "app") or s.get(k))} for s in actions],
+        "triggers": [{k: s.get(k) for k in ("name", "id", "caption", "category", "availability", "app") if k != "app" or s.get(k)} for s in triggers],
     }
-    (ROOT / "spec" / "index.json").write_text(json.dumps(index, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    (root / "spec" / "index.json").write_text(json.dumps(index, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
     by_cat = {}
     for s in actions:
@@ -63,12 +70,13 @@ def main():
         "",
         "- **Terminating** steps must be the last step in their sequence (`\"terminating\": true`).",
         "- **Group** steps carry `edges` with nested step sequences.",
+        "- Steps with an `app` in [`spec/index.json`](../../spec/index.json) come from a separate app and only exist where that app is installed.",
     ]
     if any(s.get("availability") == "dark-launched" for s in actions):
         lines.append("- **Early access** steps are released in stages (selected customers first, everyone a few weeks later): they only work where their AutoFlow feature is already switched on. Use them only when the user confirms it is.")
     lines += [
         "",
-        "Machine-readable list: [`spec/index.json`](../../spec/index.json).",
+        "Machine-readable list: [`spec/index.json`](../../spec/index.json). The step pages and specs are generated from the apps that own the steps; see [app-step-docs.md](../app-step-docs.md).",
         "",
     ]
     for cat in sorted(by_cat):
@@ -78,9 +86,15 @@ def main():
                 f"| {s.get('caption')}{' (early access)' if s.get('availability') == 'dark-launched' else ''} | `{s['id']}` | {'yes' if s.get('terminating') else ''} | {'yes' if s.get('group') else ''} | [{s['name']}]({s['name']}.md) |"
             )
         lines.append("")
-    (ROOT / "docs" / "actions" / "README.md").write_text("\n".join(lines), encoding="utf-8")
-    write_rules_catalog(actions, triggers)
-    print(f"{len(actions)} actions, {len(triggers)} triggers indexed")
+    (root / "docs" / "actions" / "README.md").write_text("\n".join(lines), encoding="utf-8")
+    write_rules_catalog(root, actions, triggers)
+    return len(actions), len(triggers)
+
+
+def main(argv=None):
+    argv = sys.argv[1:] if argv is None else argv
+    actions, triggers = build(Path(argv[0]) if argv else ROOT)
+    print(f"{actions} actions, {triggers} triggers indexed")
 
 
 if __name__ == "__main__":

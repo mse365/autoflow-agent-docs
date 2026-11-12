@@ -15,6 +15,7 @@ Use it to let an AI agent such as Claude Code, Copilot or Cursor **write or modi
 | [docs/actions/](docs/actions/README.md) | One page per action |
 | [docs/validation.md](docs/validation.md) | What AutoFlow checks at import, in the editor, at publish and at runtime |
 | [docs/validation-rules.md](docs/validation-rules.md) | Every rule of every step, with the exact message text |
+| [docs/app-step-docs.md](docs/app-step-docs.md) | For app publishers: how your own triggers and actions document themselves for AutoFlow |
 | [spec/](spec/) | Machine-readable specs for every step |
 | [examples/](examples/) | Complete, valid flow definitions |
 | [tools/validate_flow.py](tools/validate_flow.py) | Preflight validator (Python 3, no dependencies) |
@@ -50,7 +51,7 @@ Without the API, the same round trip works by hand:
 2. Let the agent edit it, then run the validator.
 3. Choose **Create from file** to import it as a draft: a new flow, or a new draft version of the flow that already has the file's `code` (after a confirmation). Review it in the editor, then **Publish changes**.
 
-## In-app use (AutoFlow AI Flow Builder)
+## In-app use (AutoFlow Intelligence Flow Builder)
 
 Since AutoFlow 27.0.41 the AI Flow Builder inside Business Central also uses these docs. Each
 AutoFlow build is pinned to one commit of this repo; on first use the app downloads that commit
@@ -58,7 +59,13 @@ from GitHub (`codeload.github.com`) once and caches it, so the docs always match
 version. It serves `IN-APP.md`, `docs/`, `spec/` and `examples/` to the model through tools, and
 validates with an AL port of `tools/validate_flow.py`. `IN-APP.md` is the entry page for that
 setting (no files, no Python); `AGENTS.md` stays the entry page for external agents such as
-Claude Code. Both share the step pages and specs, so a change to a step is documented once.
+Claude Code.
+
+In the app, the step pages and specs do not come from this repo: every installed app hands over
+the documentation of its own triggers and actions, and the AI sees only the steps available in
+that environment ([docs/app-step-docs.md](docs/app-step-docs.md)). The step pages here are
+generated from the same sources for every release, so in-app and external agents read the same
+text.
 
 ## Scope and versioning
 
@@ -72,11 +79,17 @@ Claude Code. Both share the step pages and specs, so a change to a step is docum
 
 Found a mismatch between these docs and AutoFlow's behaviour? Please open an issue with the step, the JSON you used, and what happened.
 
-After changing anything in `spec/`, run:
+The step pages and specs (`docs/actions/`, `docs/triggers/`, `spec/actions/`, `spec/triggers/`) are generated from the apps that own the steps, so please report step mismatches as issues rather than pull requests. The maintainers copy them per release with:
+
+```sh
+python3 tools/sync_step_docs.py --app "AutoFlow=<path to the app's repository>" [--app "<App>=<path>" …]
+```
+
+After changing anything else, run:
 
 ```sh
 python3 tools/build_index.py   # regenerates indexes and the rule catalog
-python3 tools/check_repo.py    # validates every documented example
+python3 tools/check_repo.py    # validates every documented example and the generated step files
 ```
 
 ## License

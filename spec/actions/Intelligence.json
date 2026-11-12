@@ -1,0 +1,502 @@
+{
+  "kind": "action",
+  "name": "Intelligence",
+  "id": 5564430,
+  "caption": "Intelligence",
+  "category": "Intelligence",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "mode",
+      "type": "string",
+      "required": true,
+      "default": "prompt",
+      "enum": [
+        "prompt",
+        "classify"
+      ],
+      "maxLength": null,
+      "smart": "none",
+      "description": "prompt = a language model answers the prompt with text (output answer). classify = TypeSafe Jev answers all questions about input in ONE request; every question has its own outputs. The editor shows them as \"Write an answer to a prompt\" / \"Answer questions about a text\"."
+    },
+    {
+      "key": "profile",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Code of an AI provider profile of the AutoFlow Intelligence Setup. Empty = the default language model profile (prompt) / the first TypeSafe profile (classify). The profile must be of the mode's kind (TypeSafe for classify, a language model otherwise) - publishing refuses another kind or an unknown code."
+    },
+    {
+      "key": "prompt",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "mode prompt: what the model should do. SmartText – {{…}} values of the flow are filled in before the call. Only stored for mode prompt."
+    },
+    {
+      "key": "attachments",
+      "type": "array",
+      "required": false,
+      "default": [],
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "mode prompt only: rows { type, reference, filename, contentBase64 } exactly like Send Email. Each resolved file is sent with the prompt: PNG, JPEG, GIF, WebP images and PDF, at most 20 MB together."
+    },
+    {
+      "key": "attachments[].type",
+      "type": "string",
+      "required": false,
+      "default": "Reference",
+      "enum": [
+        "Reference",
+        "Inline"
+      ],
+      "maxLength": null,
+      "smart": "none",
+      "description": "\"Reference\" (default) or \"Inline\", as in Send Email."
+    },
+    {
+      "key": "attachments[].reference",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "record",
+      "description": "Reference rows: {{selector}} to AutoFlow Document reference(s) (table 5564415), an array or iterator of them, or name[N]."
+    },
+    {
+      "key": "attachments[].filename",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": 250,
+      "smart": "text",
+      "description": "Inline rows: file name incl. extension. SmartText."
+    },
+    {
+      "key": "attachments[].contentBase64",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "Inline rows: base64 content. SmartText. The type is read from the content's first bytes."
+    },
+    {
+      "key": "input",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "mode classify: the text every question is about (sent once as state.input). SmartText. Put everything the questions need into it, with labels, e.g. \"Vendor: {{…}}\\nText: {{…}}\"."
+    },
+    {
+      "key": "questions",
+      "type": "array",
+      "required": false,
+      "default": [],
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "mode classify: 1 to 32 rows { id, type, instructions, answers, allowNone, answersFrom, list, listAnswer, listDescription }."
+    },
+    {
+      "key": "questions[].id",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": 19,
+      "smart": "none",
+      "description": "Name in later steps: letters, digits and _, starting with a letter, at most 19 characters, unique. It names the outputs (<id>, <id>_confidence, rating also <id>_level)."
+    },
+    {
+      "key": "questions[].type",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": [
+        "choice",
+        "yesno",
+        "rating"
+      ],
+      "maxLength": null,
+      "smart": "none",
+      "description": "choice = pick one answer from answers; yesno = yes or no; rating = place the input on the levels in answers (lowest first)."
+    },
+    {
+      "key": "questions[].instructions",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "The question itself, e.g. \"What kind of document is this?\". SmartText."
+    },
+    {
+      "key": "questions[].answers",
+      "type": "array",
+      "required": false,
+      "default": [],
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "choice with answersFrom fixed: the possible answers (2–255). rating: the levels, lowest first (2–10). Not stored for yesno or a choice from a list. Rows { value, description }."
+    },
+    {
+      "key": "questions[].answers[].value",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "The answer / level name, unique per question. This is what <id> returns – use the wording later steps compare with, e.g. invoice."
+    },
+    {
+      "key": "questions[].answers[].description",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Optional: when to pick this answer / what the level means. Helps the model; without it the answer is judged by its wording."
+    },
+    {
+      "key": "questions[].allowNone",
+      "type": "boolean",
+      "required": false,
+      "default": true,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "choice only, default true: when none of the answers fits, <id> is \"none\" (a separate fit question is asked in the same request). Switch off only when the answers surely cover every input; an answer may then not be called none."
+    },
+    {
+      "key": "questions[].answersFrom",
+      "type": "string",
+      "required": false,
+      "default": "fixed",
+      "enum": [
+        "fixed",
+        "list"
+      ],
+      "maxLength": null,
+      "smart": "none",
+      "description": "choice only. fixed = the answers are typed into answers. list = the answers are read from a list of an earlier step every time the flow runs (list, listAnswer, listDescription)."
+    },
+    {
+      "key": "questions[].list",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "answersFrom list: the list as a braced selector, records or values, e.g. {{FindProjects_results}}. Stored unresolved; read at run time like the Selection task's input."
+    },
+    {
+      "key": "questions[].listAnswer",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "answersFrom list: SmartText of one entry that is the answer, using the list's own name and the SmartField name of the field (no trailing dot), e.g. {{FindProjects_results.No}}. Empty = a record's primary key (or a value list's value)."
+    },
+    {
+      "key": "questions[].listDescription",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "answersFrom list, optional: SmartText of one entry that says when to pick it, e.g. {{FindProjects_results.Description}}. Needs listAnswer."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "answer",
+      "type": "value",
+      "tableNo": null,
+      "when": "mode prompt: the model's text answer"
+    },
+    {
+      "name": "<id>",
+      "type": "value",
+      "tableNo": null,
+      "when": "mode classify, one per question: choice → the chosen answer's value (for a list: the entry's listAnswer), or none when allowNone and no answer fits or the list is empty; yesno → true / false; rating → the value of the most likely level"
+    },
+    {
+      "name": "<id>_level",
+      "type": "value",
+      "tableNo": null,
+      "when": "rating questions: the number of the most likely level, 1 = the first (lowest) level"
+    },
+    {
+      "name": "<id>_confidence",
+      "type": "value",
+      "tableNo": null,
+      "when": "every classify question: how sure the answer is, a whole number 0–100 (yesno: of the given answer, not of yes)"
+    }
+  ],
+  "rules": [
+    {
+      "id": "Intelligence.mode",
+      "severity": "error",
+      "stage": "publish",
+      "check": "mode must be prompt or classify",
+      "message": "Choose what Intelligence should do: write an answer to a prompt, or answer questions.",
+      "machine": {
+        "type": "enum",
+        "key": "mode",
+        "values": [
+          "prompt",
+          "classify"
+        ]
+      }
+    },
+    {
+      "id": "Intelligence.prompt-required",
+      "severity": "error",
+      "stage": "publish",
+      "check": "mode prompt: prompt must not be empty",
+      "message": "Enter the prompt.",
+      "machine": {
+        "type": "requiredIf",
+        "key": "prompt",
+        "ifKey": "mode",
+        "equals": "prompt"
+      }
+    },
+    {
+      "id": "Intelligence.input-required",
+      "severity": "error",
+      "stage": "publish",
+      "check": "mode classify: input must not be empty",
+      "message": "Enter the text Intelligence should look at.",
+      "machine": {
+        "type": "requiredIf",
+        "key": "input",
+        "ifKey": "mode",
+        "equals": "classify"
+      }
+    },
+    {
+      "id": "Intelligence.no-questions",
+      "severity": "error",
+      "stage": "publish",
+      "check": "mode classify: at least one question",
+      "message": "Add at least one question."
+    },
+    {
+      "id": "Intelligence.too-many-questions",
+      "severity": "error",
+      "stage": "publish",
+      "check": "mode classify: at most 32 questions; put more into a second Intelligence step",
+      "message": "One step answers at most %1 questions. Ask further questions in a second Intelligence step."
+    },
+    {
+      "id": "Intelligence.question-name-missing",
+      "severity": "error",
+      "stage": "publish",
+      "check": "questions[].id not empty",
+      "message": "Question %1: enter a name for later steps."
+    },
+    {
+      "id": "Intelligence.question-name",
+      "severity": "error",
+      "stage": "publish",
+      "check": "questions[].id: letters, digits and _, starting with a letter, at most 19 characters",
+      "message": "Question %1: the name '%2' may only use letters, digits and _, must start with a letter and have at most %3 characters."
+    },
+    {
+      "id": "Intelligence.question-name-duplicate",
+      "severity": "error",
+      "stage": "publish",
+      "check": "questions[].id unique",
+      "message": "Questions %1 and %2 have the same name '%3'. Give each question its own name."
+    },
+    {
+      "id": "Intelligence.output-clash",
+      "severity": "error",
+      "stage": "publish",
+      "check": "no output name twice (e.g. a question named a_confidence next to a question a)",
+      "message": "Question %1: the name '%2' is already used by a result of question %3. Choose another name."
+    },
+    {
+      "id": "Intelligence.question-type",
+      "severity": "error",
+      "stage": "publish",
+      "check": "questions[].type is choice, yesno or rating",
+      "message": "Question %1: choose how Intelligence should answer – one of a list, yes or no, or a rating."
+    },
+    {
+      "id": "Intelligence.question-instructions",
+      "severity": "error",
+      "stage": "publish",
+      "check": "questions[].instructions not empty",
+      "message": "Question %1: enter the question."
+    },
+    {
+      "id": "Intelligence.choice-answers",
+      "severity": "error",
+      "stage": "publish",
+      "check": "choice: 2 to 255 non-empty answers",
+      "message": "Question %1: enter at least two possible answers. / Question %1: a list takes at most %2 answers."
+    },
+    {
+      "id": "Intelligence.rating-levels",
+      "severity": "error",
+      "stage": "publish",
+      "check": "rating: 2 to 10 non-empty levels",
+      "message": "Question %1: a rating needs 2 to %2 levels."
+    },
+    {
+      "id": "Intelligence.answer-duplicate",
+      "severity": "error",
+      "stage": "publish",
+      "check": "answer values unique per question",
+      "message": "Question %1: the answer '%2' is listed twice."
+    },
+    {
+      "id": "Intelligence.none-answer",
+      "severity": "error",
+      "stage": "publish",
+      "check": "choice with allowNone: no answer may be called none",
+      "message": "Question %1: 'none' is already the answer when nothing fits. Remove it from the list, or switch off \"Answer none when no answer fits\"."
+    },
+    {
+      "id": "Intelligence.list-missing",
+      "severity": "error",
+      "stage": "publish",
+      "check": "choice with answersFrom list: list not empty",
+      "message": "Question %1: pick the list the answers come from."
+    },
+    {
+      "id": "Intelligence.list-answer-missing",
+      "severity": "error",
+      "stage": "publish",
+      "check": "answersFrom list: listDescription needs listAnswer",
+      "message": "Question %1: say which field of the list is the answer, or leave \"When to pick it\" empty too."
+    },
+    {
+      "id": "Intelligence.profile-kind",
+      "severity": "error",
+      "stage": "publish",
+      "check": "profile exists and is of the mode's kind (wrapped: The Intelligence step '%1': …)",
+      "message": "The profile %1 does not exist. / The profile %1 is a language model profile. Answering questions needs a TypeSafe profile. / The profile %1 is a TypeSafe profile. Writing an answer needs a language model profile."
+    },
+    {
+      "id": "Intelligence.classify-attachments",
+      "severity": "error",
+      "stage": "publish",
+      "check": "mode classify takes no attachments yet",
+      "message": "Answering questions does not read files yet: images follow in a later release. Only a prompt reads files for now."
+    },
+    {
+      "id": "Intelligence.no-language-profile",
+      "severity": "error",
+      "stage": "publish",
+      "check": "mode prompt needs Intelligence switched on and a language model profile (wrapped: The Intelligence step '%1': …)",
+      "message": "the prompt mode needs Intelligence switched on and a language model profile."
+    },
+    {
+      "id": "Intelligence.no-typesafe-profile",
+      "severity": "error",
+      "stage": "publish",
+      "check": "mode classify needs Intelligence switched on and a TypeSafe profile",
+      "message": "the classify mode needs Intelligence switched on and a TypeSafe profile."
+    },
+    {
+      "id": "Intelligence.waits",
+      "severity": "warning",
+      "stage": "publish",
+      "check": "the trigger runs while the user works on the record (record created/modified interactive, document released/posted/reopened, page opened/closed, PDF printed, report file name, SubFlow): the user waits for the answer",
+      "message": "The Intelligence step '%1' runs while the user works on the record: the user waits until the model has answered (up to the timeout of the AutoFlow Intelligence Setup)."
+    },
+    {
+      "id": "Intelligence.list-empty",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "answersFrom list: the list is empty at run time and allowNone is off (with allowNone the question answers none without asking)",
+      "message": "Question %1: the list %2 is empty, so there is nothing to choose from. To answer \"none\" instead, switch on \"Answer none when no answer fits\"."
+    },
+    {
+      "id": "Intelligence.list-too-long",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "answersFrom list: more than 255 entries at run time",
+      "message": "Question %1: the list %2 has %3 entries; a question can choose from at most %4."
+    },
+    {
+      "id": "Intelligence.list-no-answers",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "answersFrom list: the list has entries but listAnswer resolves for none of them (an unresolvable SmartField stays a {{token}} and counts as no answer)",
+      "message": "Question %1: the list %2 has %3 entries, but \"Answer from each entry\" (%4) gives no answer for any of them. Pick the field again with the { } button."
+    },
+    {
+      "id": "Intelligence.unsupported-file",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "an attachment is no PNG/JPEG/GIF/WebP image or PDF",
+      "message": "Intelligence cannot read the attachment '%1': only PNG, JPEG, GIF and WebP images and PDF files are supported."
+    },
+    {
+      "id": "Intelligence.files-too-large",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "attachments together over 20 MB",
+      "message": "The attachments are too large for one request (%1 MB, at most %2 MB)."
+    },
+    {
+      "id": "Intelligence.truncated",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "the answer hit the profile's max output tokens",
+      "message": "The answer was cut off at %1 output tokens. Raise \"Max. Output Tokens\" on provider profile %2, or ask for a shorter answer."
+    },
+    {
+      "id": "Intelligence.empty-answer",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "the model answered with no text",
+      "message": "The model gave an empty answer."
+    },
+    {
+      "id": "Intelligence.wrong-profile-kind",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "profile is of the other kind",
+      "message": "Profile %1 is a TypeSafe classification profile; the prompt mode needs a language model profile."
+    }
+  ],
+  "notes": [
+    "Prefer ONE classify step with many questions over several steps: the input is sent once, each extra question costs only its own tokens.",
+    "To choose among records of the flow (e.g. which of the customer's projects an e-mail is about), use a choice with answersFrom list: a Find Records step before, list = {{FindProjects_results}}, listAnswer = {{FindProjects_results.No}}, listDescription = {{FindProjects_results.Description}}. The answer is the entry's No.; look the record up again with Find Records if later steps need it.",
+    "Branch on a choice with a Case step on {{<slug>_<id>}} (one edge per answer, plus none), or a Decision step. A yesno is true / false. A rating: compare {{<slug>_<id>_level}} as a number, e.g. >= 2.",
+    "For risky actions also check {{<slug>_<id>_confidence}}, e.g. >= 80.",
+    "Each run is logged as a session (AutoFlow Intelligence Setup → Sessions); the execution log line names the session no. A failed run fails the step.",
+    "The prompt answer is text. When later steps need structured data, ask for JSON in the prompt and read it with a Parser step.",
+    "The input and attachments go to the provider configured in the profile."
+  ]
+}

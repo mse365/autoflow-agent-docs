@@ -5,7 +5,9 @@ Every trigger and action has two files:
 - `docs/<actions|triggers>/<Name>.md` – human/agent-readable reference page
 - `spec/<actions|triggers>/<Name>.json` – machine-readable spec consumed by `tools/validate_flow.py`
 
-`<Name>` is the AL enum value name (e.g. `HttpRequest`, `ForEachLoop`, `GlobalModify`).
+`<Name>` is the AL enum value name without the app's prefix or suffix (e.g. `HttpRequest`, `ForEachLoop`, `GlobalModify`).
+
+Step files are maintained in the app that owns the step and handed to AutoFlow through the step docs events (see [docs/app-step-docs.md](../docs/app-step-docs.md)); this repo carries generated copies. `tools/sync_step_docs.py` copies them from the apps, adds the generated banner to each page and the `app` key to the specs of apps other than AutoFlow, and records the source app of every step in [`spec/sources.json`](sources.json). Do not edit the step files here – change them in the app and run the sync.
 
 ## spec JSON shape
 
@@ -50,7 +52,10 @@ Every trigger and action has two files:
       "machine": { "type": "required", "key": "url" }   // optional; see below
     }
   ],
-  "notes": [ "free-text gotchas" ]
+  "notes": [ "free-text gotchas" ],
+  "app": "Example App",             // optional: the separate app that provides the step (absent = AutoFlow itself); written by the sync
+  "worksWithTriggers": [5564403],   // optional, actions only: trigger ordinals the step works with; the validator lints other flows (action.trigger-mismatch)
+  "source": "generated"             // in-app only: a spec AutoFlow generated for a step without documentation of its own (no rules; never in this repo)
 }
 ```
 
@@ -73,5 +78,5 @@ Keys may be dotted paths into nested objects (`auth.type`). Fields of array rows
 
 ### Dark-launched steps
 
-A step that ships behind a portal feature flag gets `"availability": "dark-launched"` and `"feature": "<flag>"`. Its page starts with an **Early access** callout. The validator warns on it (`step.dark-launched`) unless `--features <flag>` says the user confirmed the flag is on for their environment. When the step becomes generally available, set `availability` to `"ga"`, drop `feature`, and remove the callout.
+A step that ships behind a portal feature flag gets `"availability": "dark-launched"` and `"feature": "<flag>"`. Its page starts with an **Early access** callout. The offline validator warns on it (`step.dark-launched`) unless `--features <flag>` says the user confirmed the flag is on for their environment. The in-app AI ignores these two keys: it asks the environment which steps are available (see [docs/validation.md](../docs/validation.md#in-app-checks-ai-flow-builder)). When the step becomes generally available, set `availability` to `"ga"`, drop `feature`, and remove the callout.
 

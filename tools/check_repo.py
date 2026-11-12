@@ -6,6 +6,9 @@
    minimal flow built around it validates without errors.
 3. Every file in examples/ validates without errors or warnings.
 4. Generated files (docs/actions/README.md, docs/validation-rules.md, spec/index.json) are up to date.
+5. Step pages and specs are generated copies (tools/sync_step_docs.py): every page starts with the
+   generated banner, every step is listed in spec/sources.json with the app it comes from, every
+   entry there has both files, and the spec's "app" key matches it.
 """
 import json
 import re
@@ -16,6 +19,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 import validate_flow as vf  # noqa: E402
+import sync_step_docs as sync  # noqa: E402
 
 FENCE = re.compile(r"```json\s*\n(.*?)\n```", re.S)
 REQUIRED = ("kind", "name", "id", "caption", "configuration", "outputs", "rules")
@@ -36,6 +40,35 @@ def example_blocks(md):
     return FENCE.findall(m.group(0)) if m else []
 
 
+def check_sources():
+    problems = []
+    src = ROOT / sync.SOURCES
+    if not src.exists():
+        return [f"{sync.SOURCES} is missing – run tools/sync_step_docs.py"]
+    sources = json.loads(src.read_text(encoding="utf-8"))
+    for folder, _kind in sync.KINDS:
+        listed = sources.get(folder) or {}
+        pages = {p.stem for p in (ROOT / "docs" / folder).glob("*.md") if p.name != "README.md"}
+        specs = {p.stem for p in (ROOT / "spec" / folder).glob("*.json")}
+        for n in sorted(pages):
+            md = ROOT / "docs" / folder / f"{n}.md"
+            if not md.read_text(encoding="utf-8").startswith(sync.BANNER_PREFIX):
+                problems.append(f"{md.relative_to(ROOT)}: no generated banner – step pages are edited in the app that owns the step, then copied with tools/sync_step_docs.py")
+        for n in sorted((pages | specs) - set(listed)):
+            problems.append(f"{folder}/{n}: not listed in {sync.SOURCES} – step files come from tools/sync_step_docs.py")
+        for n, app in sorted(listed.items()):
+            if n not in pages:
+                problems.append(f"{sync.SOURCES}: {folder}/{n} has no docs/{folder}/{n}.md")
+            if n not in specs:
+                problems.append(f"{sync.SOURCES}: {folder}/{n} has no spec/{folder}/{n}.json")
+                continue
+            spec_app = json.loads((ROOT / "spec" / folder / f"{n}.json").read_text(encoding="utf-8")).get("app")
+            expected = None if app == sync.BASE_APP else app
+            if spec_app != expected:
+                problems.append(f"spec/{folder}/{n}.json: app is {spec_app!r}, {sync.SOURCES} says {expected!r}")
+    return problems
+
+
 def main():
     problems = []
     specs = vf.load_specs()
@@ -45,6 +78,8 @@ def main():
         missing = [k for k in REQUIRED if k not in s]
         if missing:
             problems.append(f"{f.relative_to(ROOT)}: missing {missing}")
+
+    problems += check_sources()
 
     checked = 0
     for kind in ("actions", "triggers"):

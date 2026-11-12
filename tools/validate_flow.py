@@ -345,6 +345,17 @@ def check_steps(doc, specs, r, strict_outputs, features=()):
                         r.add("lint", "output.unprefixed-expected", ow,
                               f"Output name '{o['name']}' differs from configuration.{name_key}; the two must be identical.")
 
+    # lint: steps that only work with certain triggers (spec "worksWithTriggers")
+    for step, where, *_ in walk_steps(steps, "$.steps"):
+        if not isinstance(step, dict) or step.get("type") != "action":
+            continue
+        spec = specs["action"].get(step.get("action")) if isinstance(step.get("action"), int) else None
+        allowed = (spec or {}).get("worksWithTriggers")
+        if allowed and flow_trigger not in allowed:
+            r.add("lint", "action.trigger-mismatch", where,
+                  f"{spec.get('caption')} only works in flows on trigger {', '.join(str(a) for a in allowed)}; "
+                  f"here it does nothing.")
+
     # publish: at least one action
     if action_count == 0:
         r.add("error", "publish.empty-flow", "$.steps",
