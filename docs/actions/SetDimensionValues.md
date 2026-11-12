@@ -19,8 +19,11 @@ Adds, changes or removes dimension values on a record that has a *Dimension Set 
 The step resolves `reference`, checks that its table equals `tableNo` and loads the record's current dimension set. It then processes the `dimensions` rows in order:
 
 - A row with a value **adds or updates** that dimension.
-- A row with an empty value **removes** that dimension.
+- A row with an empty value **removes** that dimension, unless the row is `optional`: then it is skipped and the dimension is **kept** as it is.
+- A row whose `dimensionCode` resolves to empty is skipped.
 - Dimensions that are not listed are **kept**.
+
+`dimensionCode` and `value` can both be SmartText. The whole configuration (`{{…}}` placeholders and SmartControls such as `{#if …#}`) is resolved before the step runs, so a code computed at run time works like a literal code.
 
 The new Dimension Set ID is written to the record. The *Global/Shortcut Dimension 1/2 Code* fields are synced directly, without validation. The record is saved with `Modify(triggers)` (`OnModify` runs when `triggers` is `true`), and the step emits `rec` and `dimensionSetId`.
 
@@ -31,7 +34,7 @@ The new Dimension Set ID is written to the record. The *Global/Shortcut Dimensio
 | `reference` | string | yes | `""` | One SmartField placeholder resolving to the record, e.g. `"{{trigger_Rec}}"`. The table must have a field named *Dimension Set ID*. |
 | `tableNo` | integer | yes | `0` | Table of the referenced record. The editor derives it from the reference. It must match at runtime. |
 | `triggers` | boolean | no | `true` | `true` = `Modify(true)`, `false` = `Modify(false)`. |
-| `dimensions` | array | no | `[]` | Rows `{ "dimensionCode": "<code>", "value": "<value code or SmartText>" }`. The code is trimmed and upper-cased, and rows with an empty code are skipped. The value is resolved and trimmed, and an empty value removes the dimension. If a code is listed twice, the last row wins. The editor also writes `lineNo` (10000, 20000, …), which the step ignores. |
+| `dimensions` | array | no | `[]` | Rows `{ "dimensionCode": "<code or SmartText>", "value": "<value code or SmartText>", "optional"?: bool, "dimensionCodeMode"?: "smarttext" }`. Both texts are resolved and trimmed, the code is upper-cased, and rows with an empty code are skipped. An empty value removes the dimension, or keeps it unchanged when `"optional": true`. If a code is listed twice, the last row wins. The editor also writes `lineNo` (10000, 20000, …) and, for a code entered as SmartText, `"dimensionCodeMode": "smarttext"` – the step ignores both. |
 
 ## Outputs
 
@@ -52,6 +55,8 @@ There are no publish-time checks for this step. A missing `tableNo` or a `refere
 
 | condition | message |
 |---|---|
+| `optional` row with an empty value (not an error; Debug log line) | `Dimension "%1" skipped: it is optional and its value is empty.` |
+| Rows whose `dimensionCode` resolved to empty (not an error; one Debug log line) | `%1 dimension row(s) skipped: the dimension code is empty.` |
 | `tableNo` 0/missing | `Table No. is required for a Set Dimension Values step.` |
 | `reference` is not a single `{{…}}` placeholder, or does not resolve | `Reference "%1" cannot be resolved to a record.` |
 | Referenced record no longer exists | Business Central's standard "record does not exist" error |
@@ -80,6 +85,8 @@ There are no publish-time checks for this step. A missing `tableNo` or a `refere
     "dimensions": [
       { "dimensionCode": "DEPARTMENT", "value": "SALES" },
       { "dimensionCode": "PROJECT", "value": "{{GetDimensions_PROJECT}}" },
+      { "dimensionCode": "COSTCENTER", "value": "{{trigger_Rec.costCenter}}", "optional": true },
+      { "dimensionCode": "{{mapping_dimensionCode}}", "dimensionCodeMode": "smarttext", "value": "{{mapping_dimensionValue}}", "optional": true },
       { "dimensionCode": "AREA", "value": "" }
     ]
   },
@@ -92,6 +99,8 @@ There are no publish-time checks for this step. A missing `tableNo` or a `refere
 
 ## Gotchas
 
-- An empty `value` **removes** the dimension. Leave a dimension out completely to keep it.
+- An empty `value` **removes** the dimension. Leave a dimension out completely to keep it, or set `"optional": true` when the value comes from data that may be empty.
+- A `dimensionCode` that resolves to an unknown code – including an unresolvable `{{…}}` placeholder, which stays as literal text – fails with `Dimension "%1" does not exist.`
+- Before the release after 27.0.41: `optional` and `dimensionCodeMode` did not exist (an empty value always removed the dimension). SmartText in `dimensionCode` was already resolved at runtime, but the editor offered only the dropdown.
 - On document headers, the step changes only the header's dimension set. Lines are not updated.
 - `value` must be an existing, non-blocked, Standard value code of that dimension after resolution. A dimension name or value name doesn't work.
