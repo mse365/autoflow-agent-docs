@@ -46,7 +46,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "One row per dimension to change, processed in array order (if a code is listed twice, the last row wins). Listed dimensions are added or updated, a row with an empty value removes that dimension, unlisted dimensions are kept.",
+      "description": "One row per dimension to change, processed in array order (if a code is listed twice, the last row wins). Listed dimensions are added or updated; a row with an empty value removes that dimension, unless the row is optional (then it is skipped and the dimension is kept); unlisted dimensions are kept.",
       "items": [
         {
           "key": "dimensionCode",
@@ -54,9 +54,22 @@
           "required": true,
           "default": "",
           "enum": null,
-          "maxLength": 20,
+          "maxLength": null,
+          "smart": "text",
+          "description": "Dimension code (e.g. 'DEPARTMENT'): a literal or SmartText with {{…}} placeholders / SmartControls ({#if …#}). Resolved together with the rest of the configuration before the step runs, then trimmed and upper-cased; the result must be an existing dimension code (max 20 characters). A row whose code resolves to empty is skipped (Debug log line)."
+        },
+        {
+          "key": "dimensionCodeMode",
+          "type": "string",
+          "required": false,
+          "default": "fixed",
+          "enum": [
+            "fixed",
+            "smarttext"
+          ],
+          "maxLength": null,
           "smart": "none",
-          "description": "Dimension code (e.g. 'DEPARTMENT'). Trimmed and upper-cased; rows with an empty code are skipped."
+          "description": "Editor-only: how the config canvas shows 'dimensionCode'. 'smarttext' = SmartText cell; absent = the dimension dropdown, or the SmartText cell when the code is no existing dimension. Ignored at runtime – SmartFields in dimensionCode are resolved either way."
         },
         {
           "key": "value",
@@ -66,7 +79,17 @@
           "enum": null,
           "maxLength": 20,
           "smart": "text",
-          "description": "Dimension value code: a literal or SmartText with {{…}} placeholders. Resolved, then trimmed; the result must be an existing value code of that dimension (max 20 characters). Empty = remove the dimension from the set."
+          "description": "Dimension value code: a literal or SmartText with {{…}} placeholders. Resolved, then trimmed; the result must be an existing value code of that dimension (max 20 characters). Empty = remove the dimension from the set, or keep it unchanged when 'optional' is true."
+        },
+        {
+          "key": "optional",
+          "type": "boolean",
+          "required": false,
+          "default": false,
+          "enum": null,
+          "maxLength": null,
+          "smart": "none",
+          "description": "true = skip the row (and write a Debug log line) when its value resolves to empty or only spaces, so the record keeps its current value for that dimension instead of losing it. Absent, null or non-boolean -> false (an empty value removes the dimension, as before)."
         },
         {
           "key": "lineNo",
