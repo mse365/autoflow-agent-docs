@@ -5,7 +5,6 @@ Every action step has `"type": "action"` and `"action": <ordinal>`. The ordinal 
 - **Terminating** steps must be the last step in their sequence (`"terminating": true`).
 - **Group** steps carry `edges` with nested step sequences.
 - Steps with an `app` in [`spec/index.json`](../../spec/index.json) come from a separate app and only exist where that app is installed.
-- **Early access** steps are released in stages (selected customers first, everyone a few weeks later): they only work where their AutoFlow feature is already switched on. Use them only when the user confirms it is.
 
 Machine-readable list: [`spec/index.json`](../../spec/index.json). The step pages and specs are generated from the apps that own the steps; see [app-step-docs.md](../app-step-docs.md).
 
@@ -66,10 +65,10 @@ Machine-readable list: [`spec/index.json`](../../spec/index.json). The step page
 
 | Action | `action` | Terminating | Group | Page |
 |---|---:|:---:|:---:|---|
-| Approval task (early access) | `5564560` |  | yes | [ApprovalTask](ApprovalTask.md) |
-| Form task (early access) | `5564426` |  |  | [FormTask](FormTask.md) |
+| Approval task | `5564560` |  | yes | [ApprovalTask](ApprovalTask.md) |
+| Form task | `5564426` |  |  | [FormTask](FormTask.md) |
 | Read task repeater | `5564427` |  |  | [ReadTaskRepeater](ReadTaskRepeater.md) |
-| Selection task (early access) | `5564423` |  |  | [SelectionTask](SelectionTask.md) |
+| Selection task | `5564423` |  |  | [SelectionTask](SelectionTask.md) |
 
 ## Trigger Responses
 

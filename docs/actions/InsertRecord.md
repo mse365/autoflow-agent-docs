@@ -40,14 +40,44 @@ The insert runs inside the flow's database transaction. Any error (conversion, v
 |---|---|---|---|---|
 | `lineNo` | integer | yes | – | Order and row key. Must be **unique** in the array. The editor writes `10000, 20000, …`. |
 | `fieldNo` | integer | yes | – | Field **number**, not the field name. A row with `0` is skipped. |
-| `value` | string | no | `""` | SmartText. `{{slug_output}}`, `[[formula]]` and SmartControls are resolved, then the text is converted to the field type. |
+| `value` | string | no | `""` | SmartText. `{{slug_output}}`, `[[formula]]` and SmartControls are resolved, then the text is converted to the field type. With `valueMode: "fixed"` it is the Option/Enum value **name** instead (see below); with `valueMode: "rules"` it is ignored. |
 | `validate` | boolean | no | `true` | `true` = `Validate(field, value)` (OnValidate runs). `false` = direct assignment. |
 | `inputFormat` | string | no | `""` (omitted) | How the text is parsed. Empty = regional format of the running session. `"9"`/`"xml"` = invariant (`1234.5`, `2026-07-16`, `true`). Or a date/time pattern from `yyyy yy MM dd HH mm ss` plus separators (e.g. `yyyyMMdd`, `dd.MM.yyyy HH:mm`), for Date/Time/DateTime fields only. Max 30 chars. |
+| `valueMode` | string | no | (omitted) | How `value` is read: `"fixed"` (a value name from the field's list), `"rules"` (conditions in `valueRules`), or `"smarttext"` / omitted (the SmartText above). Compared case-insensitively; any other text counts as `smarttext`. The editor offers Fixed / SmartText / Rules only for Option and Enum fields and omits the key in SmartText mode. |
+| `valueRules` | object | no | (omitted) | Only with `valueMode: "rules"`: `{ "rules": [ { "condition": "<SmartFilter>", "value": "<value name>" } ], "otherwise": "<value name>" }`. The first rule whose condition is true wins; `otherwise` applies when none does and may be omitted. Also accepted as a JSON string holding that object. |
+| `optional` | boolean | no | `false` | Insert / Modify only. `true` = skip the row when its value is empty (see below), so the field keeps its current or initial value instead of failing a conversion or being cleared. Not a boolean: treated as `false`. |
+
+### Option and Enum fields: `valueMode`
+
+An Option or Enum field takes its value in one of three modes. The editor stores the value **name** (the AL enum value or option member, e.g. `Order`, `PendingApproval`), never the caption or the number, so a flow built in one language works in every other.
+
+- **`fixed`** – `value` holds the name. An empty `value` means *no value*: the row is skipped without a message.
+- **`smarttext`** (or no `valueMode`) – `value` is SmartText, converted like any other field: the name, the caption in the session language or the ordinal number are accepted. Matching order: exact name, exact caption, case-insensitive name or caption, then a number that is one of the field's ordinals. A number that is none of the field's ordinals is still assigned as given (Business Central then decides). Anything else fails with `Cannot convert value "%1" to %2 for field "%3". Allowed: %4.` (%4 = the value names, comma-separated).
+- **`rules`** – `valueRules.rules[]` is walked in order; each `condition` is a [SmartFilter condition](../references-and-smart-fields.md#46-smartfilter-conditions) (same language as Decision's `condition`; `{{…}}` tokens are substituted before the step runs) and each `value` a value name. The first rule whose condition is true sets the field. A rule with a blank condition or an empty value never matches. If no rule matches, `otherwise` is used; if that is empty or absent too, the row is skipped and the field keeps its value.
+
+```json
+{ "lineNo": 50000, "fieldNo": 39, "value": "", "valueMode": "rules",
+  "valueRules": { "rules": [ { "condition": "{{trigger_Rec.balancelcy}} > 10000", "value": "All" } ], "otherwise": " " } }
+```
+
+(Customer field 39 = *Blocked*, whose first value name is a single space.)
+
+The mode is read on every row, whatever the field type, but Fixed and Rules only make sense for Option/Enum fields. The editor's status line reports an incomplete rule as `Field Values, row 2: Rule 1 needs a condition and a value.`; it is advisory and does not block saving.
+
+### `optional`
+
+With `"optional": true` the row is skipped, and a Debug log line `Field "%1" skipped: it is optional and its value is empty.` is written, when the value is empty:
+
+- for every field type: the resolved text is `""` (so an empty `{{token}}` no longer fails the conversion of a Decimal, Boolean or patterned Date);
+- Date / Time / DateTime: additionally a value that converts to `0D` / `0T` / `0DT`; Guid: the null GUID;
+- Blob / Media: a bare binary SmartField with an empty payload; RecordId: no resolvable reference and empty text.
+
+An explicit `0` or `false` in a numeric, Boolean, Duration or Option field is a real value and is applied. A non-empty value that cannot be converted still fails. Without the flag (the default), an empty value is assigned as before: text fields are cleared and typed fields fail the conversion.
 
 Conversion per field type:
 - **Integer, BigInteger, Decimal, Boolean, Duration**: Evaluate, regional or invariant.
 - **Date, Time, DateTime**: Evaluate, or the pattern.
-- **Option**: the ordinal, the English member name or the localized caption. Names must match exactly, including case.
+- **Option**: the value name, the caption in the session language or the ordinal number, see `valueMode` above.
 - **Guid**: `""` gives an empty GUID.
 - **Code, Text**: taken as-is.
 - **RecordId**: only from a reference SmartField such as `{{FindItem_results}}`.
@@ -64,6 +94,7 @@ Conversion per field type:
 | stage | severity | rule | message |
 |---|---|---|---|
 | editor | error | `tableNo` missing or `0` (the Table field is required) | `Please fill in the highlighted fields.` |
+| editor (status line) | warning | A `values` row in Rules mode has a rule with a blank condition or an empty value. Advisory, does not block saving; at runtime such a rule never matches. | `%1, row %2: %3` → `Field Values, row 2: Rule 1 needs a condition and a value.` |
 
 There are no publish-time checks specific to this step. A Confirm dialog placed after it gets a publish warning, because this step writes to the database.
 
@@ -79,6 +110,8 @@ There are no publish-time checks specific to this step. A Confirm dialog placed 
 | Invalid `inputFormat` (not empty, `9`, `xml` or a valid pattern) | `"%1" is not a valid input format. Leave it empty for the regional format, enter 9 or xml for the invariant XML notation, or enter a date/time pattern such as yyyyMMdd (tokens yyyy, yy, MM, dd, HH, mm, ss plus separators).` |
 | Pattern used on a non-date field | `Input format "%1" is a date/time pattern and can only be used for Date, Time, or DateTime fields. Field "%2" is of type %3.` |
 | Value not convertible | `Cannot convert value "%1" to %2 for field "%3".` / `Cannot convert value "%1" to %2 for field "%3" using input format "%4".` |
+| Option/Enum value is neither a value name, a caption nor a number | `Cannot convert value "%1" to %2 for field "%3". Allowed: %4.` (%2 = `Option`, %4 = the value names) |
+| `optional` row with an empty value (not an error; Debug log line) | `Field "%1" skipped: it is optional and its value is empty.` |
 | Duplicate `lineNo` in `values` | Platform "record already exists" error |
 | Validation / OnInsert / duplicate primary key | Business Central's own error |
 
@@ -118,5 +151,8 @@ There are no publish-time checks specific to this step. A Confirm dialog placed 
 - Keep `outputs[0].tableNo` equal to `configuration.tableNo`.
 - Without `inputFormat`, decimals and dates are parsed in the **regional format of the user or job-queue session that runs the flow**. Use `"inputFormat": "9"` for machine-generated values such as `1234.50` or `2026-07-16`.
 - If you omit primary-key fields, the table's OnInsert (`triggers: true`) must fill them, e.g. from a number series. Otherwise the insert fails or creates a record with an empty key.
-- Scalar SmartFields anywhere in the configuration are resolved before the step runs. Reference SmartFields are kept for the step to resolve.
-- Up to AutoFlow 27.0.40, `templateCode` always named a Configuration Template (max 10 characters), also on Customer, Vendor, Item and Employee. Business Central templates are used from the release after 27.0.40.
+- Scalar SmartFields anywhere in the configuration are resolved before the step runs, including inside `valueRules` conditions. Reference SmartFields are kept for the step to resolve.
+- For Option/Enum fields write the value **name** (`"Order"`, `"PendingApproval"`), not the caption or the number: names are language-independent and the editor shows them. A `valueMode: "fixed"` row with an empty `value`, and a `rules` row where nothing matches and no `otherwise` is set, are silently skipped.
+- A `{{token}}` that resolves to nothing leaves the field at its current/initial value only with `"optional": true`. Without it, an empty text clears a text field and fails the conversion of a numeric, Boolean or patterned date field.
+- Before 27.0.41: Option values were matched case-sensitively and a value name was mapped to its **position** in the list, so enums whose ordinals have gaps got the wrong value; the unknown-value error ended without the `Allowed:` list. `valueMode`, `valueRules` and `optional` did not exist: a hand-written `valueMode` was ignored (the row read as SmartText) and an empty value was always assigned.
+- Up to AutoFlow 27.0.40, `templateCode` always named a Configuration Template (max 10 characters), also on Customer, Vendor, Item and Employee. Business Central templates are used from 27.0.41.

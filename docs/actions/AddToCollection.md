@@ -22,7 +22,7 @@ The step finds the first free index of the target collection (`…[0]`, `…[1]`
 
 | key | type | required | default | description |
 |---|---|---|---|---|
-| `collectionSelector` | string | yes | `""` | Exactly one placeholder naming the Create Collection output, for example `{{OrderList_Orders}}`. It must be wrapped in `{{ }}` and must not contain a dotted path. It is read unresolved. |
+| `collectionSelector` | string | yes | `""` | Exactly one placeholder naming the Create Collection output by its bare collection name, for example `{{Orders}}`. It must be wrapped in `{{ }}` and must not contain a dotted path. It is read unresolved. Before 27.0.41 the selector was `{{<slug>_<collectionName>}}` (`{{OrderList_Orders}}`). |
 | `value` | string | yes | `""` | **Value collection:** SmartText (SmartFields, SmartFormulas, SmartControls), resolved before it is appended. **Reference collection:** exactly one `{{name}}` that resolves to a Reference output of the same table. |
 | `derivedType` | string | yes | `""` | `"value"` or `"reference"`. This must match the collection's type. At run time only this key decides how the item is stored. A missing or empty value means text. |
 | `derivedTableNo` | integer | no | `0` | Table number of the collection (0 for Value). Not used at run time. |
@@ -31,7 +31,7 @@ The editor works out `derivedType` and `derivedTableNo` from the selected collec
 
 ## Outputs
 
-None. The items become part of the Create Collection step's output (`<slug>_<collectionName>[n]`).
+None. The items become part of the Create Collection step's output (`<collectionName>[n]`, for example `{{Orders[0]}}`; before 27.0.41 `<slug>_<collectionName>[n]`).
 
 ## Validation
 
@@ -64,7 +64,7 @@ The following step adds the current loop record to a Reference collection of Sal
   "iconUrl": "https://statics.autoflow.mse365.de/icons/addtocollection.svg",
   "terminating": false,
   "configuration": {
-    "collectionSelector": "{{OrderList_Orders}}",
+    "collectionSelector": "{{Orders}}",
     "value": "{{EachOrder_currentItem}}",
     "derivedType": "reference",
     "derivedTableNo": 36
@@ -77,6 +77,7 @@ For a Value collection, use something like `"value": "{{EachOrder_currentItem.no
 
 ## Gotchas
 
-- `EachOrder` in the example stands for a For Each step over Sales Headers whose `currentItem` is a Reference output with `tableNo` 36. Use the real slug and output of your loop or Find Records step.
+- `EachOrder` in the example stands for a For Each step over Sales Headers whose `currentItem` is a Reference output with `tableNo` 36, and `Orders` for the name declared by a [Create Collection](CreateCollection.md) step (its slug plays no part in the selector). Use the real slug and output of your loop or Find Records step.
+- A collection declared by a file written before 27.0.41 (outputs without `"unprefixed": true`) is still addressed as `{{<slug>_<collectionName>}}` until its Create Collection step is saved in the editor; see [Create Collection](CreateCollection.md#migration-from-the-prefixed-form).
 - If `derivedType` is missing, an item added to a Reference collection is stored as text and later reference access fails.
 - Steps that sit inside a loop body lose their runtime values when the body is left. Collection items survive as long as the Create Collection step's level is still active.

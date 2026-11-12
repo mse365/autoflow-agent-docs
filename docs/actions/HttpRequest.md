@@ -16,7 +16,7 @@ Calls any HTTP endpoint and exposes the response status, headers and body to lat
 
 ## What it does
 
-The step sends one HTTP request from the Business Central server, with SmartFields in the URL, header values and body already resolved. It can use an **AutoFlow Credential** (by code), which adds authentication, a base URL and default headers. The step waits for the response and publishes its status, headers and body. A 4xx or 5xx response does **not** fail the step; branch on `responseStatus` instead. Only transport failures raise an error: invalid URL, connection or DNS failure, a timeout, or HTTP calls being blocked in the environment. The response body is read as text or, for a binary Content-Type, kept as bytes (see [Binary responses](#binary-responses)).
+The step sends one HTTP request from the Business Central server, with SmartFields in the URL, header values, body and form-data values already resolved. It can use an **AutoFlow Credential** (by code), which adds authentication, a base URL and default headers. The request body is either the raw `body` text (or the bytes of one binary field) or, when `formData` has named rows, a **multipart/form-data** or **url-encoded** form built from those rows (see [Form data](#form-data-multipart-and-url-encoded-bodies)). The step waits for the response and publishes its status, headers and body. A 4xx or 5xx response does **not** fail the step; branch on `responseStatus` instead. Only transport failures raise an error: invalid URL, connection or DNS failure, a timeout, or HTTP calls being blocked in the environment. The response body is read as text or, for a binary Content-Type, kept as bytes (see [Binary responses](#binary-responses)).
 
 ## Configuration
 
@@ -25,7 +25,8 @@ The step sends one HTTP request from the Business Central server, with SmartFiel
 | `url` | string | yes | `""` | Request URL. SmartText. With a credential that has base URLs, a relative URL (one not starting with `http://` or `https://`) is prefixed with the credential's first base URL. |
 | `method` | string | yes | `"GET"` | `GET`, `POST`, `PUT`, `PATCH` or `DELETE` (upper case). It is sent as written. |
 | `headers` | object | no | `{}` | Flat object `{ "Header-Name": "value" }`. Values are SmartText. Names are truncated to 50 characters and values to 4096. The key `Content-Type` (exact spelling) sets the content type of the body. Anything other than an object (for example an array of rows) is ignored and no step headers are sent. |
-| `body` | string | no | `""` | Request body, SmartText. The editor shows it only for POST, PUT and PATCH. If the unresolved body is exactly one `{{slug_output.field}}` with no format suffix, one level deep into a record reference, and that field is a BLOB, Media or MediaSet field, the raw bytes are sent. A binary `responseBody` of another HTTP Request step is **not** sent as bytes but as its base64 text. With a credential, the reserved tokens `{{credential.username}}` and `{{credential.password}}` are replaced at send time (XML-escaped). |
+| `body` | string | no | `""` | Request body, SmartText. The editor shows it only for POST, PUT and PATCH. **Ignored when `formData` has at least one named row** on a POST, PUT or PATCH. If the unresolved body is exactly one `{{slug_output.field}}` with no format suffix, one level deep into a record reference, and that field is a BLOB, Media or MediaSet field, the raw bytes are sent. A binary `responseBody` of another HTTP Request step is **not** sent as bytes but as its base64 text. With a credential, the reserved tokens `{{credential.username}}` and `{{credential.password}}` are replaced at send time (XML-escaped). |
+| `formData` | array | no | `[]` | Rows `{ "name", "value", "fileName" }` that are sent as a form instead of `body`, for POST, PUT and PATCH only. `name` is the form field name (rows with an empty name are dropped); `value` is SmartText, or exactly one SmartField naming a document or binary field to send the row as a file part; `fileName` is optional and marks the row as a file part (omit the key when empty). See [Form data](#form-data-multipart-and-url-encoded-bodies). |
 | `credentialCode` | string (max 20) | no | `""` | Code of an AutoFlow Credential in the target company. Empty means no credential; authenticate through `headers` instead. Longer values are cut to 20 characters; the lookup is not case-sensitive. |
 
 ### Credentials: what goes in the flow JSON
@@ -45,6 +46,38 @@ A credential is a per-company Business Central record that holds the following:
 - For SOAP or XML APIs that expect the login in the body, use a credential of type "Username + password (request body)" and put `{{credential.username}}` and `{{credential.password}}` in `body`. Those two tokens are the only way to reach a credential's secrets from the flow, and only for the credential selected on that step.
 
 When a credential is used, headers are merged in this order, with later sources winning: credential default headers, then step `headers`, then authentication headers. If the credential has base URLs, the final URL must start with one of them. The match is case-insensitive, respects path boundaries and ignores the query string. Otherwise the request is refused.
+
+### Form data (multipart and url-encoded bodies)
+
+`formData` is an array of rows in the order they are sent:
+
+| field | required | description |
+|---|---|---|
+| `name` | yes | Form field name. A row with an empty name is dropped by the editor on save and ignored at run time. Names may repeat (for example several `files` parts). |
+| `value` | no | SmartText. Sent as the field's text, unless the **unresolved** value is exactly one SmartField (whitespace around it allowed, no `;format` suffix, no other text) that names an **AutoFlow Document** reference (the `Document` output of Create PDF Document, Azure Blob: Get file, …) or a BLOB, Media or MediaSet field one level into a record reference (`{{trigger_Rec.picture}}`): then the row is a **file part** carrying the raw bytes. |
+| `fileName` | no | Makes the row a file part even when the value is text, and names the file. Omit the key when empty (the editor drops it). |
+
+The form is used when **all** of this holds; otherwise the step falls back to `body`:
+
+- `method` is `POST`, `PUT` or `PATCH` (compared case-insensitively). Rows left in the configuration of a GET or DELETE are ignored, and the editor hides the grid for those methods.
+- at least one row has a non-empty `name`.
+
+When the form is used, `body` is **not sent**, whatever it contains. The encoding depends on the effective `Content-Type` header (step `headers` merged with the credential's default headers):
+
+| effective `Content-Type` | what is sent |
+|---|---|
+| contains `application/x-www-form-urlencoded` (case-insensitive; `; charset=utf-8` is fine) | `name=value&name=value`, each name and value percent-encoded (`Uri.EscapeDataString`). The header is kept as written. `fileName` and binary values are ignored: every row sends its resolved **text** (a binary field arrives as base64, a document reference as the literal token). |
+| anything else, or no `Content-Type` | `multipart/form-data`. The `Content-Type` header is **replaced** by `multipart/form-data; boundary=AutoFlowBoundary<32 hex>`, even if you wrote `application/json`. One part per named row, CRLF line endings, body written as UTF-8. |
+
+In a multipart body:
+
+- A **text row** without `fileName` is `Content-Disposition: form-data; name="<name>"` followed by the resolved value, with no part `Content-Type`.
+- A **file part** (binary value, or any row with `fileName`) adds `; filename="<file name>"` and a part `Content-Type`. The file name is `fileName`, else the document's stored name, else the row `name`. The part type is the document's stored content type when the value is a document reference; otherwise it is derived from the file name's extension: `pdf`, `xml`, `json`, `txt`, `csv`, `png`, `jpg`/`jpeg`, `tif`/`tiff`, `gif`, and `application/octet-stream` for anything else (including no extension).
+- A text row with `fileName` sends its resolved text as the file's content (useful for CSV or JSON built with SmartText).
+- `"`, CR and LF inside a name or file name are percent-encoded as `%22`, `%0D`, `%0A`.
+- A binary `responseBody` of another HTTP Request step is **not** a binary source here: it is sent as base64 text, like in `body`.
+
+Before 27.0.41 the `formData` key did not exist: the step only sent `body`, so a form had to be written by hand in `body` with a matching `Content-Type` header, and file uploads were limited to one raw binary body.
 
 ## Outputs
 
@@ -88,6 +121,9 @@ Before 27.0.40 every response body was read as text, which corrupts PDFs and ima
 | runtime | warning | `headers` is an object of name → string (anything else is silently ignored) | – |
 | runtime | warning | `credentialCode` is at most 20 characters (longer values are truncated and then usually match no credential) | – |
 | editor (live status) | warning | with a credential that has base URLs, the URL is allowed | ⚠ The URL "%1" is not allowed by credential "%2". Allowed prefixes: %3. |
+| runtime | warning | `formData` is an array of `{ "name", "value", "fileName" }` objects (anything else, and rows that are not objects, are silently ignored) | – |
+| runtime | warning | `formData` rows have a non-empty `name` (the editor drops nameless rows on save; at run time they are skipped, and if no row is left the raw `body` is sent) | – |
+| runtime | warning | `formData` is only honoured for POST, PUT and PATCH; on GET or DELETE the rows are ignored without a message | – |
 
 There is no step-specific publish check. Only the generic dangling-reference warning applies. The live status line is advisory and does not block saving.
 
@@ -129,10 +165,47 @@ There is no step-specific publish check. Only the generic dangling-reference war
 
 In this example, `SHOP-API` must exist as a credential with a base URL such as `https://shop.example.com` in the target company. The trigger placeholders are illustrative; use your trigger's real outputs.
 
+### Example: upload a PDF as multipart/form-data
+
+```json
+{
+  "id": "1B2C3D4E-5F60-4718-8A9B-0C1D2E3F4A5B",
+  "type": "action",
+  "action": 5564402,
+  "description": "Upload invoice PDF",
+  "slug": "UploadPdf",
+  "iconUrl": "https://statics.autoflow.mse365.de/icons/world-www.svg",
+  "terminating": false,
+  "configuration": {
+    "url": "https://api.example.com/documents",
+    "method": "POST",
+    "headers": {
+      "Accept": "application/json"
+    },
+    "body": "",
+    "formData": [
+      { "name": "customer", "value": "{{trigger_Rec.selltocustomerno}}" },
+      { "name": "file", "value": "{{CreatePdf_Document}}" },
+      { "name": "note", "value": "Order {{trigger_Rec.no}}", "fileName": "note.txt" }
+    ],
+    "credentialCode": "DOC-API"
+  },
+  "outputs": [
+    { "name": "responseStatus", "type": "value" },
+    { "name": "responseHeaders", "type": "value" },
+    { "name": "responseBody", "type": "value" }
+  ]
+}
+```
+
+`CreatePdf_Document` stands for the `Document` output of an earlier [Create PDF Document](PdfPrint.md) step. The request goes out as `multipart/form-data` with three parts: `customer` as text, `file` as a PDF file part named after the document (type `application/pdf` from the document), and `note` as a `text/plain` file part. Do not set a `Content-Type` header for a multipart form; it would be replaced anyway. For an OAuth-style token request, set `"Content-Type": "application/x-www-form-urlencoded"` in `headers` and the same rows are sent as `grant_type=…&scope=…`.
+
 ## Gotchas
 
 - Feed `{{<slug>_responseBody}}` into a [Parser](Parser.md) step to extract values. This works only if the response has a text Content-Type. An API that sends JSON as `application/octet-stream` (or any other binary type) gives base64, and the Parser fails.
-- The editor's "Send test request" button sends a real, authenticated request. It stores nothing in the configuration.
+- The editor's "Send test request" button sends a real, authenticated request. It stores nothing in the configuration. It asks for a value for every SmartField in the URL, headers, body and form-data **values** (not names or file names) and sends the form-data rows the same way the run time does, except that a file part is sent with the text you typed into the prompt: the test run has no flow context, so a document or binary field cannot be resolved there.
+- A form-data `value` must be **exactly** the SmartField to become a file part. `report: {{CreatePdf_Document}}` or `{{CreatePdf_Document;base64}}` is text, and a document reference in text resolves to the literal token. Put the document reference alone in `value` and use `fileName` only to override the name.
+- With `formData`, the multipart boundary and `Content-Type` are generated per request; the resolved rows are written to the execution log like `body` is.
 - Business Central sandboxes block outgoing HTTP until "Allow HttpClient Requests" is enabled for the extension.
 - `Content-Type` is matched with that exact capitalisation. A header written as `content-type` is added as a normal request header instead of the body's content type.
 - The resolved configuration, including `url`, `headers` and `body`, is written to the execution log at debug level. Only credential secrets are kept out of it.

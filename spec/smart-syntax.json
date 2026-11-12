@@ -83,7 +83,7 @@
     "publishCheck": {
       "stage": "publish",
       "severity": "warning",
-      "check": "Every {{X_...}} in any configuration string, where X is the text before the first '_', must equal (case-sensitive) the slug of some step in the flow",
+      "check": "For every {{...}} in any configuration string take the root (body up to the first '.', '[' or ';', trimmed). If the root equals (case-insensitive) the bare name of an unprefixed output (Create Element / Create Collection) it is not a slug reference. Otherwise the text before the root's first '_' must equal (case-sensitive) the slug of some step in the flow; roots without '_' are skipped. Before 27.0.41 the whole body was split at its first '_'.",
       "message": "Step \"%1\" references unknown slug \"%2\"."
     }
   },
@@ -178,6 +178,24 @@
       "triggerKeyMaxLength": 30,
       "actionKeyMaxLength": 250,
       "notes": "Trigger output keys are cut to 30 characters (output name effectively 22); reference the truncated form."
+    },
+    "unprefixedOutput": {
+      "pattern": "{{<name>}}",
+      "steps": ["ElementCreate", "CreateCollection"],
+      "outputFlag": { "unprefixed": true, "nameKey": "<configuration key holding the name: elementName | collectionName>" },
+      "nameRegex": "^[A-Za-z][A-Za-z0-9-]{0,29}$",
+      "maxLength": 30,
+      "uniqueness": "case-insensitive against every resolved output key of the flow (<slug>_<output> of every other step, trigger keys as cut at 30, and every other unprefixed name), all branches and loop bodies",
+      "renameRewrite": "When the step is saved with a changed name (or a pre-27.0.41 step is first saved, <slug>_<name> -> <name>), the root of every {{...}} token (up to '.', '[', ';' or '}}') that equals the old name case-insensitively is replaced in every step configuration (editor only; hand-edited JSON is not rewritten)",
+      "copyRename": "A duplicated step gets <name>2, <name>3, ... within 30 characters; configuration[nameKey] and references inside the copy follow",
+      "messages": {
+        "invalid": "The name \"%1\" cannot be used. Start with a letter and use only letters, digits or hyphens (no spaces or underscores, at most 30 characters).",
+        "taken": "The name \"%1\" is already used by another output in this flow. Choose a different name.",
+        "publishDuplicate": "This flow cannot be published because these names are used by more than one step output:\\%1\\Rename the Create Element or Create Collection step so that every name is unique.",
+        "apiDuplicate": "The output name \"%1\" is used by more than one step output. Every name must be unique."
+      },
+      "since": "27.0.41",
+      "before": "Referenced as {{<slug>_<name>}} like every other output; outputs without the unprefixed flag still behave that way."
     }
   },
   "stepProperties": {

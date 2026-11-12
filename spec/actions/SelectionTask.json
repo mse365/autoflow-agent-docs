@@ -4,8 +4,7 @@
   "id": 5564423,
   "caption": "Selection task",
   "category": "Tasks",
-  "availability": "dark-launched",
-  "feature": "tasks",
+  "availability": "ga",
   "terminating": false,
   "group": false,
   "configuration": [
@@ -147,7 +146,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "text",
-      "description": "Optional. A date (yyyy-mm-dd is safest) or a SmartDate such as [[TODAY+5D]]. A value that does not resolve to a date is ignored silently."
+      "description": "Optional. A date (yyyy-mm-dd is safest) or a SmartDate such as [@ calc(today, \"+5D\") @]. A value that does not resolve to a date is ignored silently."
     }
   ],
   "outputs": [
@@ -225,17 +224,6 @@
       }
     },
     {
-      "id": "SelectionTask.tasks-not-enabled",
-      "severity": "error",
-      "stage": "publish",
-      "check": "AutoFlow Tasks (portal feature flag 'tasks') is not enabled for the environment. Hard error. The step is also hidden from the step list.",
-      "message": "The task step '%1' cannot be published: AutoFlow Tasks is not enabled for this environment.",
-      "machine": {
-        "type": "feature",
-        "feature": "tasks"
-      }
-    },
-    {
       "id": "SelectionTask.trigger-cannot-wait",
       "severity": "error",
       "stage": "publish",
@@ -276,13 +264,6 @@
       "stage": "runtime",
       "check": "The input holds both records and values",
       "message": "The list to choose from (%1) holds both records and values. Choose a list of records or a list of values."
-    },
-    {
-      "id": "SelectionTask.runtime-not-enabled",
-      "severity": "error",
-      "stage": "runtime",
-      "check": "AutoFlow Tasks was switched off after the flow was published",
-      "message": "AutoFlow Tasks is not enabled for this environment."
     },
     {
       "id": "SelectionTask.runtime-inline",
@@ -342,7 +323,6 @@
     }
   ],
   "notes": [
-    "Dark-launched: only available where AutoFlow Tasks (portal feature flag 'tasks') is enabled for the environment. Elsewhere the step is hidden in the editor and publish refuses it.",
     "The rows are built once, when the task is created: column values are a snapshot. Lists longer than 1,000 rows are cut to the first 1,000 (logged), and the task card says the list was cut.",
     "The flow waits in the background like the Approval task: parked, checked every poll interval (AutoFlow Setup 'Task Poll Interval (Min.)', default 5 minutes), and continued immediately when the user the flow runs as completes the task themselves. Each loop pass creates its own task; a retried run reuses the task it created.",
     "Completing a selection task needs a paid AutoFlow licence and an AutoFlow Tasks seat - except assignType 2 (the user who started the flow) completing it while following the run in its progress dialog. Assigning needs no seat; the editor's status line warns when a fixed assignee or every member of a fixed group has no seat.",

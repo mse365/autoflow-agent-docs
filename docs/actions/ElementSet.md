@@ -22,7 +22,7 @@ The step replaces the content of the element's single slot. It never appends; us
 
 | key | type | required | default | description |
 |---|---|---|---|---|
-| `elementSelector` | string | yes | `""` | Exactly one placeholder naming the Create Element output, for example `{{Total_Amount}}`. It must be wrapped in `{{ }}` and must not contain a dotted path. It is read unresolved. |
+| `elementSelector` | string | yes | `""` | Exactly one placeholder naming the Create Element output by its bare element name, for example `{{Amount}}`. It must be wrapped in `{{ }}` and must not contain a dotted path. It is read unresolved. Before 27.0.41 the selector was `{{<slug>_<elementName>}}` (`{{Total_Amount}}`). |
 | `value` | string | no | `""` | **Value element:** SmartText, resolved before it is stored; empty clears the slot. **Reference element:** exactly one `{{name}}` that resolves to a Reference output of the same table. |
 | `derivedType` | string | yes | `""` | `"value"` or `"reference"`. This must match the element's type. At run time only this key decides how the value is stored. A missing or empty value means text. |
 | `derivedTableNo` | integer | no | `0` | Table number of the element (0 for Value). Not used at run time. |
@@ -31,7 +31,7 @@ The editor works out `derivedType` and `derivedTableNo` from the selected elemen
 
 ## Outputs
 
-None. The new content is read through the Create Element step's output (`{{<createSlug>_<elementName>}}`).
+None. The new content is read through the Create Element step's output (`{{<elementName>}}`; before 27.0.41 `{{<createSlug>_<elementName>}}`).
 
 ## Validation
 
@@ -72,13 +72,13 @@ The following step adds the current line amount to a running total kept in a Val
   "id": "4C3B2A19-0F8E-4D7C-B6A5-948372615F0E",
   "type": "action",
   "action": 203,
-  "description": "Set Total_Amount",
+  "description": "Set Amount",
   "slug": "AddToTotal",
   "iconUrl": "https://statics.autoflow.mse365.de/icons/setelement.svg",
   "terminating": false,
   "configuration": {
-    "elementSelector": "{{Total_Amount}}",
-    "value": "[[{{Total_Amount}} + {{EachLine_currentItem.amount}}]]",
+    "elementSelector": "{{Amount}}",
+    "value": "[[{{Amount}} + {{EachLine_currentItem.amount}}]]",
     "derivedType": "value",
     "derivedTableNo": 0
   },
@@ -88,5 +88,6 @@ The following step adds the current line amount to a running total kept in a Val
 
 ## Gotchas
 
-- `EachLine` in the example stands for a For Each step over sales lines, and `Total` for the Create Element step that declared `Amount`.
+- `EachLine` in the example stands for a For Each step over sales lines. `Amount` is the name declared by a [Create Element](ElementCreate.md) step; that step's slug plays no part in the selector.
+- An element declared by a file written before 27.0.41 (outputs without `"unprefixed": true`) is still addressed as `{{<slug>_<elementName>}}` until its Create Element step is saved in the editor; see [Create Element](ElementCreate.md#migration-from-the-prefixed-form).
 - If `derivedType` is missing, a Reference element is overwritten with text.

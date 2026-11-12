@@ -1,13 +1,13 @@
 # AutoFlow flow definitions: instructions for AI agents
 
-You are working with **AutoFlow** flow definitions: the JSON documents that *Export current version* produces and *Create from file* imports into Microsoft Dynamics 365 Business Central. This repository is your reference, verified against AutoFlow 27.0.40. Use it in place of guessing. If the user's AutoFlow is older, follow the **Before 27.0.40** notes; if it is newer, say that these docs may be out of date.
+You are working with **AutoFlow** flow definitions: the JSON documents that *Export current version* produces and *Create from file* imports into Microsoft Dynamics 365 Business Central. This repository is your reference, verified against AutoFlow 27.0.41. Use it in place of guessing. If the user's AutoFlow is older, follow the **Before <version>** notes; if it is newer, say that these docs may be out of date.
 
 ## Workflow
 
 1. **Read the format first**: [docs/flow-definition.md](docs/flow-definition.md). It covers the root object, the trigger and action step shapes, edges, ids, slugs, outputs and execution order.
 2. **Pick the trigger** from [docs/triggers/README.md](docs/triggers/README.md) and **the actions** from [docs/actions/README.md](docs/actions/README.md). Then open each step's page: it lists every configuration key, its type and default, the outputs it produces, its validation rules, and a valid example.
    Steps with an `app` in [spec/index.json](spec/index.json) come from a separate app and only exist where that app is installed. Steps of apps that are not documented here (vendor apps, per-tenant extensions) have no page in this repo: ask the user for the step's configuration, or for an exported flow that uses it.
-3. **Wire data between steps** with `{{<slug>_<output>}}` tokens. The syntax (field paths, loop items, formulas, dates, conditions) is in [docs/references-and-smart-fields.md](docs/references-and-smart-fields.md).
+3. **Wire data between steps** with `{{<slug>_<output>}}` tokens; an element or collection from Create Element / Create Collection is `{{<name>}}` without a slug (since 27.0.41). The syntax (field paths, loop items, formulas, dates, conditions) is in [docs/references-and-smart-fields.md](docs/references-and-smart-fields.md).
 4. **Validate before you hand over**:
    ```sh
    python3 tools/validate_flow.py flow.json --strict
@@ -31,7 +31,8 @@ You are working with **AutoFlow** flow definitions: the JSON documents that *Exp
 - Configuration keys are case-sensitive. Some are capitalised: `Message` (Log, Send Notification) and `Error` (Error).
 - Editor-stage rules are **not** checked at publish. Satisfy them anyway; they are what makes the step work.
 - Publish warnings block a non-interactive (API) publish.
-- Steps marked **early access** (e.g. the AutoFlow Tasks steps *Approval task* and *Selection task*) are dark-launched: they only work where their feature is enabled for the environment, and are refused at publish everywhere else. Use them only when the user asks for them or confirms the feature is enabled, then validate with `--features <feature>`. Task steps also need a trigger that can wait – never an interactive document or page trigger, a PDF/report-file-name trigger or a SubFlow.
+- Task steps (*Approval task*, *Selection task*, *Form task*) wait for a person, so they need a trigger that can wait – never an interactive document or page trigger, a PDF/report-file-name trigger or a SubFlow. Publish refuses them there. Tell the user which users or task groups the flow assigns tasks to.
+- A step whose page starts with an **Early access** callout is dark-launched: it only works where its feature is enabled for the environment, and is refused at publish everywhere else. Use it only when the user asks for it or confirms the feature is enabled, then validate with `--features <feature>`.
 
 ## Modifying an existing flow
 

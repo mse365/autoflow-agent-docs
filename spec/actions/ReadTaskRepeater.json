@@ -16,7 +16,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "field",
-      "description": "Exactly one SmartField placeholder '{{name}}' pointing to a Form task's repeater output ({{slug_section}}), one row of it ({{slug_section[2]}}), or a For Each currentItem / items over it. Read in its raw form."
+      "description": "Exactly one SmartField placeholder '{{name}}': the rows output of a Form task repeater section (e.g. '{{<formSlug>_<section>}}'), one row of it ('{{<formSlug>_<section>[2]}}'), or the currentItem of a For Each over it. Read in its raw form."
     },
     {
       "key": "columns",
@@ -26,7 +26,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "Rows of { name, type: \"value\" | \"reference\", tableNo (reference only) } - the columns of the form task's repeater, one per field of the section in fields order. The editor copies them from the form task's repeater output (or a For Each over it) on save and refreshes them whenever another step is edited. Only these columns are read."
+      "description": "The columns the step reads, rows of { name, type, tableNo }: a copy of the \"columns\" of the repeater output the input points at. The editor takes them over from the Form task (also through a For Each) and refreshes them whenever another step of the flow is edited; in hand-written JSON keep them equal to the repeater's fields."
     },
     {
       "key": "columns[].name",
@@ -36,7 +36,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "The repeater field's name (fields[].name of the Form task)."
+      "description": "The column: the name of a field of the repeater section. Becomes the output name."
     },
     {
       "key": "columns[].type",
@@ -49,7 +49,7 @@
       ],
       "maxLength": null,
       "smart": "none",
-      "description": "value, or reference for a record field."
+      "description": "\"reference\" for a column whose form field has type reference, else \"value\"."
     },
     {
       "key": "columns[].tableNo",
@@ -59,27 +59,21 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "reference columns: the record field's table (fields[].tableNo of the Form task)."
+      "description": "Only for type \"reference\": the form field's tableNo."
     }
   ],
   "outputs": [
     {
-      "name": "<column name>",
+      "name": "<columns[].name>",
       "type": "value",
       "tableNo": null,
-      "when": "when at least one row was read - one per value column: the first row's value; {{slug_column[i]}} holds row i (0-based, not declared)"
-    },
-    {
-      "name": "<column name>",
-      "type": "reference",
-      "tableNo": "<columns[].tableNo>",
-      "when": "when at least one row was read - one per reference column: the first row's record; {{slug_column[i]}} holds row i (0-based, not declared)"
+      "when": "one per columns[] row, in order; type 'reference' with that row's tableNo when columns[].type = \"reference\". {{slug_column}} is the column of the first row the input holds (for one row, e.g. a For Each currentItem: of that row), {{slug_column[i]}} of the i-th row (0-based). Not written when the input holds no row."
     },
     {
       "name": "count",
       "type": "value",
       "tableNo": null,
-      "when": "always - number of rows read; \"0\" when input resolved to nothing"
+      "when": "always - the number of rows read"
     }
   ],
   "rules": [
@@ -87,7 +81,7 @@
       "id": "ReadTaskRepeater.input-required",
       "severity": "error",
       "stage": "editor",
-      "check": "The configuration dialog refuses to save while the input is empty. (The step's own check 'Choose the repeater of a form task to read.' is not run.)",
+      "check": "The configuration dialog refuses to save while the repeater is empty. (The step's own check 'Choose the repeater of a form task to read.' is not run.)",
       "message": "Please fill in the highlighted fields.",
       "machine": {
         "type": "required",
@@ -95,18 +89,35 @@
       }
     },
     {
+      "id": "ReadTaskRepeater.input-selector",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "configuration.input must be exactly one placeholder {{name}}. Anything else resolves to nothing: the step reads no rows and only writes count \"0\", without an error.",
+      "message": "(no message)",
+      "machine": {
+        "type": "regex",
+        "key": "input",
+        "pattern": "\\s*\\{\\{[^{}]+\\}\\}\\s*"
+      }
+    },
+    {
+      "id": "ReadTaskRepeater.columns",
+      "severity": "info",
+      "stage": "editor",
+      "check": "configuration.columns should list the repeater's columns; without them the step writes only count. The step's own check ('The step knows no columns of %1. Choose the repeater of a form task and save the step.') is not run.",
+      "message": "(no message)"
+    },
+    {
       "id": "ReadTaskRepeater.not-a-repeater",
       "severity": "error",
       "stage": "runtime",
-      "check": "input resolves to values, or to records that are not SmartObjects (rows of a form task repeater, table 5564267) or no longer exist. %1 = the raw input. An input that resolves to nothing is not an error (count = \"0\").",
+      "check": "The input holds plain values, or records that are not rows of a Form task repeater (%1 = the input)",
       "message": "%1 is not a repeater of a form task. Choose the repeater output of a Form task step, or one row of it."
     }
   ],
   "notes": [
-    "Not gated itself, but only useful after a Form task, which is dark-launched (AutoFlow Tasks, portal feature flag 'tasks').",
-    "Typical use: For Each over {{formslug_section}}, then this step on the loop's currentItem, then the steps that use the row.",
-    "Read on the whole repeater, <column> is the first row only; use <column>[i] or a loop for the others.",
-    "The step's own check 'The step knows no columns of %1. Choose the repeater of a form task and save the step.' is not run: without columns the step only writes count. A column the form does not have reads as empty; a form field missing from columns is not read.",
-    "Output names are cut at 30 characters. Nothing is checked at publish time."
+    "Not a task step itself: it creates no task, does not wait, and is not restricted to background triggers. It is only useful after a Form task.",
+    "The step reads the columns named in its own configuration.columns at run time; the Form task's current fields are not consulted.",
+    "An input that resolves to nothing (for example a repeater the person left empty) is not an error: count is \"0\" and no column output is written."
   ]
 }

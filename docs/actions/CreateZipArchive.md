@@ -3,7 +3,7 @@
 
 [← All actions](README.md)
 
-Packs AutoFlow documents, incoming document attachments and base64 content into one ZIP archive, optionally sorted into folders, and returns the archive as an AutoFlow document for later steps (send it by e-mail, upload it, return it from a webhook).
+Packs AutoFlow documents, incoming document attachments and base64 content into one ZIP archive and stores it as an AutoFlow Document that later steps can attach, upload or return.
 
 | | |
 |---|---|
@@ -12,95 +12,86 @@ Packs AutoFlow documents, incoming document attachments and base64 content into 
 | Category | Documents |
 | Terminating | `false` |
 | Group / edges | No |
-| Availability | GA |
+| Availability | Generally available from AutoFlow 27.0.41. |
 
 ## What it does
 
-The step walks the `files` rows in order. Each row adds one or more entries to the archive:
+The step walks the `files` rows in order and collects one archive entry per source:
 
-- **`document`**: `reference` is a placeholder `{{name}}` that points to AutoFlow documents (table `5564415`), e.g. the `Document` output of a Create PDF step. **Each record it holds becomes one entry**, so a Find Records result, a collection or a loop variable adds all its records. The entry is named after the document's `name`.
-- **`attachment`**: the same for Incoming Document Attachment records (table `133`). The entry is named `<Name>.<File Extension>`.
-- **`base64`**: `content` is base64 text, decoded before it is packed. If the raw `content` is exactly one SmartField that holds binary data (an HTTP Request `responseBody`, a BLOB field), the bytes are taken as they are. `fileName` is required for this type.
+- **`document` rows** resolve `reference` to AutoFlow Document records (table 5564415), for example the `Document` output of Create PDF, Azure Blob: Get file or another Create ZIP archive step. Each record's bytes become one entry.
+- **`attachment` rows** resolve `reference` to Incoming Document Attachment records (table 133), for example the `results` of a Find Records step on that table. Each record's content becomes one entry.
+- **`base64` rows** take `content`: exactly one `{{token}}` of a binary step output or a BLOB/Media field is packed byte for byte, anything else is resolved as SmartText and base64-decoded.
 
-A reference that resolves to nothing adds nothing, without an error. An empty Find Records result looks exactly like that. If no row yields an entry, `errorIfEmpty` decides: fail the step (default), or continue without an archive with `created` = `"false"`.
+A `reference` may be a single reference, a reference array (every record is packed), an indexed element or an iterator. A selector that resolves to nothing adds nothing and raises no error.
 
-Otherwise the archive is built in memory, stored as a new AutoFlow document (content type `application/zip`) named after `archiveName`, and the outputs are written.
-
-### Entry names and folders
-
-- `fileName` empty: the record's own name. A `/` or `\` inside a record's name never creates a folder; it becomes `_`.
-- `fileName` set: it replaces the name and may contain folders, e.g. `invoices/2026/INV-1001.pdf`. `\` counts as `/`.
-- `fileName` ending in `/`: a folder only. Each record keeps its own name inside that folder (`scans/`).
-- Folder parts that would leave the archive root (`..`, `.`, a leading `/`, a drive prefix such as `C:`) are dropped, so `../../report.pdf` becomes `report.pdf`. A `:` in a name becomes `_`.
-- Two entries with the same path (case-insensitive) are numbered: `invoice.pdf`, `invoice (2).pdf`, `invoice (3).pdf`.
-
-On a row whose `reference` holds several records, SmartFields in `fileName` are resolved **per record**: the reference's own name points at the current record, so with `reference` `{{FindDocs_results}}` the file name `{{FindDocs_results.name}}` gives each entry its own record's value. Other SmartFields resolve to the same value on every entry.
+When at least one entry was collected, the entries are zipped with Business Central's Data Compression module, a new AutoFlow Document is inserted (Name = archive name, Content Type `application/zip`, Length = bytes) and a reference to it is published as `Document`. The execution log gets a Debug entry `Created %1 with %2 file(s): %3`. When nothing was collected, the step fails with the message under [Validation](#validation) if `errorIfEmpty` is on (the default); otherwise it logs `No files to pack; no archive created.`, sets `created` to `false` and `fileCount` to `0`, creates no document and the flow continues.
 
 ## Configuration
 
 | key | type | required | default | description |
 |---|---|---|---|---|
-| `archiveName` | string | no | `""` | File name of the archive. Supports SmartText, e.g. `Invoices {{workdate}}.zip`. `.zip` is appended when missing, `:` becomes `_`. Empty: `archive.zip`. |
-| `files` | array | yes (at runtime) | `[]` | Rows of `{ "type", "reference", "content", "fileName" }`, described below. Packed in order. |
-| `errorIfEmpty` | boolean | no | `true` | `true`: no file to pack fails the step. `false`: the step creates no archive, sets `created` to `"false"` and the flow continues. |
+| `archiveName` | string | no | `""` | SmartText. File name of the archive, e.g. `Invoices {{workdate}}.zip`. `.zip` is added if missing; `:` becomes `_`. Empty gives `archive.zip`. |
+| `files` | array | yes | `[]` | Rows `{ "type", "reference", "content", "fileName" }`, described below. One entry per record or content. |
+| `errorIfEmpty` | boolean | no | `true` | Fail when no entry could be collected. When `false`, the step creates no archive and the flow continues with `created` = `false`. |
 
-`files` rows:
+File rows:
 
-| field | used for | description |
+| key | used when | description |
 |---|---|---|
-| `type` | all | `"document"` (AutoFlow document), `"attachment"` (Incoming Document Attachment) or `"base64"`. Matched case-insensitively. Any other value fails the step. |
-| `reference` | document, attachment | Exactly one placeholder `{{name}}` that points to a reference, an array or an iterator (see [selector fields](../references-and-smart-fields.md#16-selector-fields-reference-inputs)). Read in its raw form. |
-| `content` | base64 | Base64 text (SmartText), or exactly one SmartField holding binary data. |
-| `fileName` | all | Entry path inside the archive (SmartText). Optional for document/attachment rows, required for base64 rows. See [Entry names and folders](#entry-names-and-folders). |
+| `type` | always | `"document"` (AutoFlow document), `"attachment"` (Incoming document attachment) or `"base64"` (Base64). Compared case-insensitively; anything else, including an empty value, fails the step. |
+| `reference` | document, attachment | `{{selector}}` to the records: `{{CreatePdf_Document}}`, `{{FindScans_results}}` (every record), `{{FindScans_results[1]}}` or a dotted relation. The dialog disables the column for base64 rows. |
+| `content` | base64 | SmartText base64 content. If the raw value is exactly one `{{token}}` (no `;` format suffix) naming a binary HTTP Request `responseBody` or a BLOB, Media or MediaSet field of a record reference, the bytes are packed as they are. The dialog disables the column for document and attachment rows. |
+| `fileName` | all | Path of the entry inside the archive, SmartText; may contain folders (`invoices/2026/INV-1001.pdf`, `\` works like `/`). Document and attachment rows: empty keeps the record's own name (the document's Name, or the attachment's Name plus `.` and its File Extension); a value ending in `/` is a folder only and keeps each record's name; any other value replaces the name. Base64 rows: required. |
 
-The editor always writes the three keys. Rows can carry extra keys from the editor (such as `lineNo`); the step ignores them.
+Entry paths are sanitized: empty, `.` and `..` segments and a leading drive prefix (`C:`) are dropped, `:` becomes `_`, and names taken from records never create folders (their slashes become `_`). A path that is already taken (case-insensitive, full path) is numbered before the extension: `invoice.pdf`, `invoice (2).pdf`, `invoice (3).pdf`. The same name in different folders is not a duplicate.
 
 ## Outputs
 
 | name | type | tableNo | notes |
 |---|---|---|---|
-| `created` | value | – | `"true"` when an archive was created, `"false"` when there was nothing to pack and `errorIfEmpty` is `false`. |
-| `Document` | reference | `5564415` | The archive in the AutoFlow document library (`mse365 AF Document`). Only set when `created` is `"true"`. |
-| `name` | value | – | File name of the archive. Only set when `created` is `"true"`. |
-| `size` | value | – | Size of the archive in bytes. Only set when `created` is `"true"`. |
-| `fileCount` | value | – | Number of entries in the archive; `"0"` when nothing was packed. |
+| `created` | value | – | `true` or `false`. Always set. |
+| `Document` | reference | 5564415 | The AutoFlow Document holding the archive. Only set when `created` is `true`. |
+| `name` | value | – | Archive file name including `.zip`. Only when created. |
+| `size` | value | – | Archive size in bytes, plain digits. Only when created. |
+| `fileCount` | value | – | Number of entries, plain digits. Always set (`0` when nothing was packed). |
 
-Reference the archive downstream as `{{<slug>_Document}}`, e.g. as an attachment in Send Email or as the `content` of Azure Blob: Upload file.
+Reference the archive as `{{<slug>_Document}}`, e.g. as a Reference attachment of Send Email or as the `content` of Azure Blob: Upload file. All five outputs are declared in `outputs` regardless of `errorIfEmpty`.
 
 ## Validation
 
 | stage | severity | rule | message |
 |---|---|---|---|
-| runtime | error | No row yielded an entry and `errorIfEmpty` is `true` (also when `files` is empty) | `There are no files to put into the archive. Check the Files list - a SmartField there may not have resolved, or an earlier step found no records. Turn off "Error if empty" to continue without an archive.` |
-| runtime | error | A row's `type` is not `document`, `attachment` or `base64` | `File %1 has an unknown type "%2".` |
-| runtime | error | A document/attachment `reference` holds values instead of records | `The reference %1 must point at a record, not at a value.` |
-| runtime | error | A referenced record is of another table than the row's type expects | `The reference %1 must point at a record of the table %2; it points at table %3.` |
-| runtime | error | A referenced record was deleted | `The record %1 referenced by %2 no longer exists.` |
-| runtime | error | An incoming document attachment has no content | `The incoming document attachment %1 has no content.` |
-| runtime | error | A base64 row's resolved `fileName` is empty | `File %1: a base64 file needs a file name, e.g. data.xml.` |
-| runtime | error | A base64 row's resolved `content` is empty | `The content of %1 is empty. A SmartField there may not have resolved.` |
-| runtime | error | A base64 row's `content` is not valid base64 | `The content of %1 is not valid base64.` |
+| runtime | error | No entry collected (no rows, or every row resolved to nothing) and `errorIfEmpty` is `true` | There are no files to put into the archive. Check the Files list - a SmartField there may not have resolved, or an earlier step found no records. Turn off "Error if empty" to continue without an archive. |
+| runtime | error | Row `type` is not `document`, `attachment` or `base64` (`%1` = row number from 1) | File %1 has an unknown type "%2". |
+| runtime | error | Reference resolves to a value instead of a record | The reference %1 must point at a record, not at a value. |
+| runtime | error | A record is not from the AutoFlow Document table (document rows) or the Incoming Document Attachment table (attachment rows) | The reference %1 must point at a record of the table %2; it points at table %3. |
+| runtime | error | Referenced record deleted (usually the generic SmartField resolution fails first with Business Central's own "does not exist" error) | The record %1 referenced by %2 no longer exists. |
+| runtime | error | Attachment record without content | The incoming document attachment %1 has no content. |
+| runtime | error | Base64 row with empty `fileName` after resolution | File %1: a base64 file needs a file name, e.g. data.xml. |
+| runtime | error | Base64 row (not a binary SmartField) resolves to empty text | The content of %1 is empty. A SmartField there may not have resolved. |
+| runtime | error | Base64 row (not a binary SmartField) is not valid base64 | The content of %1 is not valid base64. |
 
-`%1` in the `File %1` messages is the 1-based row number. The editor has no required fields and nothing is checked at publish time. The step's own design-time messages (`Add at least one file to the archive.`, `File %1: choose the reference whose file is put into the archive.`, `File %1: the reference "%2" must use the SmartField notation, e.g. {{pdf_Document}}.`, `File %1: enter the base64 content.`) are not run: an empty or misspelled `reference` simply adds nothing.
+There is **no editor or publish-time check** for this step: the configuration dialog has no required fields, and nothing validates the rows before the step runs. A `files` value that is not an array, and rows that are not objects, count as no rows. A document or attachment row with an empty, unbraced or unknown selector is skipped silently; only the all-empty case is caught by the first rule.
 
 ## Example
 
-Packs the PDF of a Create PDF step (slug `CreatePdf`) and all incoming document attachments found by a Find Records step (slug `FindAtt`, table 133) into folders:
+Zips an invoice PDF, every scanned attachment that an earlier Find Records step found, and a JSON file downloaded with HTTP Request, then hands the archive to Send Email.
 
 ```json
 {
-  "id": "5C2E8A41-7D3B-4F60-9A1E-2B4C6D8E0F11",
+  "id": "7A3F0C2E-9B14-4D86-A5E7-2C61D8F0B493",
   "type": "action",
   "action": 5564425,
-  "description": "Zip invoice and attachments",
-  "slug": "ZipDocs",
+  "description": "Create ZIP archive",
+  "slug": "ZipInvoice",
   "iconUrl": "https://statics.autoflow.mse365.de/icons/file-zip.svg",
   "terminating": false,
   "configuration": {
-    "archiveName": "Invoice {{trigger_Rec.no}}",
+    "archiveName": "Invoice {{trigger_Rec.no}}.zip",
     "files": [
-      { "type": "document", "reference": "{{CreatePdf_Document}}", "content": "", "fileName": "invoice/{{trigger_Rec.no}}.pdf" },
-      { "type": "attachment", "reference": "{{FindAtt_results}}", "content": "", "fileName": "attachments/" }
+      { "type": "document", "reference": "{{CreateInvoicePdf_Document}}", "content": "", "fileName": "" },
+      { "type": "attachment", "reference": "{{FindScans_results}}", "content": "", "fileName": "scans/" },
+      { "type": "base64", "reference": "", "content": "{{CallApi_responseBody}}", "fileName": "data/response.json" }
     ],
     "errorIfEmpty": true
   },
@@ -114,12 +105,13 @@ Packs the PDF of a Create PDF step (slug `CreatePdf`) and all incoming document 
 }
 ```
 
-(`trigger_Rec`, `CreatePdf_Document` and `FindAtt_results` stand for outputs of earlier steps in your flow.)
+(`trigger_Rec`, `CreateInvoicePdf_Document`, `FindScans_results` and `CallApi_responseBody` stand for outputs of earlier steps in your flow.) A later Send Email step attaches the archive with `{ "type": "Reference", "reference": "{{ZipInvoice_Document}}", "filename": "", "contentBase64": "" }`.
 
 ## Gotchas
 
-- Every archive is a new record in the AutoFlow document library. Delete it with Delete Record on `{{<slug>_Document}}` when it is not needed after sending or uploading.
-- The archive is built in memory. A few megabytes are fine; hundreds of megabytes can hit the limits of the Business Central server.
-- A binary HTTP Request `responseBody` must be the **only** content of `content` to be packed byte for byte. `{{Http_responseBody}}` works; `x{{Http_responseBody}}` is decoded as base64 text and fails.
-- With `errorIfEmpty` `false`, follow the step with a Decision on `{{<slug>_created}}` before using `{{<slug>_Document}}`.
-- Per-record file names only work with SmartFields that start with the row's own reference. `{{OtherStep_value}}` in `fileName` is the same for every record, and the entries are then numbered `name (2)`, `name (3)`, ….
+- An empty Find Records result does not fail a row, it just packs nothing. Keep `errorIfEmpty` on when the archive must not be empty, or branch on `{{<slug>_created}}` afterwards.
+- `created` is `true`/`false` and `size`/`fileCount` are plain digits, so a Decision can compare them directly.
+- The step configuration is resolved once before the step runs, so a `fileName` such as `{{FindDocs_results.name}}` would arrive as the **first** record's name. The step therefore re-resolves a `fileName` that contains `{{` once per record of a reference array, with the selector's root bound to that record: `out/{{FindDocs_results.name}}` names every file after its own document. A literal `fileName` on an array gives `name.pdf`, `name (2).pdf`, ...
+- A binary HTTP Request `responseBody` **is** packed byte for byte when it is the whole `content` of a base64 row. This is unlike Azure Blob: Upload file, which uploads its base64 text. `report: {{CallApi_responseBody}}` or `{{CallApi_responseBody;utf8}}` is treated as text and must be valid base64.
+- Path traversal is neutralised rather than rejected: `../../etc/a.txt` lands as `etc/a.txt`, `C:\temp\c.txt` as `temp/c.txt`.
+- Every run creates a new AutoFlow Document record; nothing deletes it afterwards.

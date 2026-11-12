@@ -22,7 +22,7 @@ On the first pass the step resolves `selector`, collects all items into its `ite
 
 | key | type | required | default | description |
 |---|---|---|---|---|
-| `selector` | string | yes | – | Exactly one SmartField placeholder `{{name}}`. It can point to an array output (e.g. a find-records step's `{{<slug>_results}}`), a collection, or a dotted relation such as `{{trigger_Rec.SalesLines}}`, where `SalesLines` is a `reference` definition in `smartFieldDefs` (see [selector fields](../references-and-smart-fields.md#16-selector-fields-reference-inputs)). Bare names without `{{ }}` are rejected. The raw, unsubstituted value is used. |
+| `selector` | string | yes | – | Exactly one SmartField placeholder `{{name}}`. It can point to an array output (e.g. a find-records step's `{{<slug>_results}}`), a collection by its bare name (`{{Orders}}`, see [Create Collection](CreateCollection.md)), or a dotted relation such as `{{trigger_Rec.SalesLines}}`, where `SalesLines` is a `reference` definition in `smartFieldDefs` (see [selector fields](../references-and-smart-fields.md#16-selector-fields-reference-inputs)). Bare names without `{{ }}` are rejected. The raw, unsubstituted value is used. |
 
 ## Edges
 
@@ -41,6 +41,8 @@ On the first pass the step resolves `selector`, collects all items into its `ite
 
 `items` and `currentItem` are declared as `{"type":"reference","tableNo":N}` when the selector resolves to record references, and as `{"type":"value"}` otherwise. The editor derives this from the selector. Do the same in hand-written JSON so that downstream steps can bind record fields.
 
+When the selector is the rows output of a [Form task](FormTask.md) repeater, `items` and `currentItem` are references to table `5564267` and also carry that output's `"columns"` array unchanged. A [Read task repeater](ReadTaskRepeater.md) step on `currentItem` takes its columns from there.
+
 Reference outputs inside the body as `{{<slug>_currentItem}}`, `{{<slug>_iteration}}` and `{{<slug>_total}}`. For a record item, address a field as `{{<slug>_currentItem.no}}` (see [field paths](../references-and-smart-fields.md#13-walking-a-path-through-records)).
 
 ## Validation
@@ -56,7 +58,7 @@ Reference outputs inside the body as `{{<slug>_currentItem}}`, `{{<slug>_iterati
 | Selector is not a `{{name}}` placeholder | `The selector '%1' must use the SmartField placeholder notation (e.g. '{{name}}'). Bare selector names are no longer accepted – open the SmartField picker on the For Each step config to insert a valid placeholder.` |
 | Selector resolves to a non-empty scalar, or a dotted path doesn't resolve to records | `The provided selector '%1' does not resolve to an array or iterable reference.` |
 
-For a plain `{{<slug>_<output>}}` selector, a name that doesn't exist at run time (a collection nothing was added to, or a typo) and a **blank** output (e.g. a parser step that matched nothing) count as an empty collection, not as an error: the loop is skipped silently. Check the selector name carefully.
+For a plain `{{<slug>_<output>}}` or `{{<collectionName>}}` selector, a name that doesn't exist at run time (a collection nothing was added to, or a typo) and a **blank** output (e.g. a parser step that matched nothing) count as an empty collection, not as an error: the loop is skipped silently. Check the selector name carefully.
 
 ## Example
 

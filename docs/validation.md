@@ -15,12 +15,12 @@ Run the preflight validator before handing a definition to a user:
 python3 tools/validate_flow.py my-flow.json          # human-readable
 python3 tools/validate_flow.py my-flow.json --json   # machine-readable
 python3 tools/validate_flow.py my-flow.json --strict # also fail on warnings
-python3 tools/validate_flow.py my-flow.json --features tasks  # the user confirmed AutoFlow Tasks is enabled
+python3 tools/validate_flow.py my-flow.json --features <feature>  # the user confirmed an early-access feature is enabled
 ```
 
 It reports `error` (AutoFlow refuses the definition or it will certainly fail), `warning` (publish asks for confirmation) and `lint` (AutoFlow doesn't check this, but it's almost certainly a mistake).
 
-Early-access (dark-launched) steps get a `step.dark-launched` warning: they only work where their feature is enabled for the environment. Pass `--features <feature>` (e.g. `tasks`) once the user has confirmed it is. This warning exists only in the offline validator; inside Business Central the AI asks the environment instead (see [In-app checks](#in-app-checks-ai-flow-builder)).
+Early-access (dark-launched) steps get a `step.dark-launched` warning: they only work where their feature is enabled for the environment. Pass `--features <feature>` (the feature named on the step's page) once the user has confirmed it is. This warning exists only in the offline validator; inside Business Central the AI asks the environment instead (see [In-app checks](#in-app-checks-ai-flow-builder)).
 
 Actions whose spec lists `worksWithTriggers` get an `action.trigger-mismatch` lint in flows on any other trigger: they are accepted there, but do nothing.
 
@@ -60,16 +60,17 @@ Checks run in this order. The first hard error stops the publish.
 3. **Not a template reference** (error): *"Version %1 is a template reference and cannot be activated. Create a draft from it and activate that instead."* Only possible for flows from the template gallery.
 4. **At least one action step** (error). The message: *"A flow must contain at least one action step before it can be published. Add a step after the trigger and try again."* Action steps inside edges count.
 5. **Trigger configuration** (error). Wrapped as *"This flow's trigger cannot be published:"* followed by a bulleted list. Only these triggers have such checks: Manual, the four interactive document triggers (modified, released, posted, reopened) and the two page triggers. See each trigger's page.
-6. **Step warnings**, collected for every action step and confirmed together:
+6. **Duplicate output names** (error, since 27.0.41). The bare name of a [Create Element](actions/ElementCreate.md) / [Create Collection](actions/CreateCollection.md) output must not be used by any other output of the flow (compared case-insensitively against every `<slug>_<output>` and every other element / collection name): *"This flow cannot be published because these names are used by more than one step output:"* followed by the names, then *"Rename the Create Element or Create Collection step so that every name is unique."* A Flow API import or validate call returns one issue per name instead: *"The output name "%1" is used by more than one step output. Every name must be unique."* The validator's `publish.duplicate-output-name` mirrors it.
+7. **Step warnings**, collected for every action step and confirmed together:
    - **Terminating step with a successor**: *"Step "%1" is a terminating step but has a successor – terminating steps must end the path."* This is decided by the step's own `terminating` flag in the JSON, so the flag must be correct.
    - **Step-specific publish checks**: Sleep (duration), Confirm dialog (dialog in a non-interactive or post-write position), Send Notification (actions and targets). See [validation-rules.md](validation-rules.md#stage-publish).
-   - **Task steps** (early access: [Approval task](actions/ApprovalTask.md), [Selection task](actions/SelectionTask.md)) are checked at the same point, but their checks are **hard errors**: AutoFlow Tasks must be enabled for the environment, and the trigger must be one that can wait.
-   - **Dangling references**: *"Step "%1" references unknown slug "%2"."* AutoFlow scans every string inside every step's `configuration`. For each `{{…}}`, it takes the text before the **first underscore** as a slug and warns if no step has that slug. Tokens without an underscore, such as built-ins like `{{today}}`, are skipped. The check doesn't look at output names or field paths, so `{{trigger_Typo}}` passes publish and then silently resolves to the literal text at runtime. The validator's `reference.unknown-output` lint catches this.
-7. **Licensing** (error). SubFlows don't count toward the flow limit and skip this step. Republishing a flow that is already counted needs no new slot. The messages:
+   - **Task steps** ([Approval task](actions/ApprovalTask.md), [Selection task](actions/SelectionTask.md), [Form task](actions/FormTask.md)) are checked at the same point, but their check is a **hard error**: the trigger must be one that can wait.
+   - **Dangling references**: *"Step "%1" references unknown slug "%2"."* AutoFlow scans every string inside every step's `configuration`. For each `{{…}}`, it takes the **root** of the body (up to the first `.`, `[` or `;`, trimmed), splits it at the **first underscore** and warns if no step has the slug before it. Roots without an underscore, such as built-ins like `{{today}}`, are skipped, and so is a root that equals (case-insensitively) the bare name of a [Create Element](actions/ElementCreate.md) / [Create Collection](actions/CreateCollection.md) output (`{{Orders[0].no}}`). An underscore further down the path (`{{Invoices.Customer_No}}`) doesn't count. The check doesn't look at output names or field paths, so `{{trigger_Typo}}` passes publish and then silently resolves to the literal text at runtime. The validator's `reference.unknown-output` lint catches this.
+8. **Licensing** (error). SubFlows don't count toward the flow limit and skip this step. Republishing a flow that is already counted needs no new slot. The messages:
    - Free tier full (2 published flows per production environment; sandboxes are unlimited, every paid license model has unlimited flows): *"All flows of the AutoFlow free tier in this environment are in use. To publish this flow, unpublish another one, or license AutoFlow in the AutoFlow portal (portal.mse365.de) for unlimited flows."*
    - AutoFlow not activated in the company, or the license expired: *"Your tenant is not registered with the licensing server. Please contact support."*
    - *"The licensing server is currently unreachable. Please try again later."* and *"Flow registration failed. Please try again later."*
-8. **Trigger registration**: job queue entries (scheduled, global record triggers), webhook registration, and so on. Some triggers check their configuration only here, as hard errors that undo the whole publish:
+9. **Trigger registration**: job queue entries (scheduled, global record triggers), webhook registration, and so on. Some triggers check their configuration only here, as hard errors that undo the whole publish:
    - **When a PDF is printed** and **When a report file name is generated**: at least one report line, and only one published flow per trigger in the environment. See their pages.
    - **Webhook**: registration problems, including a production environment without a paid license, are reported on the flow card, not as errors.
 
@@ -117,6 +118,7 @@ Before you hand a definition over:
 6. All editor-stage rules on each step's page are met. They aren't enforced at publish, but they are what makes the step work.
 7. The root `code` is set (every flow needs one to be published), and environment dependencies (credentials, Codes of called flows, tables and fields from extensions) are listed for the user.
 8. `python3 tools/validate_flow.py flow.json --strict` reports no errors or warnings, except dangling-reference warnings you can explain.
-9. Early-access steps are used only if the user confirmed their feature is enabled (and you validated with `--features`). Tell the user which task groups or users the flow assigns tasks to.
+9. Early-access steps are used only if the user confirmed their feature is enabled (and you validated with `--features`).
+10. Task steps sit in a flow whose trigger can wait, and you told the user which task groups or users the flow assigns tasks to.
 
 All rules, by step: [validation-rules.md](validation-rules.md).

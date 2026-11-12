@@ -71,7 +71,10 @@ def build(root=ROOT):
         "- **Terminating** steps must be the last step in their sequence (`\"terminating\": true`).",
         "- **Group** steps carry `edges` with nested step sequences.",
         "- Steps with an `app` in [`spec/index.json`](../../spec/index.json) come from a separate app and only exist where that app is installed.",
-        "- **Early access** steps are released in stages (selected customers first, everyone a few weeks later): they only work where their AutoFlow feature is already switched on. Use them only when the user confirms it is.",
+    ]
+    if any(s.get("availability") == "dark-launched" for s in actions):
+        lines.append("- **Early access** steps are released in stages (selected customers first, everyone a few weeks later): they only work where their AutoFlow feature is already switched on. Use them only when the user confirms it is.")
+    lines += [
         "",
         "Machine-readable list: [`spec/index.json`](../../spec/index.json). The step pages and specs are generated from the apps that own the steps; see [app-step-docs.md](../app-step-docs.md).",
         "",

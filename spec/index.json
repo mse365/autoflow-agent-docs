@@ -34,8 +34,7 @@
       "category": "Tasks",
       "terminating": false,
       "group": true,
-      "availability": "dark-launched",
-      "feature": "tasks"
+      "availability": "ga"
     },
     {
       "name": "AzureBlobGet",
@@ -179,8 +178,7 @@
       "category": "Tasks",
       "terminating": false,
       "group": false,
-      "availability": "dark-launched",
-      "feature": "tasks"
+      "availability": "ga"
     },
     {
       "name": "GetDimensions",
@@ -324,8 +322,7 @@
       "category": "Tasks",
       "terminating": false,
       "group": false,
-      "availability": "dark-launched",
-      "feature": "tasks"
+      "availability": "ga"
     },
     {
       "name": "SendEmail",

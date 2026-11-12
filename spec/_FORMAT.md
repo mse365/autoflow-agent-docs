@@ -19,7 +19,7 @@ Step files are maintained in the app that owns the step and handed to AutoFlow t
   "caption": "HTTP Request",        // English caption shown in the step picker
   "category": "Web",                // picker category, if any
   "availability": "ga",             // "ga" | "dark-launched" | "deprecated" | "internal"; explain in notes
-  "feature": null,                  // dark-launched steps: the portal feature flag that enables them (e.g. "tasks"), else omitted
+  "feature": null,                  // dark-launched steps: the portal feature flag that enables them, else omitted
   "terminating": false,             // value written to step.terminating
   "group": false,                   // true if the step carries edges[] (branches/loop bodies)
   "edges": {                        // only when group = true

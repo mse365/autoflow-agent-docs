@@ -14,9 +14,9 @@
       "required": false,
       "default": "",
       "enum": null,
-      "maxLength": null,
+      "maxLength": 250,
       "smart": "text",
-      "description": "File name of the archive. SmartText, e.g. 'Invoices {{workdate}}.zip'. '.zip' is appended when missing, ':' becomes '_'. Empty = archive.zip."
+      "description": "File name of the ZIP archive, e.g. 'Invoices {{workdate}}.zip'. SmartText. Trimmed; ':' becomes '_'. '.zip' is appended when the (case-insensitive) name does not end with it. Empty = 'archive.zip'. Cut to 250 characters when stored on the document."
     },
     {
       "key": "files",
@@ -26,21 +26,17 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "Rows of { type, reference, content, fileName }, packed in order. Required in practice: without rows there is nothing to pack, which fails the step while errorIfEmpty is true. Rows can carry extra editor keys (lineNo); they are ignored."
+      "description": "Rows {type, reference, content, fileName}, one per source. type 'document' or 'attachment': 'reference' is a {{selector}} to AutoFlow Document records (table 5564415) or Incoming Document Attachment records (table 133) – a single reference, a reference array, an indexed element or an iterator; every record becomes one entry. type 'base64': 'content' is base64 text (SmartText), or exactly one {{token}} of a binary step output or BLOB/Media field, taken byte for byte; 'fileName' is required. A value that is not an array counts as no rows."
     },
     {
       "key": "files[].type",
       "type": "string",
       "required": true,
-      "default": null,
-      "enum": [
-        "document",
-        "attachment",
-        "base64"
-      ],
+      "default": "",
+      "enum": ["document", "attachment", "base64"],
       "maxLength": null,
       "smart": "none",
-      "description": "document = AutoFlow document records (table 5564415) from reference; attachment = Incoming Document Attachment records (table 133) from reference; base64 = content decoded from base64. Matched case-insensitively; any other value fails the step at runtime."
+      "description": "Source of the row: 'document' (AutoFlow document), 'attachment' (Incoming document attachment) or 'base64' (Base64). Compared case-insensitively at run time; any other value, including an empty one, fails the step."
     },
     {
       "key": "files[].reference",
@@ -49,8 +45,8 @@
       "default": "",
       "enum": null,
       "maxLength": null,
-      "smart": "field",
-      "description": "document / attachment rows: exactly one SmartField placeholder '{{name}}' pointing to a reference, an array or an iterator, read in its raw form. Each record it holds becomes one entry. A reference that resolves to nothing adds nothing, without an error."
+      "smart": "record",
+      "description": "document/attachment rows: one braced selector, e.g. {{CreatePdf_Document}} or {{FindScans_results}} (every record of the array), {{FindScans_results[1]}} or a dotted relation. Ignored for base64 rows (the dialog disables the column). An empty, unbraced or unresolvable selector adds nothing and raises no error."
     },
     {
       "key": "files[].content",
@@ -60,7 +56,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "text",
-      "description": "base64 rows: base64 text (SmartText). If the raw value is exactly one SmartField holding binary data (an HTTP Request responseBody, a BLOB field), the bytes are taken as they are."
+      "description": "base64 rows: the file content. If the raw value is exactly one {{token}} (whitespace allowed, no ';' format suffix) that names a binary step output (an HTTP Request responseBody with a binary Content-Type) or a BLOB/Media/MediaSet field of a record reference, its bytes are packed as they are. Anything else is resolved as SmartText, trimmed and base64-decoded. Ignored for document/attachment rows (the dialog disables the column)."
     },
     {
       "key": "files[].fileName",
@@ -70,7 +66,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "text",
-      "description": "Entry path inside the archive (SmartText). Optional for document/attachment rows (default: the record's own name - document name, or attachment Name.File Extension), required for base64 rows. May contain folders (invoices/2026/INV-1001.pdf, '\\' counts as '/'); a value ending in '/' is a folder only and each record keeps its own name. '..', '.', a leading '/' and a drive prefix are dropped, ':' becomes '_'. On a row whose reference holds several records, SmartFields starting with the row's reference are resolved per record."
+      "description": "Path of the entry inside the archive; may contain folders ('invoices/2026/INV-1001.pdf', '\\' is treated as '/'). document/attachment rows: empty = the record's own name (document Name, or attachment Name + '.' + File Extension); a value ending in '/' is a folder only and keeps each record's own name; otherwise it replaces the name. base64 rows: required. Segments '.', '..', '' and a leading drive prefix (C:) are dropped, ':' becomes '_'; names from records never create folders (their slashes become '_'). A path already taken (case-insensitive) is numbered: 'invoice.pdf' -> 'invoice (2).pdf'. For a reference array with a {{token}} in the file name, the name is resolved once per record with the selector's root bound to that record, e.g. 'out/{{FindDocs_results.name}}'."
     },
     {
       "key": "errorIfEmpty",
@@ -80,110 +76,105 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "true: no file to pack fails the step. false: no archive is created, created = \"false\" and the flow continues."
+      "description": "When true (the default when the key is absent) the step fails if no entry could be collected. When false the step creates no document, sets created = 'false' and fileCount = '0' and the flow continues."
     }
   ],
   "outputs": [
-    {
-      "name": "created",
-      "type": "value",
-      "tableNo": null,
-      "when": "always - \"true\" when an archive was created, \"false\" when nothing was packed and errorIfEmpty is false"
-    },
-    {
-      "name": "Document",
-      "type": "reference",
-      "tableNo": 5564415,
-      "when": "when created - the archive in the AutoFlow document library (table 5564415 mse365 AF Document, content type application/zip)"
-    },
-    {
-      "name": "name",
-      "type": "value",
-      "tableNo": null,
-      "when": "when created - the archive's file name"
-    },
-    {
-      "name": "size",
-      "type": "value",
-      "tableNo": null,
-      "when": "when created - the archive's size in bytes"
-    },
-    {
-      "name": "fileCount",
-      "type": "value",
-      "tableNo": null,
-      "when": "always - number of entries; \"0\" when nothing was packed"
-    }
+    { "name": "created", "type": "value", "tableNo": null, "when": "always; 'true' when an archive was created, 'false' when there was nothing to pack and errorIfEmpty is false" },
+    { "name": "Document", "type": "reference", "tableNo": 5564415, "when": "only when created = 'true'; the AutoFlow Document holding the archive (Name = archive name, Content Type = application/zip, Length = bytes)" },
+    { "name": "name", "type": "value", "tableNo": null, "when": "only when created = 'true'; the archive file name including .zip" },
+    { "name": "size", "type": "value", "tableNo": null, "when": "only when created = 'true'; archive size in bytes as plain digits" },
+    { "name": "fileCount", "type": "value", "tableNo": null, "when": "always; number of entries in the archive as plain digits, '0' when nothing was packed" }
   ],
   "rules": [
     {
-      "id": "CreateZipArchive.no-files",
-      "severity": "error",
+      "id": "CreateZipArchive.files-type",
+      "severity": "warning",
       "stage": "runtime",
-      "check": "No row yielded an entry (files empty, references resolved to nothing) while errorIfEmpty is true (the default).",
-      "message": "There are no files to put into the archive. Check the Files list - a SmartField there may not have resolved, or an earlier step found no records. Turn off \"Error if empty\" to continue without an archive."
+      "check": "configuration.files should be an array of row objects. A value that is not an array, and rows that are not objects, count as no rows (no error of their own; see files-empty).",
+      "message": "",
+      "machine": { "type": "type", "key": "files", "valueType": "array" }
     },
     {
-      "id": "CreateZipArchive.unknown-type",
+      "id": "CreateZipArchive.files-empty",
       "severity": "error",
       "stage": "runtime",
-      "check": "files[].type is not document, attachment or base64 (case-insensitive). %1 = 1-based row number.",
+      "check": "At least one entry must be collected from the rows, unless errorIfEmpty is false. Fires with no rows at all, and when every row resolved to nothing (an empty Find Records result, an empty, unbraced or unknown selector). With errorIfEmpty = false the step instead sets created = 'false', fileCount = '0', creates no document and continues.",
+      "message": "There are no files to put into the archive. Check the Files list - a SmartField there may not have resolved, or an earlier step found no records. Turn off \"Error if empty\" to continue without an archive.",
+      "machine": { "type": "requiredUnless", "key": "files", "ifKey": "errorIfEmpty", "equals": false }
+    },
+    {
+      "id": "CreateZipArchive.row-type",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "Each row's type, lower-cased, must be 'document', 'attachment' or 'base64'. An empty or missing type also fails. Rows are numbered from 1.",
       "message": "File %1 has an unknown type \"%2\"."
     },
     {
-      "id": "CreateZipArchive.reference-not-record",
+      "id": "CreateZipArchive.reference-silent",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "A document/attachment row whose reference is empty, not written as {{name}}, or names an output that is not in the run context adds nothing to the archive and raises no error. Only the all-empty case is caught by files-empty. Not checked in the editor or at publish; the dialog's selector column only offers existing reference outputs.",
+      "message": ""
+    },
+    {
+      "id": "CreateZipArchive.reference-is-reference",
       "severity": "error",
       "stage": "runtime",
-      "check": "A document/attachment row's reference resolves to values only, no records.",
+      "check": "A document/attachment row's reference must resolve to a record reference (or an array/iterator of references), not to a value.",
       "message": "The reference %1 must point at a record, not at a value."
     },
     {
-      "id": "CreateZipArchive.reference-wrong-table",
+      "id": "CreateZipArchive.reference-table",
       "severity": "error",
       "stage": "runtime",
-      "check": "A referenced record is not of table 5564415 (document rows) or 133 (attachment rows).",
+      "check": "Every record of a 'document' row must belong to the AutoFlow Document table (5564415); every record of an 'attachment' row to the Incoming Document Attachment table (133). %2 is the expected table's caption, %3 the table number found.",
       "message": "The reference %1 must point at a record of the table %2; it points at table %3."
     },
     {
       "id": "CreateZipArchive.record-missing",
       "severity": "error",
       "stage": "runtime",
-      "check": "A referenced record no longer exists.",
+      "check": "Every referenced document or attachment record must still exist. The generic SmartField resolution usually fails on a dangling reference first, with Business Central's own 'does not exist' error.",
       "message": "The record %1 referenced by %2 no longer exists."
     },
     {
       "id": "CreateZipArchive.attachment-empty",
       "severity": "error",
       "stage": "runtime",
-      "check": "An incoming document attachment has no content.",
+      "check": "An Incoming Document Attachment record must have content. %1 is the attachment's name with its extension.",
       "message": "The incoming document attachment %1 has no content."
     },
     {
       "id": "CreateZipArchive.base64-filename-required",
       "severity": "error",
       "stage": "runtime",
-      "check": "A base64 row's resolved fileName is empty. %1 = 1-based row number.",
+      "check": "A base64 row's resolved fileName (trimmed) must be non-empty. %1 is the row number (1-based).",
       "message": "File %1: a base64 file needs a file name, e.g. data.xml."
     },
     {
       "id": "CreateZipArchive.base64-content-empty",
       "severity": "error",
       "stage": "runtime",
-      "check": "A base64 row's resolved content is empty (and it is not a binary SmartField).",
+      "check": "A base64 row that is not a binary SmartField must resolve to non-empty text (trimmed). %1 is the row's fileName.",
       "message": "The content of %1 is empty. A SmartField there may not have resolved."
     },
     {
       "id": "CreateZipArchive.base64-invalid",
       "severity": "error",
       "stage": "runtime",
-      "check": "A base64 row's resolved content is not valid base64.",
+      "check": "A base64 row that is not a binary SmartField must hold valid base64 text. %1 is the row's fileName.",
       "message": "The content of %1 is not valid base64."
     }
   ],
   "notes": [
-    "The editor has no required fields and there is no publish-time check. The step's own design-time messages ('Add at least one file to the archive.', 'File %1: choose the reference whose file is put into the archive.', 'File %1: the reference \"%2\" must use the SmartField notation, e.g. {{pdf_Document}}.', 'File %1: enter the base64 content.') are not run: an empty or misspelled reference adds nothing.",
-    "Entries with the same path (case-insensitive) are numbered: invoice.pdf, invoice (2).pdf, invoice (3).pdf. A '/' or '\\' inside a record's own name becomes '_' (record data never creates folders).",
-    "Every archive is a new AutoFlow document; delete it with Delete Record on {{slug_Document}} when it is not needed afterwards. The archive is built in memory.",
-    "With errorIfEmpty false, check {{slug_created}} (e.g. with a Decision) before using {{slug_Document}}."
+    "There is no editor or publish-time check for this step: the dialog has no required fields, and nothing validates the rows before the step runs. A hand-written definition is only checked at run time.",
+    "Every run that packs at least one entry creates a new AutoFlow Document record (Content Type application/zip) and publishes it as Document – the same hand-off format Create PDF and Azure Blob: Get file produce. Use {{<slug>_Document}} as a Reference attachment in Send Email or as the content of Azure Blob: Upload file.",
+    "created is 'true'/'false' and size/fileCount are plain digits (locale-invariant text), so they can be compared in a Decision without formatting issues.",
+    "Reference rows resolve the raw selector themselves: a single reference packs one entry; a reference array (e.g. a Find Records results output), an indexed element or an iterator packs one entry per record. A selector that resolves to nothing is skipped silently, so an empty Find Records result only surfaces through errorIfEmpty.",
+    "Core resolves the step configuration once before the step runs, so a fileName like '{{FindDocs_results.name}}' would arrive as the FIRST record's name. The step therefore re-resolves a fileName that contains '{{' once per record of a reference array, with the selector's root bound to that record. This only applies when the array has more than one record; a literal fileName on an array gives 'name.pdf', 'name (2).pdf', ... instead.",
+    "A base64 row packs bytes as they are when content is exactly one {{token}} of a binary step output (an HTTP Request responseBody with a binary Content-Type) or of a BLOB, Media or MediaSet field reached through a record reference. This differs from Azure Blob: Upload file, where a binary responseBody is uploaded as its base64 text.",
+    "Entry paths are sanitized: '\\' becomes '/', empty, '.', '..' segments and a leading drive prefix are dropped, ':' becomes '_', and names taken from records never create folders. Duplicate paths (case-insensitive, full path) are numbered before the extension; the same name in different folders is not a duplicate.",
+    "The execution log gets a Debug entry 'Created %1 with %2 file(s): %3' (archive name, count, entry paths) or 'No files to pack; no archive created.'"
   ]
 }

@@ -3,7 +3,7 @@
 
 [← All actions](README.md)
 
-Reads the rows a person entered in a repeater section of a [Form task](FormTask.md) and offers each column as an output, for one row (e.g. the current item of a For Each over the repeater) or for all rows. The columns are not configured: they are taken over from the form task.
+Reads the rows a person entered in a repeater section of a [Form task](FormTask.md) and writes each column as an output, for all rows or for one row (typically the current item of a For Each over the repeater).
 
 | | |
 |---|---|
@@ -12,80 +12,79 @@ Reads the rows a person entered in a repeater section of a [Form task](FormTask.
 | Category | Tasks |
 | Terminating | `false` |
 | Group / edges | No |
-| Availability | GA. The step itself is not gated, but it only makes sense after a [Form task](FormTask.md), which is dark-launched (AutoFlow Tasks). |
+| Availability | Generally available from AutoFlow 27.0.41 (part of AutoFlow Tasks). Creates no task and does not wait, so it has no trigger restriction of its own. |
 
 ## What it does
 
-The step resolves the **raw** `input` into the rows it holds: the whole repeater output of a form task (`{{CustForm_contacts}}`), one row of it (`{{CustForm_contacts[2]}}`), or the `currentItem` / `items` of a For Each over the repeater. Each row is a SmartObject (table `5564267`). For every row, and every entry of `columns`, it writes:
+The step resolves `input` into the rows it holds: every row of a repeater output, or the single row of an indexed entry or a For Each `currentItem`. For each row it reads the columns listed in `columns` and writes them as outputs: `<column>` for the first row and `<column>[i]` for every row. `count` is the number of rows read.
 
-- `<column>`: the value of the **first** row (inside a For Each over the repeater: of the current row),
-- `<column>[i]`: the value of row `i` (0-based),
-
-as a reference for a record column and as a value otherwise, and finally `count`, the number of rows read.
-
-An `input` that resolves to nothing (an empty repeater, a misspelled name) reads no rows: `count` is `"0"` and no column outputs are set. An `input` that holds values, or records of another table, fails the step.
-
-### How the columns follow the form task
-
-When the step is saved in the editor, it copies the `columns` the form task declares on its repeater output (or that a For Each over the repeater passes on to `items` / `currentItem`). Whenever another step of the flow is edited, the editor refreshes them, so the step follows the form when a column is added or renamed. The step reads exactly the columns in its own configuration at runtime. In hand-written JSON, write `columns` as the form task's repeater declares them: one entry per field of the section, in `fields` order.
+The columns are not chosen freely. They are a copy of the `columns` that the Form task's repeater output carries. In the editor the step takes them over when it is saved and again whenever another step of the flow is edited, so it follows the form. A [For Each](ForEachLoop.md) over the repeater passes the columns on to its `items` and `currentItem` outputs in the same way.
 
 ## Configuration
 
 | key | type | required | default | description |
 |---|---|---|---|---|
-| `input` | string | yes | `""` | Exactly one placeholder `{{name}}` that points to a form task's repeater output, one row of it, or a For Each `currentItem` / `items` over it. Read in its raw form. |
-| `columns` | array | yes | `[]` | Rows of `{ "name", "type", "tableNo" }`: `name` = the repeater field's name, `type` = `"value"` or `"reference"`, `tableNo` = the field's table (reference columns only). Copied from the form task by the editor; never edited by hand in the editor. |
+| `input` | string | yes | – | Exactly one placeholder `{{name}}`: the rows output of a Form task repeater (`{{<formSlug>_<section>}}`), one row of it (`{{<formSlug>_<section>[2]}}`), or the `currentItem` of a For Each over it (`{{<loopSlug>_currentItem}}`). The raw form is used. See [selector fields](../references-and-smart-fields.md#16-selector-fields-reference-inputs). |
+| `columns` | array | yes | – | Rows of `{ "name", "type", "tableNo" }`: the same entries as the `columns` of the repeater output that `input` points at. `type` is `"value"` or `"reference"`; `tableNo` only for `"reference"`. |
 
 ## Outputs
 
 | name | type | tableNo | notes |
 |---|---|---|---|
-| `<column>` | value / reference | reference: the column's `tableNo` | One per entry of `columns`: the first row's value. `{{<slug>_<column>[i]}}` holds row `i` (0-based). Not set when no row was read. |
-| `count` | value | – | Number of rows read. `"0"` when `input` resolved to nothing. |
+| `<column name>` | value, or reference for a `"reference"` column | = the column's `tableNo` (reference) | One per `columns` row, in order. `{{<slug>_<column>}}` is the column of the first row (for a single row: of that row), `{{<slug>_<column>[0]}}`, `{{<slug>_<column>[1]}}`, … of each row. Not written when there is no row. |
+| `count` | value | – | Number of rows read. |
 
-Output names are cut at 30 characters. Declare one output per column (a `reference` with the column's `tableNo`, or a `value`) plus `count`. The `[i]` outputs are not declared.
+Values have the format the Form task stores them in: `true` / `false`, `12`, `1.25`, `2026-11-02`, `2026-11-02T09:30:00`.
 
 ## Validation
 
 | stage | severity | rule | message |
 |---|---|---|---|
 | editor | error | `input` is empty | `Please fill in the highlighted fields.` |
-| runtime | error | `input` holds values, or records that are not rows of a form task repeater | `%1 is not a repeater of a form task. Choose the repeater output of a Form task step, or one row of it.` |
 
-`%1` is the raw `input`. Nothing is checked at publish time. The step's own checks (`Choose the repeater of a form task to read.`, `The step knows no columns of %1. Choose the repeater of a form task and save the step.`) are not run: without `columns`, the step only writes `count`.
+The step's own messages (`Choose the repeater of a form task to read.`, `The step knows no columns of %1. Choose the repeater of a form task and save the step.`) are not run. Without `columns` the step only writes `count`.
+
+## Runtime errors
+
+| condition | message |
+|---|---|
+| `input` holds plain values, or records that are not rows of a Form task repeater (`%1` = the input) | `%1 is not a repeater of a form task. Choose the repeater output of a Form task step, or one row of it.` |
+
+An `input` that resolves to nothing is not an error: `count` is `"0"`. This is the case for a repeater the person left empty, and also for an `input` that is not a single `{{name}}` placeholder.
 
 ## Example
 
-Inside a For Each with slug `EachContact` over `{{CustForm_contacts}}` (the repeater of the [Form task example](FormTask.md#example)):
+Inside the body of a For Each with slug `EachLine` over `{{Request_lines}}` (the repeater of the [Form task example](FormTask.md#example)), the step reads the current row:
 
 ```json
 {
-  "id": "2B7D4E19-5A3C-4F82-8D61-0E9F1A2B3C71",
+  "id": "9D3A5C70-6E8F-4B2C-8D4E-3F5A7B9C1D01",
   "type": "action",
   "action": 5564427,
-  "description": "Read contact",
-  "slug": "Contact",
+  "description": "Read line",
+  "slug": "Line",
   "iconUrl": "https://statics.autoflow.mse365.de/icons/table-rows.svg",
   "terminating": false,
   "configuration": {
-    "input": "{{EachContact_currentItem}}",
+    "input": "{{EachLine_currentItem}}",
     "columns": [
-      { "name": "name", "type": "value" },
-      { "name": "email", "type": "value" }
+      { "name": "item", "type": "reference", "tableNo": 27 },
+      { "name": "quantity", "type": "value" }
     ]
   },
   "outputs": [
-    { "name": "name", "type": "value" },
-    { "name": "email", "type": "value" },
+    { "name": "item", "type": "reference", "tableNo": 27 },
+    { "name": "quantity", "type": "value" },
     { "name": "count", "type": "value" }
   ]
 }
 ```
 
-Later steps in the loop use `{{Contact_name}}` and `{{Contact_email}}`.
+The For Each step declares its `items` and `currentItem` outputs as `{ "type": "reference", "tableNo": 5564267, "columns": [ … ] }` with the same columns. Later steps in the body use `{{Line_item.no}}` and `{{Line_quantity}}`.
 
 ## Gotchas
 
-- The typical pattern is a For Each over `{{<form slug>_<section>}}` and this step on the loop's `currentItem`, followed by the steps that use the row (e.g. Insert Record).
-- Read on the whole repeater, `<column>` is only the first row. Use `<column>[i]` or a loop for the others.
-- Keep `columns` in step with the form task's repeater fields. A column the form does not have reads as empty; a form field missing in `columns` is not read.
+- Keep `columns` and `outputs` equal to the repeater's fields in the Form task. At run time the step reads the columns from its own configuration, not from the form.
+- Used directly on the repeater (`{{<formSlug>_<section>}}`) the step reads all rows at once: `{{<slug>_<column>[i]}}` per row and `count`. Inside a For Each on `currentItem` it reads one row and `count` is `"1"`.
+- Do not name a repeater column `count`: the step's own output uses that name.
+- Outputs written inside a For Each body are discarded when the loop finishes, like any step in a loop.
