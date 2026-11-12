@@ -23,6 +23,7 @@
     "GetDimensions": "AutoFlow",
     "HttpRequest": "AutoFlow",
     "InsertRecord": "AutoFlow",
+    "Intelligence": "AutoFlow",
     "Log": "AutoFlow",
     "ModifyRecord": "AutoFlow",
     "NoSeriesDraw": "AutoFlow",

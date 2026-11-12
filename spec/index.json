@@ -208,6 +208,15 @@
       "availability": "ga"
     },
     {
+      "name": "Intelligence",
+      "id": 5564430,
+      "caption": "Intelligence",
+      "category": "Intelligence",
+      "terminating": false,
+      "group": false,
+      "availability": "ga"
+    },
+    {
       "name": "Log",
       "id": 104,
       "caption": "Log",

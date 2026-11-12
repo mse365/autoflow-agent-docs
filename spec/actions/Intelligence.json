@@ -1,0 +1,505 @@
+{
+  "kind": "action",
+  "name": "Intelligence",
+  "id": 5564430,
+  "caption": "Intelligence",
+  "category": "Intelligence",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "mode",
+      "type": "string",
+      "required": true,
+      "default": "prompt",
+      "enum": [
+        "prompt",
+        "classify"
+      ],
+      "maxLength": null,
+      "smart": "none",
+      "description": "prompt = a language model answers the prompt with text (output answer). classify = TypeSafe Jev answers all questions about input in ONE request; every question has its own outputs."
+    },
+    {
+      "key": "profile",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Code of an AI provider profile of the AutoFlow Intelligence Setup. Empty = the default language model profile (prompt) / the first TypeSafe profile (classify). A profile of the wrong kind fails the run."
+    },
+    {
+      "key": "prompt",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "mode prompt: what the model should do. SmartText – {{…}} values of the flow are filled in before the call. Only stored for mode prompt."
+    },
+    {
+      "key": "attachments",
+      "type": "array",
+      "required": false,
+      "default": [],
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "mode prompt only: rows { type, reference, filename, contentBase64 } exactly like Send Email. Each resolved file is sent with the prompt: PNG, JPEG, GIF, WebP images and PDF, at most 20 MB together."
+    },
+    {
+      "key": "attachments[].type",
+      "type": "string",
+      "required": false,
+      "default": "Reference",
+      "enum": [
+        "Reference",
+        "Inline"
+      ],
+      "maxLength": null,
+      "smart": "none",
+      "description": "\"Reference\" (default) or \"Inline\", as in Send Email."
+    },
+    {
+      "key": "attachments[].reference",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "record",
+      "description": "Reference rows: {{selector}} to AutoFlow Document reference(s) (table 5564415), an array or iterator of them, or name[N]."
+    },
+    {
+      "key": "attachments[].filename",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": 250,
+      "smart": "text",
+      "description": "Inline rows: file name incl. extension. SmartText."
+    },
+    {
+      "key": "attachments[].contentBase64",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "Inline rows: base64 content. SmartText. The type is read from the content's first bytes."
+    },
+    {
+      "key": "input",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "mode classify: the content every question is about (sent once as state.input). SmartText."
+    },
+    {
+      "key": "fields",
+      "type": "array",
+      "required": false,
+      "default": [],
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "mode classify: extra named parts of the state, rows { name, value }. Questions refer to them by name in backticks, e.g. `vendor`."
+    },
+    {
+      "key": "fields[].name",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Letters, digits and _, starting with a letter; not input or attachments; unique."
+    },
+    {
+      "key": "fields[].value",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "SmartText. Always sent as text."
+    },
+    {
+      "key": "questions",
+      "type": "array",
+      "required": false,
+      "default": [],
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "mode classify: 1 to 32 rows { id, type, instructions, threshold, checkFit }."
+    },
+    {
+      "key": "questions[].id",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": 18,
+      "smart": "none",
+      "description": "Question name: letters, digits and _, starting with a letter, at most 18 characters, unique. It names the outputs."
+    },
+    {
+      "key": "questions[].type",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": [
+        "choice",
+        "score",
+        "noul"
+      ],
+      "maxLength": null,
+      "smart": "none",
+      "description": "choice = pick one option; score = rate on ordered levels; noul = yes/no."
+    },
+    {
+      "key": "questions[].instructions",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "The question itself. SmartText."
+    },
+    {
+      "key": "questions[].threshold",
+      "type": "number",
+      "required": false,
+      "default": 0.5,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "noul only: the output <id> is true when the probability is at least this value (0–1)."
+    },
+    {
+      "key": "questions[].checkFit",
+      "type": "boolean",
+      "required": false,
+      "default": true,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "choice only: also ask whether any option applies at all (output <id>_fits). On by default – a choice always picks an option, even when none fits."
+    },
+    {
+      "key": "options",
+      "type": "array",
+      "required": false,
+      "default": [],
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "mode classify: rows { question, value, description }. choice: the options (1–255). score: the levels in order, the first row is level 0 (1–10). noul: optional descriptions with value true / false."
+    },
+    {
+      "key": "options[].question",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "The id of the question the row belongs to."
+    },
+    {
+      "key": "options[].value",
+      "type": "string",
+      "required": true,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Option name / level name (noul: true or false). Option names are what <id> returns."
+    },
+    {
+      "key": "options[].description",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "Optional description that helps the model; an option without description is judged by its name."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "answer",
+      "type": "value",
+      "tableNo": null,
+      "when": "mode prompt: the model's text answer"
+    },
+    {
+      "name": "<id>",
+      "type": "value",
+      "tableNo": null,
+      "when": "mode classify, one per question: choice → the chosen option value; score → the probability-weighted level as a decimal with a point (can lie between two levels); noul → true / false at the question's threshold"
+    },
+    {
+      "name": "<id>_confidence",
+      "type": "value",
+      "tableNo": null,
+      "when": "choice and score questions: 0–1 with a point"
+    },
+    {
+      "name": "<id>_fits",
+      "type": "value",
+      "tableNo": null,
+      "when": "choice questions with checkFit: true when one of the options applies (probability ≥ 0.5)"
+    },
+    {
+      "name": "<id>_level",
+      "type": "value",
+      "tableNo": null,
+      "when": "score questions: the value of the most probable level row"
+    },
+    {
+      "name": "<id>_probability",
+      "type": "value",
+      "tableNo": null,
+      "when": "noul questions: the probability of yes, 0–1 with a point"
+    }
+  ],
+  "rules": [
+    {
+      "id": "Intelligence.mode",
+      "severity": "error",
+      "stage": "publish",
+      "check": "mode must be prompt or classify",
+      "message": "Choose the mode: prompt or classify.",
+      "machine": {
+        "type": "enum",
+        "key": "mode",
+        "values": [
+          "prompt",
+          "classify"
+        ]
+      }
+    },
+    {
+      "id": "Intelligence.prompt-required",
+      "severity": "error",
+      "stage": "publish",
+      "check": "mode prompt: prompt must not be empty",
+      "message": "Enter the prompt.",
+      "machine": {
+        "type": "requiredIf",
+        "key": "prompt",
+        "ifKey": "mode",
+        "equals": "prompt"
+      }
+    },
+    {
+      "id": "Intelligence.input-required",
+      "severity": "error",
+      "stage": "publish",
+      "check": "mode classify: input must not be empty",
+      "message": "Enter the input the questions are about.",
+      "machine": {
+        "type": "requiredIf",
+        "key": "input",
+        "ifKey": "mode",
+        "equals": "classify"
+      }
+    },
+    {
+      "id": "Intelligence.no-questions",
+      "severity": "error",
+      "stage": "publish",
+      "check": "mode classify: at least one question",
+      "message": "Add at least one question."
+    },
+    {
+      "id": "Intelligence.too-many-questions",
+      "severity": "error",
+      "stage": "publish",
+      "check": "mode classify: at most 32 questions; put more into a second Intelligence step",
+      "message": "One step answers at most %1 questions. Put further questions into a second Intelligence step."
+    },
+    {
+      "id": "Intelligence.question-id",
+      "severity": "error",
+      "stage": "publish",
+      "check": "questions[].id: letters, digits and _, starting with a letter, at most 18 characters",
+      "message": "Question name '%1': use letters, digits and _ only, at most %2 characters, starting with a letter."
+    },
+    {
+      "id": "Intelligence.question-id-duplicate",
+      "severity": "error",
+      "stage": "publish",
+      "check": "questions[].id unique",
+      "message": "The question name '%1' is used twice."
+    },
+    {
+      "id": "Intelligence.output-clash",
+      "severity": "error",
+      "stage": "publish",
+      "check": "no output name twice (e.g. a question named a_fits next to a choice a with checkFit)",
+      "message": "The question name '%1' is also an output of question '%2'. Choose another name."
+    },
+    {
+      "id": "Intelligence.question-type",
+      "severity": "error",
+      "stage": "publish",
+      "check": "questions[].type is choice, score or noul",
+      "message": "Question '%1': choose the type choice, score or yes/no."
+    },
+    {
+      "id": "Intelligence.question-instructions",
+      "severity": "error",
+      "stage": "publish",
+      "check": "questions[].instructions not empty",
+      "message": "Question '%1': enter the question."
+    },
+    {
+      "id": "Intelligence.choice-options",
+      "severity": "error",
+      "stage": "publish",
+      "check": "choice: 1 to 255 options rows",
+      "message": "Question '%1': a choice needs 1 to %2 options."
+    },
+    {
+      "id": "Intelligence.score-levels",
+      "severity": "error",
+      "stage": "publish",
+      "check": "score: 1 to 10 level rows",
+      "message": "Question '%1': a score needs 1 to %2 levels."
+    },
+    {
+      "id": "Intelligence.option-duplicate",
+      "severity": "error",
+      "stage": "publish",
+      "check": "option values unique per question",
+      "message": "Question '%1': the option '%2' is listed twice."
+    },
+    {
+      "id": "Intelligence.option-empty",
+      "severity": "error",
+      "stage": "publish",
+      "check": "option value not empty",
+      "message": "Question '%1': an option has no value."
+    },
+    {
+      "id": "Intelligence.noul-options",
+      "severity": "error",
+      "stage": "publish",
+      "check": "noul option rows only use the values true / false",
+      "message": "Question '%1': a yes/no question only takes descriptions for the values true and false."
+    },
+    {
+      "id": "Intelligence.threshold",
+      "severity": "error",
+      "stage": "publish",
+      "check": "noul threshold between 0 and 1",
+      "message": "Question '%1': the threshold must lie between 0 and 1."
+    },
+    {
+      "id": "Intelligence.orphan-option",
+      "severity": "error",
+      "stage": "publish",
+      "check": "every options row belongs to an existing question",
+      "message": "The option '%1' belongs to question '%2', which does not exist."
+    },
+    {
+      "id": "Intelligence.field-name",
+      "severity": "error",
+      "stage": "publish",
+      "check": "fields[].name: letters, digits and _, starting with a letter; not input / attachments",
+      "message": "Field name '%1': use letters, digits and _ only, starting with a letter; 'input' and 'attachments' are taken."
+    },
+    {
+      "id": "Intelligence.field-duplicate",
+      "severity": "error",
+      "stage": "publish",
+      "check": "fields[].name unique",
+      "message": "The field name '%1' is used twice."
+    },
+    {
+      "id": "Intelligence.classify-attachments",
+      "severity": "error",
+      "stage": "publish",
+      "check": "mode classify takes no attachments yet",
+      "message": "The classify mode does not read attachments yet: images for TypeSafe follow in a later release. Only the prompt mode reads files for now."
+    },
+    {
+      "id": "Intelligence.no-language-profile",
+      "severity": "error",
+      "stage": "publish",
+      "check": "mode prompt needs Intelligence switched on and a language model profile (wrapped: The Intelligence step '%1': …)",
+      "message": "the prompt mode needs Intelligence switched on and a language model profile."
+    },
+    {
+      "id": "Intelligence.no-typesafe-profile",
+      "severity": "error",
+      "stage": "publish",
+      "check": "mode classify needs Intelligence switched on and a TypeSafe profile",
+      "message": "the classify mode needs Intelligence switched on and a TypeSafe profile."
+    },
+    {
+      "id": "Intelligence.waits",
+      "severity": "warning",
+      "stage": "publish",
+      "check": "the trigger runs while the user works on the record (record created/modified interactive, document released/posted/reopened, page opened/closed, PDF printed, report file name, SubFlow): the user waits for the answer",
+      "message": "The Intelligence step '%1' runs while the user works on the record: the user waits until the model has answered (up to the timeout of the AutoFlow Intelligence Setup)."
+    },
+    {
+      "id": "Intelligence.unsupported-file",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "an attachment is no PNG/JPEG/GIF/WebP image or PDF",
+      "message": "Intelligence cannot read the attachment '%1': only PNG, JPEG, GIF and WebP images and PDF files are supported."
+    },
+    {
+      "id": "Intelligence.files-too-large",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "attachments together over 20 MB",
+      "message": "The attachments are too large for one request (%1 MB, at most %2 MB)."
+    },
+    {
+      "id": "Intelligence.truncated",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "the answer hit the profile's max output tokens",
+      "message": "The answer was cut off at %1 output tokens. Raise \"Max. Output Tokens\" on provider profile %2, or ask for a shorter answer."
+    },
+    {
+      "id": "Intelligence.empty-answer",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "the model answered with no text",
+      "message": "The model gave an empty answer."
+    },
+    {
+      "id": "Intelligence.wrong-profile-kind",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "profile is of the other kind",
+      "message": "Profile %1 is a TypeSafe classification profile; the prompt mode needs a language model profile."
+    }
+  ],
+  "notes": [
+    "Prefer ONE classify step with many questions over several steps: the input is sent once, each extra question costs only its own tokens.",
+    "Act on the answers with Condition steps, e.g. {{<slug>_category}} = 'invoice' and {{<slug>_category_fits}} = 'true'. Check <id>_confidence / <id>_probability for risky actions.",
+    "Each run is logged as a session (AutoFlow Intelligence Setup → Sessions); the execution log line names the session no. A failed run fails the step.",
+    "The prompt answer is text. When later steps need structured data, ask for JSON in the prompt and read it with a Parser step.",
+    "Field values and attachments go to the provider configured in the profile."
+  ]
+}

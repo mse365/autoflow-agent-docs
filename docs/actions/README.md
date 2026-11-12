@@ -38,6 +38,12 @@ Machine-readable list: [`spec/index.json`](../../spec/index.json). The step page
 | Create PDF | `5564410` |  |  | [PdfPrint](PdfPrint.md) |
 | Create ZIP archive | `5564425` |  |  | [CreateZipArchive](CreateZipArchive.md) |
 
+## Intelligence
+
+| Action | `action` | Terminating | Group | Page |
+|---|---:|:---:|:---:|---|
+| Intelligence | `5564430` |  |  | [Intelligence](Intelligence.md) |
+
 ## Records
 
 | Action | `action` | Terminating | Group | Page |
