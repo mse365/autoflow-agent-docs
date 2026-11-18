@@ -22,7 +22,7 @@ Hooks the open event of the configured page. In a session with a UI, and when th
 
 | key | type | required | default | description |
 |---|---|---|---|---|
-| `pageNo` | integer | yes | `0` | Sales Quote `41`, Sales Order `42`, Sales Invoice `43`, Sales Credit Memo `44`, Sales Return Order `6630`, Blanket Sales Order `507`, Purchase Quote `49`, Purchase Order `50`, Purchase Invoice `51`, Purchase Credit Memo `52`, Purchase Return Order `6640`, Blanket Purchase Order `509`, Customer Card `21`, Vendor Card `26`, Contact Card `5050`, Item Card `30`. |
+| `pageNo` | integer | yes | `0` | Sales Quote `41`, Sales Order `42`, Sales Invoice `43`, Sales Credit Memo `44`, Sales Return Order `6630`, Blanket Sales Order `507`, Purchase Quote `49`, Purchase Order `50`, Purchase Invoice `51`, Purchase Credit Memo `52`, Purchase Return Order `6640`, Blanket Purchase Order `509`, Customer Card `21`, Vendor Card `26`, Contact Card `5050`, Item Card `30`. With the on-premises app "AutoFlow for SITE" also: Customer Contract `5002080`, Vendor Contract `5002280`, SITE Work Order `5002155`, Incident `5002211`, Problem `5002329`, Hardware Change `5002120`, Software Change `5002115`, Installed Items `5002018`, Order Demand Sales `5002069`. |
 | `timeoutSec` | integer | no | `10` | Maximum run time. The page waits for it. Checked between steps: when it has passed, the remaining steps are skipped and the page opens. `0` or less means 10. |
 | `filters` | array | no | `[]` | `[{ "fieldNo": int, "filter": "text" }]`. These are filters on the page's record (its source table), applied literally, max. 250 characters. A filter that Business Central can't parse means the flow never runs. |
 

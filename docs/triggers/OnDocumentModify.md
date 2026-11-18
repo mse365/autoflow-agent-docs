@@ -12,7 +12,7 @@ Runs synchronously in the user's session while a record of a supported table is 
 | Category | Interactive |
 | Terminating | n/a (trigger) |
 | Group / edges | no |
-| Availability | GA. Only for supported tables. The subscription-contract tables need the separate app "AutoFlow for Subscription Billing" (BC26+, with Microsoft's Subscription Billing). |
+| Availability | GA. Only for supported tables. The subscription-contract tables need the separate app "AutoFlow for Subscription Billing" (BC26+, with Microsoft's Subscription Billing); the SITE tables need the separate on-premises app "AutoFlow for SITE". |
 
 ## What it does
 
@@ -27,7 +27,7 @@ Only writes that run table triggers fire the flow. With `guiOnly` (the default),
 
 | key | type | required | default | description |
 |---|---|---|---|---|
-| `tableNo` | integer | yes | `0` | One of: Customer `18`, Vendor `23`, Item `27`, Sales Header `36`, Sales Line `37`, Purchase Header `38`, Purchase Line `39`, Project `167`, Project Task `1001`, Project Budget Line `1003`, Contact `5050`, Customer Subscription Contract `8052`*, Customer Subscription Contract Line `8062`*. Tables marked * are only supported when the app "AutoFlow for Subscription Billing" is installed. Extensions can register more. |
+| `tableNo` | integer | yes | `0` | One of: Customer `18`, Vendor `23`, Item `27`, Sales Header `36`, Sales Line `37`, Purchase Header `38`, Purchase Line `39`, Project `167`, Project Task `1001`, Project Budget Line `1003`, Contact `5050`, Customer Subscription Contract `8052`*, Customer Subscription Contract Line `8062`*. Tables marked * are only supported when the app "AutoFlow for Subscription Billing" is installed. With the on-premises app "AutoFlow for SITE" (SITE by Singhammer, BC24/26/28) also: Customer Contract Header `5002080`, Customer Contract Line `5002081`, Vendor Contract Header `5002280`, Vendor Contract Line `5002281`, SITE Service Header `5002152`, SITE Service Line `5002153`, Installed Item `5002009`, Order Demand Header `5002030`, Order Demand Line `5002031`. Extensions can register more. |
 | `guiOnly` | boolean | no | `true` | Run only in interactive sessions. |
 | `triggerOnInsert` | boolean | no | `false` | Run while a record is created. |
 | `triggerOnModify` | boolean | no | `true` | Run while a record is changed. |
