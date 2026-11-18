@@ -83,6 +83,10 @@ Conversion per field type:
 - **RecordId**: only from a reference SmartField such as `{{FindItem_results}}`.
 - **Blob, Media**: a bare binary SmartField is streamed. Otherwise the value is base64-decoded, with UTF-8 text as the fallback. MediaSet is not supported.
 
+### Text and Code length
+
+A Text or Code value that is longer than the target field (after SmartField resolution) is cropped to the field length before Validate or direct assignment. This applies to primary-key fields too, and to every step that uses `values[]` rows (Insert, Modify, Rename, Set document field values). Insert / Modify / Rename write one Info log line per crop: `Field "%1" was cropped from %2 to %3 characters.`; Set document field values crops without a log line. Don't pre-truncate values in the flow, and don't rely on an overflow error to stop it.
+
 ## Outputs
 
 | name | type | tableNo | notes |
@@ -112,6 +116,7 @@ There are no publish-time checks specific to this step. A Confirm dialog placed 
 | Value not convertible | `Cannot convert value "%1" to %2 for field "%3".` / `Cannot convert value "%1" to %2 for field "%3" using input format "%4".` |
 | Option/Enum value is neither a value name, a caption nor a number | `Cannot convert value "%1" to %2 for field "%3". Allowed: %4.` (%2 = `Option`, %4 = the value names) |
 | `optional` row with an empty value (not an error; Debug log line) | `Field "%1" skipped: it is optional and its value is empty.` |
+| Text/Code value longer than the field (not an error; Info log line) | `Field "%1" was cropped from %2 to %3 characters.` |
 | Duplicate `lineNo` in `values` | Platform "record already exists" error |
 | Validation / OnInsert / duplicate primary key | Business Central's own error |
 
@@ -156,3 +161,4 @@ There are no publish-time checks specific to this step. A Confirm dialog placed 
 - A `{{token}}` that resolves to nothing leaves the field at its current/initial value only with `"optional": true`. Without it, an empty text clears a text field and fails the conversion of a numeric, Boolean or patterned date field.
 - Before 27.0.41: Option values were matched case-sensitively and a value name was mapped to its **position** in the list, so enums whose ordinals have gaps got the wrong value; the unknown-value error ended without the `Allowed:` list. `valueMode`, `valueRules` and `optional` did not exist: a hand-written `valueMode` was ignored (the row read as SmartText) and an empty value was always assigned.
 - Up to AutoFlow 27.0.40, `templateCode` always named a Configuration Template (max 10 characters), also on Customer, Vendor, Item and Employee. Business Central templates are used from 27.0.41.
+- Before the release after 27.0.42: a Text/Code value longer than the field failed the step with Business Central's overflow error instead of being cropped.

@@ -177,6 +177,13 @@
       "message": "Cannot convert value \"%1\" to %2 for field \"%3\". | Cannot convert value \"%1\" to %2 for field \"%3\" using input format \"%4\"."
     },
     {
+      "id": "SetDocumentField.values-text-cropped",
+      "severity": "info",
+      "stage": "runtime",
+      "check": "A Text or Code value (after SmartField resolution) that is longer than the target field's length is cropped to that length before Validate / direct assignment; no log line (the document triggers have no execution log context). Before the release after 27.0.42: the step failed with Business Central's own overflow error.",
+      "message": ""
+    },
+    {
       "id": "SetDocumentField.values-option-value",
       "severity": "error",
       "stage": "runtime",
