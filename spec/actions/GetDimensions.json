@@ -36,7 +36,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "Dimensions to read. Each distinct code produces two value outputs.",
+      "description": "Dimensions to read. Each row (distinct output name) produces three value outputs.",
       "items": [
         {
           "key": "dimensionCode",
@@ -44,9 +44,32 @@
           "required": true,
           "default": "",
           "enum": null,
-          "maxLength": 20,
+          "maxLength": null,
+          "smart": "text",
+          "description": "Dimension to read: a dimension code (e.g. 'DEPARTMENT'), a General Ledger Setup slot 'GLSETUP:SHORTCUTDIMENSION1'..'GLSETUP:SHORTCUTDIMENSION8' (the dimension set up in that slot when the flow runs; 1/2 = Global Dimension 1/2), or SmartText with {{…}} placeholders / SmartControls, resolved with the rest of the configuration before the step runs. Trimmed and upper-cased. An unknown code, an empty result or an unconfigured slot yields empty outputs (no error)."
+        },
+        {
+          "key": "dimensionCodeMode",
+          "type": "string",
+          "required": false,
+          "default": "fixed",
+          "enum": [
+            "fixed",
+            "smarttext"
+          ],
+          "maxLength": null,
           "smart": "none",
-          "description": "Dimension code to read. Trimmed and upper-cased; duplicates and empty codes are ignored."
+          "description": "Editor-only: how the config canvas shows 'dimensionCode'. 'smarttext' = SmartText cell; absent = the dimension dropdown (with the slot entries), or the SmartText cell when the code is no option. Also decides the default output name: a 'smarttext' row has none."
+        },
+        {
+          "key": "outputName",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "maxLength": null,
+          "smart": "none",
+          "description": "Plain-text name the row's outputs are returned under (<name>, <name>_Name, <name>_Code). Default: the trimmed, upper-cased dimensionCode, or 'ShortcutDim<N>' for a slot; a SmartText row has no default and is ignored without one. Unique per step (ignoring case; the first row wins), no {{. The editor writes the default on save."
         },
         {
           "key": "lineNo",
@@ -63,16 +86,22 @@
   ],
   "outputs": [
     {
-      "name": "<DIMENSIONCODE>",
+      "name": "<outputName>",
       "type": "value",
       "tableNo": null,
-      "when": "one per configured dimension code (upper-cased): the dimension value code, '' if the record has no value for it"
+      "when": "one per row with an output name: the dimension value code, '' if the record has no value for the dimension, the code is empty/unknown or the slot is not set up"
     },
     {
-      "name": "<DIMENSIONCODE>_Name",
+      "name": "<outputName>_Name",
       "type": "value",
       "tableNo": null,
-      "when": "one per configured code: the dimension value name, '' if none"
+      "when": "one per row: the dimension value name, '' if none"
+    },
+    {
+      "name": "<outputName>_Code",
+      "type": "value",
+      "tableNo": null,
+      "when": "one per row: the dimension code the row resolved to (e.g. the dimension in a General Ledger Setup slot), '' if empty or not set up"
     }
   ],
   "rules": [
@@ -86,6 +115,27 @@
         "type": "required",
         "key": "reference"
       }
+    },
+    {
+      "id": "GetDimensions.outputName-required",
+      "severity": "warning",
+      "stage": "publish",
+      "check": "A dimensions row with dimensionCodeMode 'smarttext' and a non-empty dimensionCode needs an outputName. Also shown as a message when the step is saved in the editor. At publish the message is wrapped as \"Get Dimensions step '<step id>': <message>\".",
+      "message": "Row %1: a dimension code from a SmartField needs an Output Name."
+    },
+    {
+      "id": "GetDimensions.outputName-unique",
+      "severity": "warning",
+      "stage": "publish",
+      "check": "Output names (explicit or default) must be unique within the step, ignoring case.",
+      "message": "Output Name \"%1\" is used more than once."
+    },
+    {
+      "id": "GetDimensions.outputName-plain",
+      "severity": "warning",
+      "stage": "publish",
+      "check": "outputName must not contain '{{' – it names outputs at design time.",
+      "message": "Output Name \"%1\" must be plain text, not a SmartField."
     },
     {
       "id": "GetDimensions.reference-placeholder",
@@ -169,8 +219,9 @@
     }
   ],
   "notes": [
-    "Output names are the trimmed, upper-cased dimension codes, two per distinct code in configuration order: {\"name\":\"DEPARTMENT\",\"type\":\"value\"} and {\"name\":\"DEPARTMENT_Name\",\"type\":\"value\"}. Reference them as {{slug_DEPARTMENT}} / {{slug_DEPARTMENT_Name}}.",
-    "A dimension code that does not exist, or has no value on the record, yields empty outputs (no error).",
+    "Output names come from outputName, defaulting to the trimmed, upper-cased dimensionCode or 'ShortcutDim<N>' for a slot: three per row in configuration order, e.g. {\"name\":\"DEPARTMENT\",\"type\":\"value\"}, {\"name\":\"DEPARTMENT_Name\",\"type\":\"value\"}, {\"name\":\"DEPARTMENT_Code\",\"type\":\"value\"}. Reference them as {{slug_DEPARTMENT}} / {{slug_DEPARTMENT_Name}} / {{slug_DEPARTMENT_Code}}.",
+    "Slot rows ('GLSETUP:SHORTCUTDIMENSION1'..'8') read General Ledger Setup when the flow runs, so one flow reads Dim 1-8 in any company. A slot that is not set up returns empty outputs and a Debug log line: 'Shortcut Dimension %1 is not set up in General Ledger Setup – row skipped.'",
+    "A dimension code that does not exist, or has no value on the record, yields empty outputs (no error). A code that resolves to empty also writes a Debug log line: 'Dimension row \"%1\" returned empty: the dimension code is empty.'",
     "The step only reads. It has no 'rec' output and does not count as a writing step for the Confirm dialog publish warning.",
     "The missing-field error message says 'set' because the text is shared with Set Dimension Values."
   ]

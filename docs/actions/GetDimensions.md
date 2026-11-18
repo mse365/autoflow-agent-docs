@@ -3,7 +3,7 @@
 
 [← All actions](README.md)
 
-Reads selected dimension values from a record that has a *Dimension Set ID*. Each value is returned as a value output named after its dimension code.
+Reads selected dimension values from a record that has a *Dimension Set ID*. Each row is returned under its output name – by default the dimension code, or `ShortcutDim1`…`ShortcutDim8` for a General Ledger Setup slot.
 
 | | |
 |---|---|
@@ -16,12 +16,19 @@ Reads selected dimension values from a record that has a *Dimension Set ID*. Eac
 
 ## What it does
 
-The step resolves `reference`, checks that its table equals `tableNo` and reads the record's dimension set. For each distinct dimension code in `dimensions`, it emits two value outputs:
+The step resolves `reference`, checks that its table equals `tableNo` and reads the record's dimension set. Each row names a dimension in one of three ways:
 
-- `<CODE>`: the dimension value code.
-- `<CODE>_Name`: the value's name.
+- a dimension code, e.g. `"DEPARTMENT"`;
+- a General Ledger Setup slot, `"GLSETUP:SHORTCUTDIMENSION1"` … `"GLSETUP:SHORTCUTDIMENSION8"` – the dimension set up in that slot **when the flow runs** (1/2 = Global Dimension 1/2, 3-8 = Shortcut Dimension 3-8), so one flow works in every company;
+- SmartText, e.g. `"{{mapping_dimensionCode}}"` (with `"dimensionCodeMode": "smarttext"`). The whole configuration is resolved before the step runs.
 
-If the record has no value for a code, or the code doesn't exist, both outputs are empty. The step only reads, so it doesn't trigger the Confirm dialog's "writing step" publish warning.
+For each row (distinct output name, row order) it emits three value outputs:
+
+- `<name>`: the dimension value code.
+- `<name>_Name`: the value's name.
+- `<name>_Code`: the dimension code the row resolved to (useful for slots and SmartText).
+
+If the record has no value for the dimension, the code doesn't exist, the code resolves to empty or the slot is not set up, the outputs are empty – no error (an empty code or unconfigured slot writes a Debug log line). The step only reads, so it doesn't trigger the Confirm dialog's "writing step" publish warning.
 
 ## Configuration
 
@@ -29,16 +36,17 @@ If the record has no value for a code, or the code doesn't exist, both outputs a
 |---|---|---|---|---|
 | `reference` | string | yes | `""` | One SmartField placeholder resolving to the record, e.g. `"{{trigger_Rec}}"`. The table must have a *Dimension Set ID* field. |
 | `tableNo` | integer | yes | `0` | Table of the referenced record. The editor derives it from the reference. It must match at runtime. |
-| `dimensions` | array | no | `[]` | Rows `{ "dimensionCode": "<code>" }`. Codes are trimmed and upper-cased, and duplicates and empty codes are ignored. The editor also writes `lineNo` (10000, 20000, …), which the step ignores. |
+| `dimensions` | array | no | `[]` | Rows `{ "dimensionCode": "<code, slot or SmartText>", "outputName"?: "<name>", "dimensionCodeMode"?: "smarttext" }`. `outputName` defaults to the trimmed, upper-cased code, or `ShortcutDim<N>` for a slot; a SmartText row needs one. Rows without an output name are ignored, and on a duplicate name (ignoring case) the first row wins. The editor writes the default `outputName` on save, plus `lineNo` (10000, 20000, …), which the step ignores. |
 
 ## Outputs
 
-Generated from `dimensions`, in row order, with two entries per distinct code:
+Generated from `dimensions`, in row order, with three entries per output name:
 
 | name | type | tableNo | notes |
 |---|---|---|---|
-| `<DIMENSIONCODE>` | value | – | E.g. `DEPARTMENT`, used as `{{<slug>_DEPARTMENT}}`. |
-| `<DIMENSIONCODE>_Name` | value | – | E.g. `{{<slug>_DEPARTMENT_Name}}`. |
+| `<name>` | value | – | E.g. `DEPARTMENT` or `ShortcutDim3`, used as `{{<slug>_DEPARTMENT}}`. |
+| `<name>_Name` | value | – | E.g. `{{<slug>_DEPARTMENT_Name}}`. |
+| `<name>_Code` | value | – | The dimension code, e.g. `{{<slug>_ShortcutDim3_Code}}` → `AREA`. |
 
 There is no `rec` output.
 
@@ -47,8 +55,11 @@ There is no `rec` output.
 | stage | severity | rule | message |
 |---|---|---|---|
 | editor | error | `reference` is empty (required field in the config canvas) | `Please fill in the highlighted fields.` |
+| editor + publish | warning | SmartText row without `outputName` | `Row %1: a dimension code from a SmartField needs an Output Name.` |
+| editor + publish | warning | two rows with the same `outputName` (ignoring case) | `Output Name "%1" is used more than once.` |
+| editor + publish | warning | `outputName` contains `{{` | `Output Name "%1" must be plain text, not a SmartField.` |
 
-There are no publish-time checks for this step. A missing `tableNo` or a `reference` that isn't a single `{{…}}` placeholder is only caught at runtime (see below).
+The `outputName` checks show as a message when the step is saved and, at publish, as `Get Dimensions step '%1': %2` (step id, message) in the confirmable publish warnings. A missing `tableNo` or a `reference` that isn't a single `{{…}}` placeholder is only caught at runtime (see below).
 
 ## Runtime errors
 
@@ -61,6 +72,11 @@ There are no publish-time checks for this step. A missing `tableNo` or a `refere
 | Table has no *Dimension Set ID* field | `Table "%1" has no "Dimension Set ID" field, so dimensions cannot be set on it.` (the same text as Set Dimension Values) |
 
 Unknown dimension codes do **not** raise an error. Their outputs are simply empty.
+
+| condition (not an error; Debug log line) | message |
+|---|---|
+| Slot not set up in General Ledger Setup | `Shortcut Dimension %1 is not set up in General Ledger Setup – row skipped.` |
+| `dimensionCode` resolved to empty | `Dimension row "%1" returned empty: the dimension code is empty.` |
 
 ## Example
 
@@ -77,20 +93,28 @@ Unknown dimension codes do **not** raise an error. Their outputs are simply empt
     "reference": "{{trigger_Rec}}",
     "tableNo": 36,
     "dimensions": [
-      { "dimensionCode": "DEPARTMENT" },
-      { "dimensionCode": "PROJECT" }
+      { "dimensionCode": "DEPARTMENT", "outputName": "DEPARTMENT" },
+      { "dimensionCode": "GLSETUP:SHORTCUTDIMENSION3", "outputName": "ShortcutDim3" },
+      { "dimensionCode": "{{mapping_dimensionCode}}", "dimensionCodeMode": "smarttext", "outputName": "Mapped" }
     ]
   },
   "outputs": [
     { "name": "DEPARTMENT", "type": "value" },
     { "name": "DEPARTMENT_Name", "type": "value" },
-    { "name": "PROJECT", "type": "value" },
-    { "name": "PROJECT_Name", "type": "value" }
+    { "name": "DEPARTMENT_Code", "type": "value" },
+    { "name": "ShortcutDim3", "type": "value" },
+    { "name": "ShortcutDim3_Name", "type": "value" },
+    { "name": "ShortcutDim3_Code", "type": "value" },
+    { "name": "Mapped", "type": "value" },
+    { "name": "Mapped_Name", "type": "value" },
+    { "name": "Mapped_Code", "type": "value" }
   ]
 }
 ```
 
 ## Gotchas
 
-- Output names are the **upper-cased** codes. If you write `"dimensionCode": "department"`, the output is still `DEPARTMENT`.
-- Keep `outputs` in sync with `dimensions` by hand when you edit JSON: two entries per code, in order.
+- Without `outputName`, output names are the **upper-cased** codes. If you write `"dimensionCode": "department"`, the output is still `DEPARTMENT`.
+- Keep `outputs` in sync with `dimensions` by hand when you edit JSON: three entries per row, in order.
+- To read Dim 1-8 regardless of the company's setup, use the eight `GLSETUP:SHORTCUTDIMENSION<N>` rows; `<name>_Code` tells which dimension sits in the slot.
+- Before the release after 27.0.42: no `outputName`, no `_Code` output, no slot entries, and the editor offered only the dimension dropdown.
