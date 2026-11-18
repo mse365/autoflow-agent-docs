@@ -16,7 +16,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "Table to watch. Must be a supported table: Customer 18, Vendor 23, Item 27, Sales Header 36, Sales Line 37, Purchase Header 38, Purchase Line 39, Project 167, Project Task 1001, Project Budget Line (Job Planning Line) 1003, Contact 5050; Customer Subscription Contract 8052 and Customer Subscription Contract Line 8062 only where the Subscription Billing app is installed (BC26+). Extensions can register more tables. Known supported values: 18, 23, 27, 36, 37, 38, 39, 167, 1001, 1003, 5050, 8052, 8062. Extensions can register more, so other values are not rejected by this reference."
+      "description": "Table to watch. Must be a supported table: Customer 18, Vendor 23, Item 27, Sales Header 36, Sales Line 37, Purchase Header 38, Purchase Line 39, Project 167, Project Task 1001, Project Budget Line (Job Planning Line) 1003, Contact 5050; Customer Subscription Contract 8052 and Customer Subscription Contract Line 8062 only where the app 'AutoFlow for Subscription Billing' is installed (BC26+). Extensions can register more tables. Known supported values: 18, 23, 27, 36, 37, 38, 39, 167, 1001, 1003, 5050, 8052, 8062. Extensions can register more, so other values are not rejected by this reference."
     },
     {
       "key": "guiOnly",
@@ -116,7 +116,7 @@
       "id": "OnDocumentModify.table-supported",
       "severity": "error",
       "stage": "publish",
-      "check": "configuration.tableNo must be a supported table (built-in list or registered by an extension). Hard stop at publish.",
+      "check": "configuration.tableNo must be a supported table (built-in list or registered by an extension). Hard stop at publish. For 8052 and 8062 without the app 'AutoFlow for Subscription Billing' the message is instead: Table %1 needs the app \"%2\". Install it to run flows on this table.",
       "message": "Table %1 is not one of the supported tables."
     },
     {

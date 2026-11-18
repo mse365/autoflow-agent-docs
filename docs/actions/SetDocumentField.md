@@ -85,7 +85,7 @@ These errors surface in the user's session when the trigger applies the values, 
 
 - Always the **last** step of its path (`"terminating": true`). Use it at the end of each branch that should change the document.
 - The picker offers it only in the four interactive document flows. Don't use it in other flows.
-- The editor fills `tableNo` from the trigger output only for the supported document tables (18, 23, 27, 36, 37, 38, 39, 167, 1001, 1003, 5050, 8052, 8062). The runtime ignores `tableNo`.
+- The editor fills `tableNo` from the trigger output only for the tables the record trigger supports (18, 23, 27, 36, 37, 38, 39, 167, 1001, 1003, 5050, plus tables registered by other apps, e.g. 8052 and 8062 with "AutoFlow for Subscription Billing"). The runtime ignores `tableNo`.
 - Use `validate: false` for fields such as *Status*, whose validation would block a direct change.
 - Rules conditions (`valueRules`) are evaluated inside the flow, with the flow's SmartFields; the trigger only receives the resulting literal value names.
 - Before 27.0.41: `valueMode` / `valueRules` did not exist (a hand-written `valueMode` was ignored and the row read as SmartText), and Option names were matched case-sensitively by list position.

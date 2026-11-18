@@ -12,7 +12,7 @@ Runs synchronously in the user's session while a record of a supported table is 
 | Category | Interactive |
 | Terminating | n/a (trigger) |
 | Group / edges | no |
-| Availability | GA. Only for supported tables. The subscription-contract tables need Microsoft's Subscription Billing app (BC26+). |
+| Availability | GA. Only for supported tables. The subscription-contract tables need the separate app "AutoFlow for Subscription Billing" (BC26+, with Microsoft's Subscription Billing). |
 
 ## What it does
 
@@ -27,7 +27,7 @@ Only writes that run table triggers fire the flow. With `guiOnly` (the default),
 
 | key | type | required | default | description |
 |---|---|---|---|---|
-| `tableNo` | integer | yes | `0` | One of: Customer `18`, Vendor `23`, Item `27`, Sales Header `36`, Sales Line `37`, Purchase Header `38`, Purchase Line `39`, Project `167`, Project Task `1001`, Project Budget Line `1003`, Contact `5050`, Customer Subscription Contract `8052`*, Customer Subscription Contract Line `8062`*. Tables marked * need the Subscription Billing app. Extensions can register more. |
+| `tableNo` | integer | yes | `0` | One of: Customer `18`, Vendor `23`, Item `27`, Sales Header `36`, Sales Line `37`, Purchase Header `38`, Purchase Line `39`, Project `167`, Project Task `1001`, Project Budget Line `1003`, Contact `5050`, Customer Subscription Contract `8052`*, Customer Subscription Contract Line `8062`*. Tables marked * are only supported when the app "AutoFlow for Subscription Billing" is installed. Extensions can register more. |
 | `guiOnly` | boolean | no | `true` | Run only in interactive sessions. |
 | `triggerOnInsert` | boolean | no | `false` | Run while a record is created. |
 | `triggerOnModify` | boolean | no | `true` | Run while a record is changed. |
@@ -51,6 +51,7 @@ Values are locale-invariant text, for example `1234.5` or `2026-10-23`. Referenc
 |---|---|---|---|
 | publish | error (hard stop) | `tableNo` set | Pick the table the flow should watch. |
 | publish | error (hard stop) | `tableNo` supported | Table %1 is not one of the supported tables. |
+| publish | error (hard stop) | `tableNo` is `8052` or `8062` and the app "AutoFlow for Subscription Billing" is not installed (replaces the message above) | Table %1 needs the app "%2". Install it to run flows on this table. |
 | publish | error (hard stop) | insert or modify enabled | Choose when the flow runs: on insert, on modify, or both. |
 | publish | warning | **Confirm dialog** step in the flow (a rule of that step) | The confirm dialog '%1' runs inside the record change that started the flow. Business Central does not open dialogs there, so when a user triggers the flow it fails at this step. It only works when the flow runs in the background, where the answer under 'Without a user interface' applies. |
 | editor | error | no table picked | Please fill in the highlighted fields. |
