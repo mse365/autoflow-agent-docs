@@ -54,6 +54,7 @@ These errors surface in the user's session when the trigger applies the values, 
 | `fieldNo` not in the document table | `Field %1 does not exist in table %2.` |
 | Invalid input format | `"%1" is not a valid input format. Leave it empty for the regional format, enter 9 or xml for the invariant XML notation, or enter a date/time pattern such as yyyyMMdd (tokens yyyy, yy, MM, dd, HH, mm, ss plus separators).` |
 | Value not convertible | `Cannot convert value "%1" to %2 for field "%3".` / `… using input format "%4".` |
+| Text/Code value longer than the field (not an error, no log line) | The value is cropped to the field length |
 | Option/Enum value is neither a value name, a caption nor a number | `Cannot convert value "%1" to %2 for field "%3". Allowed: %4.` |
 | Field validation fails | Business Central's own error |
 
@@ -89,3 +90,4 @@ These errors surface in the user's session when the trigger applies the values, 
 - Use `validate: false` for fields such as *Status*, whose validation would block a direct change.
 - Rules conditions (`valueRules`) are evaluated inside the flow, with the flow's SmartFields; the trigger only receives the resulting literal value names.
 - Before 27.0.41: `valueMode` / `valueRules` did not exist (a hand-written `valueMode` was ignored and the row read as SmartText), and Option names were matched case-sensitively by list position.
+- Before the release after 27.0.42: a Text/Code value longer than the field cancelled the document action with Business Central's overflow error instead of being cropped.

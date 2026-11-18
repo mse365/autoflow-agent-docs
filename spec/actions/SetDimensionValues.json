@@ -56,7 +56,7 @@
           "enum": null,
           "maxLength": null,
           "smart": "text",
-          "description": "Dimension code (e.g. 'DEPARTMENT'): a literal or SmartText with {{…}} placeholders / SmartControls ({#if …#}). Resolved together with the rest of the configuration before the step runs, then trimmed and upper-cased; the result must be an existing dimension code (max 20 characters). A row whose code resolves to empty is skipped (Debug log line)."
+          "description": "Dimension code (e.g. 'DEPARTMENT'), a General Ledger Setup slot 'GLSETUP:SHORTCUTDIMENSION1'..'GLSETUP:SHORTCUTDIMENSION8' (the dimension set up in that slot when the flow runs; 1/2 = Global Dimension 1/2, 3-8 = Shortcut Dimension 3-8), or SmartText with {{…}} placeholders / SmartControls ({#if …#}). Resolved together with the rest of the configuration before the step runs, then trimmed and upper-cased; the result must be an existing dimension code (max 20 characters). A row whose code resolves to empty, or whose slot is not set up, is skipped (Debug log line)."
         },
         {
           "key": "dimensionCodeMode",
@@ -240,6 +240,7 @@
     }
   ],
   "notes": [
+    "Slot rows ('GLSETUP:SHORTCUTDIMENSION1'..'8') read General Ledger Setup when the flow runs, so one flow writes Dim 1-8 in any company. A slot that is not set up is skipped with a Debug log line: 'Shortcut Dimension %1 is not set up in General Ledger Setup – row skipped.'",
     "Global/Shortcut Dimension 1 and 2 code fields on the record are kept in sync with the new set (assigned directly, without validation).",
     "The record is saved with Modify(triggers). Only the referenced record changes: changing a document header's dimensions does not update its lines.",
     "Writing step: a Confirm dialog placed after this step (in document order) gets a publish warning, because Business Central cannot open a dialog once the flow has written to the database."

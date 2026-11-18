@@ -54,6 +54,7 @@ There are no publish-time checks specific to this step. A Confirm dialog after t
 | Invalid `inputFormat`, conversion errors | Same as Insert Record (`Cannot convert value "%1" to %2 for field "%3".` …) |
 | Option/Enum value is neither a value name, a caption nor a number | `Cannot convert value "%1" to %2 for field "%3". Allowed: %4.` |
 | `optional` row with an empty value (not an error; Debug log line) | `Field "%1" skipped: it is optional and its value is empty.` |
+| Text/Code value longer than the field (not an error; Info log line) | `Field "%1" was cropped from %2 to %3 characters.` |
 | Record deleted meanwhile, validation or OnModify errors | Business Central's own error |
 
 ## Example
@@ -91,3 +92,4 @@ There are no publish-time checks specific to this step. A Confirm dialog after t
 - The record is re-read before the change, so values written by earlier steps are not lost.
 - The values rules (unique `lineNo`, `fieldNo` numbers, `inputFormat`, Option names, `valueMode` / `valueRules`, `optional`) are the same as for Insert Record. A Rules row that matches nothing (and has no `otherwise`) and an `optional` row with an empty value both leave the field as it is; `Modify(triggers)` still runs.
 - Before 27.0.41: `valueMode`, `valueRules` and `optional` did not exist. An empty value was always assigned (clearing text fields, failing on typed fields), and Option names were matched case-sensitively by list position.
+- Before the release after 27.0.42: a Text/Code value longer than the field failed the step with Business Central's overflow error instead of being cropped.

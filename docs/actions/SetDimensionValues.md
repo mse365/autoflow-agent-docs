@@ -21,6 +21,7 @@ The step resolves `reference`, checks that its table equals `tableNo` and loads 
 - A row with a value **adds or updates** that dimension.
 - A row with an empty value **removes** that dimension, unless the row is `optional`: then it is skipped and the dimension is **kept** as it is.
 - A row whose `dimensionCode` resolves to empty is skipped.
+- A row with `dimensionCode` `"GLSETUP:SHORTCUTDIMENSION1"` … `"GLSETUP:SHORTCUTDIMENSION8"` sets the dimension that General Ledger Setup has in that slot **when the flow runs** (1/2 = Global Dimension 1/2, 3-8 = Shortcut Dimension 3-8). A slot that is not set up is skipped.
 - Dimensions that are not listed are **kept**.
 
 `dimensionCode` and `value` can both be SmartText. The whole configuration (`{{…}}` placeholders and SmartControls such as `{#if …#}`) is resolved before the step runs, so a code computed at run time works like a literal code.
@@ -34,7 +35,7 @@ The new Dimension Set ID is written to the record. The *Global/Shortcut Dimensio
 | `reference` | string | yes | `""` | One SmartField placeholder resolving to the record, e.g. `"{{trigger_Rec}}"`. The table must have a field named *Dimension Set ID*. |
 | `tableNo` | integer | yes | `0` | Table of the referenced record. The editor derives it from the reference. It must match at runtime. |
 | `triggers` | boolean | no | `true` | `true` = `Modify(true)`, `false` = `Modify(false)`. |
-| `dimensions` | array | no | `[]` | Rows `{ "dimensionCode": "<code or SmartText>", "value": "<value code or SmartText>", "optional"?: bool, "dimensionCodeMode"?: "smarttext" }`. Both texts are resolved and trimmed, the code is upper-cased, and rows with an empty code are skipped. An empty value removes the dimension, or keeps it unchanged when `"optional": true`. If a code is listed twice, the last row wins. The editor also writes `lineNo` (10000, 20000, …) and, for a code entered as SmartText, `"dimensionCodeMode": "smarttext"` – the step ignores both. |
+| `dimensions` | array | no | `[]` | Rows `{ "dimensionCode": "<code, GLSETUP:SHORTCUTDIMENSION<N> or SmartText>", "value": "<value code or SmartText>", "optional"?: bool, "dimensionCodeMode"?: "smarttext" }`. Both texts are resolved and trimmed, the code is upper-cased, and rows with an empty code are skipped. An empty value removes the dimension, or keeps it unchanged when `"optional": true`. If a code is listed twice, the last row wins. The editor also writes `lineNo` (10000, 20000, …) and, for a code entered as SmartText, `"dimensionCodeMode": "smarttext"` – the step ignores both. |
 
 ## Outputs
 
@@ -57,6 +58,7 @@ There are no publish-time checks for this step. A missing `tableNo` or a `refere
 |---|---|
 | `optional` row with an empty value (not an error; Debug log line) | `Dimension "%1" skipped: it is optional and its value is empty.` |
 | Rows whose `dimensionCode` resolved to empty (not an error; one Debug log line) | `%1 dimension row(s) skipped: the dimension code is empty.` |
+| Slot row whose General Ledger Setup slot is not set up (not an error; Debug log line) | `Shortcut Dimension %1 is not set up in General Ledger Setup – row skipped.` |
 | `tableNo` 0/missing | `Table No. is required for a Set Dimension Values step.` |
 | `reference` is not a single `{{…}}` placeholder, or does not resolve | `Reference "%1" cannot be resolved to a record.` |
 | Referenced record no longer exists | Business Central's standard "record does not exist" error |
@@ -87,6 +89,7 @@ There are no publish-time checks for this step. A missing `tableNo` or a `refere
       { "dimensionCode": "PROJECT", "value": "{{GetDimensions_PROJECT}}" },
       { "dimensionCode": "COSTCENTER", "value": "{{trigger_Rec.costCenter}}", "optional": true },
       { "dimensionCode": "{{mapping_dimensionCode}}", "dimensionCodeMode": "smarttext", "value": "{{mapping_dimensionValue}}", "optional": true },
+      { "dimensionCode": "GLSETUP:SHORTCUTDIMENSION3", "value": "{{GetDimensions_ShortcutDim3}}", "optional": true },
       { "dimensionCode": "AREA", "value": "" }
     ]
   },
@@ -102,5 +105,7 @@ There are no publish-time checks for this step. A missing `tableNo` or a `refere
 - An empty `value` **removes** the dimension. Leave a dimension out completely to keep it, or set `"optional": true` when the value comes from data that may be empty.
 - A `dimensionCode` that resolves to an unknown code – including an unresolvable `{{…}}` placeholder, which stays as literal text – fails with `Dimension "%1" does not exist.`
 - Before the release after 27.0.41: `optional` and `dimensionCodeMode` did not exist (an empty value always removed the dimension). SmartText in `dimensionCode` was already resolved at runtime, but the editor offered only the dropdown.
+- To write Dim 1-8 regardless of the company's setup, use the eight `GLSETUP:SHORTCUTDIMENSION<N>` rows (with `"optional": true` when the value may be empty).
+- Before the release after 27.0.42: no slot entries (`GLSETUP:SHORTCUTDIMENSION<N>` was an unknown dimension).
 - On document headers, the step changes only the header's dimension set. Lines are not updated.
 - `value` must be an existing, non-blocked, Standard value code of that dimension after resolution. A dimension name or value name doesn't work.

@@ -52,6 +52,7 @@ There are no publish-time checks specific to this step. A Confirm dialog after t
 | A key field has no row | `All primary key fields must be provided. Missing field "%1".` |
 | Key has more than 16 fields | `Tables with more than 16 primary key fields are not supported by Rename.` |
 | Invalid `inputFormat`, conversion errors | `Cannot convert value "%1" to %2 for field "%3".` (and the variants listed for Insert Record) |
+| Text/Code value longer than the field (not an error; Info log line) | `Field "%1" was cropped from %2 to %3 characters.` |
 | Target key already exists | Business Central's own error |
 
 ## Example
@@ -83,3 +84,4 @@ There are no publish-time checks specific to this step. A Confirm dialog after t
 - You must supply **all** key fields, including the ones that do not change (e.g. *Document Type* and *No.* for a Sales Header).
 - `lineNo` must still be unique across rows.
 - Renames cascade through related tables and can be slow on heavily used records.
+- Before the release after 27.0.42: a Text/Code value longer than the field failed the step with Business Central's overflow error instead of being cropped.
