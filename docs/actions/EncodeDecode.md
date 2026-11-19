@@ -26,7 +26,7 @@ The step resolves the SmartText `input`, converts it with the chosen `format` in
 | `urlPath` | percent-encoding, space as `%20` | `%XX` is decoded, `+` stays |
 | `xml` | `& < > " '` as entities | named XML entities and numeric entities |
 | `html` | like `xml`, `'` as `&#39;` | additionally the named HTML 4 / Latin-1 entities (`&nbsp;`, `&auml;`, `&euro;`, `&ndash;`, …) |
-| `json` | escapes `" \` and control characters (no surrounding quotes) | `\" \\ \/ \b \f \n \r \t \uXXXX` |
+| `json` | escapes `" \` and control characters (no surrounding quotes) | `\" \\ \/ \b \f \n \r \t \uXXXX`; an unescaped `"` is invalid |
 | `quotedPrintable` | RFC 2045, `=XX`, soft line breaks at 76 characters | removes soft line breaks, `=XX` bytes as UTF-8 |
 | `rfc2047` | unchanged if printable ASCII, else `=?utf-8?B?…?=` words | decodes every `B` / `Q` encoded word in the text |
 | `regex` | escapes regex metacharacters | – (not allowed) |

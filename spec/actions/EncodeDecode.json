@@ -136,7 +136,7 @@
       "id": "EncodeDecode.invalid-input",
       "severity": "error",
       "stage": "runtime",
-      "check": "Decode input that is not valid in the format: base64/base64url with invalid characters or length, a JSON escape other than \\\" \\\\ \\/ \\b \\f \\n \\r \\t \\uXXXX, a Quoted-Printable '=' not followed by two hex digits or a line break, a broken RFC 2047 B/Q payload",
+      "check": "Decode input that is not valid in the format: base64/base64url with invalid characters or length, JSON-escaped text with an unescaped \" or an escape other than \\\" \\\\ \\/ \\b \\f \\n \\r \\t \\uXXXX, a Quoted-Printable '=' not followed by two hex digits or a line break, a broken RFC 2047 B/Q payload",
       "message": "The input is not valid %1."
     },
     {
