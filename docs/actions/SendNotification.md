@@ -16,7 +16,7 @@ Shows a message to the user running the flow, either as a page notification with
 
 ## What it does
 
-Resolves `Message` and shows it in the current client session, either as a notification in the bar at the top of the page or as a dialog message. A dialog message only appears once the flow has finished and control returns to the client. A notification can carry up to three actions: start a manual flow, open a card page on a record, or open a filtered list page. Everything an action needs is resolved while the step runs, and the click happens later, outside the flow. The run offers the first three rows that have a label, a type and a target. Without a user interface, a Job Queue run keeps the message for the user following the run in the wait dialog. Any other headless session skips it. The flow always continues with the next step.
+Resolves `Message` and shows it in the current client session, either as a notification in the bar at the top of the page or as a dialog message. A dialog message only appears once the flow has finished and control returns to the client. A notification can carry up to three actions: start a manual flow, open a card page on a record, or open a filtered list page. Everything an action needs is resolved while the step runs, and the click happens later, outside the flow. The run offers the first three rows that have a label, a type and a target. Without a user interface, a Job Queue run keeps the message, with its actions, for the user following the run in the wait dialog. Any other headless session skips it. The flow always continues with the next step.
 
 ## Configuration
 
