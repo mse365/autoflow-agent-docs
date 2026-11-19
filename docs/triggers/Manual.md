@@ -16,7 +16,7 @@ Starts the flow on demand: from the flow itself, from another flow (Start flow s
 
 ## What it does
 
-Every start creates one pending execution and its own Job Queue entry in the caller's transaction (one execution per record when the flow runs on a table). Interactive starts (flow card, Flow Workspace, page action) then commit and follow the run in a wait dialog. Extensions starting the flow choose a mode: wait with dialog, wait silently, fire and forget (nothing committed, runs once the caller commits), or inline (commits, then runs the whole flow in the caller's session with no Job Queue). Queued runs commit after every step. No recurring Job Queue entry is created on publish.
+Every start creates one pending execution and its own Job Queue entry in the caller's transaction (one execution per record when the flow runs on a table). Interactive starts (flow card, Flow Workspace, page action) then commit and follow the run in a wait dialog – or, with `openExecution` Always and a single run, on its execution card, which opens right away. Extensions starting the flow choose a mode: wait with dialog, wait silently, fire and forget (nothing committed, runs once the caller commits), or inline (commits, then runs the whole flow in the caller's session with no Job Queue). Queued runs commit after every step. No recurring Job Queue entry is created on publish.
 
 When `tableNo` is set, starting from the flow card shows a filter page for that table and starts one execution per matching record. With more than one record you are asked to confirm.
 
@@ -25,7 +25,7 @@ When `tableNo` is set, starting from the flow card shows a filter page for that 
 | key | type | required | default | description |
 |---|---|---|---|---|
 | `tableNo` | integer | no | `0` | Table the flow runs on. `0` means standalone, with no record. When set, every start must pass exactly one record of this table. |
-| `openExecution` | integer | no | `0` | When to open the execution card after a run that a user waited for: `0` Never (you are offered to open a failed run), `1` On error, `2` Always. Unknown values act as `0`. |
+| `openExecution` | integer | no | `0` | When to open the execution card for a run that a user waited for: `0` Never (you are offered to open a failed run), `1` On error, `2` Always (a single run opens its card right away instead of the wait dialog, and the user follows the run there; several runs keep the dialog and open as a list once finished). Unknown values act as `0`. |
 | `pages` | array of integer | no | `[]` | Page numbers that offer this flow through their **Start Flow** action. Only supported pages are allowed (see Gotchas). For a record-based flow, each page must show records of `tableNo`. |
 
 None of these keys supports SmartText. They are literal values.
