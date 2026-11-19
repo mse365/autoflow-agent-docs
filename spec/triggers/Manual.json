@@ -30,7 +30,7 @@
       ],
       "maxLength": null,
       "smart": "none",
-      "description": "When the execution card opens after a run a user started and waited for: 0 = Never (a failed run is offered), 1 = On error, 2 = Always. Unknown values are treated as 0. Runs without a waiting user (from other flows, silent, background) never open it."
+      "description": "When the execution card opens after a run a user started and waited for: 0 = Never (a failed run is offered), 1 = On error, 2 = Always (a single run opens its card right away instead of the wait dialog; several runs keep the dialog and open as a list once finished). Unknown values are treated as 0. Runs without a waiting user (from other flows, silent, background) never open it."
     },
     {
       "key": "pages",
@@ -140,7 +140,7 @@
     }
   ],
   "notes": [
-    "Execution is asynchronous: each start creates one pending execution (one per record for a record-based flow) plus its own Job Queue entry, queued in the caller's transaction. Interactive starts (flow card, Flow Workspace, page action) then commit and follow the run in a wait dialog. No recurring Job Queue entry is created on publish.",
+    "Execution is asynchronous: each start creates one pending execution (one per record for a record-based flow) plus its own Job Queue entry, queued in the caller's transaction. Interactive starts (flow card, Flow Workspace, page action) then commit and follow the run in a wait dialog (with openExecution = 2 and a single run: on its execution card, opened right away). No recurring Job Queue entry is created on publish.",
     "Integration callers choose a run mode: WaitDialog, Silent, FireAndForget (default for the external contract; queues in the caller's transaction, nothing is committed) or Inline (commits, then runs the flow to its end in the caller's session without the Job Queue; a step that defers itself, e.g. Sleep, fails the flow in this mode with 'The flow stopped before its end and cannot continue when it runs in this session.').",
     "Asynchronous runs commit after every step (no trigger in AutoFlow currently opts into one-transaction runs).",
     "Starting a record-based flow from the flow card shows a filter page on the table and starts one execution per matching record (confirmation when more than one; message 'No records match the filters, so the flow was not started.' when none).",
