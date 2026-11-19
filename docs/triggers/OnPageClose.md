@@ -22,7 +22,7 @@ Hooks the page's query-close event. In a session with a UI, and when the page sh
 
 | key | type | required | default | description |
 |---|---|---|---|---|
-| `pageNo` | integer | yes | `0` | Same 16 card pages as [When a page is opened](OnPageOpen.md): `41`, `42`, `43`, `44`, `6630`, `507`, `49`, `50`, `51`, `52`, `6640`, `509`, `21`, `26`, `5050`, `30`. |
+| `pageNo` | integer | yes | `0` | Same 16 card pages as [When a page is opened](OnPageOpen.md): `41`, `42`, `43`, `44`, `6630`, `507`, `49`, `50`, `51`, `52`, `6640`, `509`, `21`, `26`, `5050`, `30`. With the on-premises app "AutoFlow for SITE" also: Customer Contract `5002080`, Vendor Contract `5002280`, SITE Work Order `5002155`, Incident `5002211`, Problem `5002329`, Hardware Change `5002120`, Software Change `5002115`, Installed Items `5002018`, Order Demand Sales `5002069`. |
 | `timeoutSec` | integer | no | `10` | Maximum run time. The user is waiting to leave. Checked between steps: when it has passed, the remaining steps are skipped and the page closes. `0` or less means 10. |
 | `filters` | array | no | `[]` | `[{ "fieldNo": int, "filter": "text" }]`. These are filters on the page's record, applied literally, max. 250 characters. A filter that Business Central can't parse means the flow never runs. |
 

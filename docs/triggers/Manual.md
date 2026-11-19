@@ -26,7 +26,7 @@ When `tableNo` is set, starting from the flow card shows a filter page for that 
 |---|---|---|---|---|
 | `tableNo` | integer | no | `0` | Table the flow runs on. `0` means standalone, with no record. When set, every start must pass exactly one record of this table. |
 | `openExecution` | integer | no | `0` | When to open the execution card after a run that a user waited for: `0` Never (you are offered to open a failed run), `1` On error, `2` Always. Unknown values act as `0`. |
-| `pages` | array of integer | no | `[]` | Page numbers that offer this flow through their **Start Flow** action. Only supported pages are allowed (see Gotchas). For a record-based flow, each page must show records of `tableNo`. |
+| `pages` | array of integer | no | `[]` | Page numbers that offer this flow through their **Start Flow** action. Only supported pages are allowed (see Gotchas). For a record-based flow, each page must show records of `tableNo`. With the on-premises app "AutoFlow for SITE" the 19 SITE pages are supported too: `5002080`, `5002083`, `5002280`, `5002283`, `5002155`, `5002211`, `5002329`, `5002120`, `5002115`, `5158820`, `5158821`, `5158822`, `5158823`, `5158824`, `5002189`, `5002018`, `5002019`, `5002069`, `5002071`. |
 
 None of these keys supports SmartText. They are literal values.
 

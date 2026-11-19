@@ -16,7 +16,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "Document table: Sales Header 36 or Purchase Header 38. Extensions can register more postable tables. Known supported values: 36, 38. Extensions can register more, so other values are not rejected by this reference."
+      "description": "Document table: Sales Header 36 or Purchase Header 38. Extensions can register more postable tables. Known supported values: 36, 38; with the on-premises app AutoFlow for SITE also 5002152 (SITE Service Header, fires on close) and 5002030 (Order Demand Header). Extensions can register more, so other values are not rejected by this reference."
     },
     {
       "key": "guiOnly",

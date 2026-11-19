@@ -12,7 +12,7 @@ Runs synchronously in the user's session when a Sales or Purchase document is re
 | Category | Interactive |
 | Terminating | n/a (trigger) |
 | Group / edges | no |
-| Availability | GA. Sales Header and Purchase Header. Extensions can register more tables. |
+| Availability | GA. Sales Header and Purchase Header. Extensions can register more tables ("AutoFlow for SITE": 5002152, 5002030). |
 
 ## What it does
 
@@ -28,7 +28,7 @@ Because the flow runs outside a table event, a **Confirm dialog** can ask the us
 
 | key | type | required | default | description |
 |---|---|---|---|---|
-| `tableNo` | integer | yes | `0` | `36` (Sales Header) or `38` (Purchase Header). |
+| `tableNo` | integer | yes | `0` | `36` (Sales Header) or `38` (Purchase Header). With the on-premises app "AutoFlow for SITE" also SITE Service Header `5002152` and Order Demand Header `5002030` (the release is detected on the write that sets Status to Released, so every release path fires it; a flow error fails that write and the document stays open). |
 | `guiOnly` | boolean | no | `true` | Run only in interactive sessions. |
 | `timeoutSec` | integer | no | `30` | Seconds the flow may run, checked between steps. When it has passed, the remaining steps are skipped and the release goes ahead. `0` or less means no limit. |
 | `filters` | array | no | `[]` | `[{ "fieldNo": int, "filter": "text" }]`. These are filters on the header, applied literally, max. 250 characters. A filter that Business Central can't parse means the flow never runs. |
