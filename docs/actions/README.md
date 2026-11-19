@@ -25,6 +25,7 @@ Machine-readable list: [`spec/index.json`](../../spec/index.json). The step page
 | Add to Collection | `201` |  |  | [AddToCollection](AddToCollection.md) |
 | Create Collection | `200` |  |  | [CreateCollection](CreateCollection.md) |
 | Create Element | `202` |  |  | [ElementCreate](ElementCreate.md) |
+| Encode / Decode | `5564431` |  |  | [EncodeDecode](EncodeDecode.md) |
 | Parser | `5564403` |  |  | [Parser](Parser.md) |
 | Set Element | `203` |  |  | [ElementSet](ElementSet.md) |
 

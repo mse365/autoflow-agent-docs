@@ -1,0 +1,159 @@
+{
+  "kind": "action",
+  "name": "EncodeDecode",
+  "id": 5564431,
+  "caption": "Encode / Decode",
+  "category": "Data",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "direction",
+      "type": "string",
+      "required": false,
+      "default": "decode",
+      "enum": [
+        "encode",
+        "decode"
+      ],
+      "maxLength": null,
+      "smart": "none",
+      "description": "\"encode\" converts plain text into the format, \"decode\" converts the format back into plain text. Case-insensitive. A missing value means decode. Any other value fails the step and gives a publish warning. The editor always writes it."
+    },
+    {
+      "key": "format",
+      "type": "string",
+      "required": false,
+      "default": "base64",
+      "enum": [
+        "base64",
+        "base64url",
+        "urlForm",
+        "urlPath",
+        "xml",
+        "html",
+        "json",
+        "quotedPrintable",
+        "rfc2047",
+        "regex"
+      ],
+      "maxLength": null,
+      "smart": "none",
+      "description": "The coding: base64, base64url (URL alphabet -_ without padding), urlForm (space as +), urlPath (space as %20), xml, html, json (escape/unescape of the content, no surrounding quotes), quotedPrintable (RFC 2045), rfc2047 (MIME header encoded words such as =?utf-8?B?...?=), regex (encode only). Case-insensitive. A missing value means base64. Any other value fails the step and gives a publish warning. The editor always writes it."
+    },
+    {
+      "key": "input",
+      "type": "string",
+      "required": true,
+      "default": null,
+      "enum": null,
+      "maxLength": null,
+      "smart": "text",
+      "description": "The value to encode or decode, usually a SmartField such as \"{{GetAttachments_contentBytes}}\". Resolved before the step runs. An empty resolved value gives an empty result, not an error."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "result",
+      "type": "value",
+      "tableNo": null,
+      "when": "always; the encoded or decoded text ('' for an empty input). Large values (hundreds of KB) are stored completely."
+    }
+  ],
+  "rules": [
+    {
+      "id": "EncodeDecode.direction-enum",
+      "severity": "warning",
+      "stage": "publish",
+      "check": "configuration.direction, when present, must be \"encode\" or \"decode\" (case-insensitive)",
+      "message": "Encode / Decode step '%1': Direction '%2' is unknown. Use encode or decode.",
+      "machine": {
+        "type": "enum",
+        "key": "direction",
+        "values": [
+          "encode",
+          "decode"
+        ]
+      }
+    },
+    {
+      "id": "EncodeDecode.format-enum",
+      "severity": "warning",
+      "stage": "publish",
+      "check": "configuration.format, when present, must be one of the format codes (case-insensitive)",
+      "message": "Encode / Decode step '%1': Format '%2' is unknown. Use base64, base64url, urlForm, urlPath, xml, html, json, quotedPrintable, rfc2047 or regex.",
+      "machine": {
+        "type": "enum",
+        "key": "format",
+        "values": [
+          "base64",
+          "base64url",
+          "urlForm",
+          "urlPath",
+          "xml",
+          "html",
+          "json",
+          "quotedPrintable",
+          "rfc2047",
+          "regex"
+        ]
+      }
+    },
+    {
+      "id": "EncodeDecode.regex-decode",
+      "severity": "warning",
+      "stage": "publish",
+      "check": "format \"regex\" must not be combined with direction \"decode\"",
+      "message": "Encode / Decode step '%1': RegEx escape can only encode. Use the direction Encode."
+    },
+    {
+      "id": "EncodeDecode.input-required",
+      "severity": "warning",
+      "stage": "publish",
+      "check": "configuration.input must be present and non-empty",
+      "message": "Encode / Decode step '%1': Enter the input to encode or decode.",
+      "machine": {
+        "type": "required",
+        "key": "input"
+      }
+    },
+    {
+      "id": "EncodeDecode.editor-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "direction, format and input are required fields in the configuration dialog",
+      "message": "Please fill in the highlighted fields."
+    },
+    {
+      "id": "EncodeDecode.unknown-code-runtime",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "An unknown direction or format code, or regex with decode, fails the step before anything is converted",
+      "message": "Direction '%1' is unknown. Use encode or decode. | Format '%1' is unknown. Use base64, base64url, urlForm, urlPath, xml, html, json, quotedPrintable, rfc2047 or regex. | RegEx escape can only encode. Use the direction Encode."
+    },
+    {
+      "id": "EncodeDecode.invalid-input",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "Decode input that is not valid in the format: base64/base64url with invalid characters or length, JSON-escaped text with an unescaped \" or an escape other than \\\" \\\\ \\/ \\b \\f \\n \\r \\t \\uXXXX, a Quoted-Printable '=' not followed by two hex digits or a line break, a broken RFC 2047 B/Q payload",
+      "message": "The input is not valid %1."
+    },
+    {
+      "id": "EncodeDecode.rfc2047-charset",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "An RFC 2047 encoded word names a character set other than UTF-8, ISO-8859-1, Windows-1252 or US-ASCII",
+      "message": "The character set %1 is not supported in RFC 2047 encoded words. Supported are UTF-8, ISO-8859-1, Windows-1252 and US-ASCII."
+    }
+  ],
+  "notes": [
+    "Text is UTF-8 in both directions. Base64 decode returns text: decoding binary content such as a PDF to text loses data - keep binary content as base64 and pass the base64 to steps that accept it.",
+    "Base64 and Base64URL decode ignore spaces, tabs and line breaks (MIME wraps base64 at 76 characters).",
+    "Quoted-Printable decode always interprets the bytes as UTF-8; ISO-8859-1 content shows wrong umlauts. Encode writes =XX for every non-printable byte and '=', soft line breaks keep lines at 76 characters, line breaks become CRLF.",
+    "RFC 2047 decode replaces every encoded word in the text and keeps plain text; whitespace between two adjacent encoded words is removed. Encode returns pure printable ASCII unchanged, otherwise =?utf-8?B?...?= words of at most 75 characters joined by a space.",
+    "XML and HTML encode write the five entities & < > \" ' (HTML writes ' as &#39;). Decode resolves numeric entities; HTML decode also the named HTML 4 / Latin-1 entities (&nbsp;, &auml;, &euro;, &ndash;, ...). Unknown entities and a lone & stay unchanged.",
+    "The Debug execution log contains a summary line, the input and the result.",
+    "Typical use: Microsoft Graph returns an S/MIME signed mail as one attachment smime.p7m (contentType multipart/signed) whose contentBytes hold the whole MIME message. Decode it with base64, cut the parts with a Parser (RegEx) step, decode file names with rfc2047; the PDF part body is already base64."
+  ]
+}
