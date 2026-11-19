@@ -145,6 +145,15 @@
       "availability": "ga"
     },
     {
+      "name": "EncodeDecode",
+      "id": 5564431,
+      "caption": "Encode / Decode",
+      "category": "Data",
+      "terminating": false,
+      "group": false,
+      "availability": "ga"
+    },
+    {
       "name": "Error",
       "id": 102,
       "caption": "Error",

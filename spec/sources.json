@@ -16,6 +16,7 @@
     "DeleteRecord": "AutoFlow",
     "ElementCreate": "AutoFlow",
     "ElementSet": "AutoFlow",
+    "EncodeDecode": "AutoFlow",
     "Error": "AutoFlow",
     "FindRecords": "AutoFlow",
     "ForEachLoop": "AutoFlow",
