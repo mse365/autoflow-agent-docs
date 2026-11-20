@@ -16,7 +16,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "Table to watch. Must be a supported table: Customer 18, Vendor 23, Item 27, Sales Header 36, Sales Line 37, Purchase Header 38, Purchase Line 39, Project 167, Project Task 1001, Project Budget Line (Job Planning Line) 1003, Contact 5050; Customer Subscription Contract 8052 and Customer Subscription Contract Line 8062 only where the app 'AutoFlow for Subscription Billing' is installed (BC26+). Extensions can register more tables. Known supported values: 18, 23, 27, 36, 37, 38, 39, 167, 1001, 1003, 5050, 8052, 8062; with the on-premises app AutoFlow for SITE also 5002080, 5002081, 5002280, 5002281, 5002152, 5002153, 5002009, 5002030, 5002031. Extensions can register more, so other values are not rejected by this reference."
+      "description": "Table to watch. Must be a supported table: Customer 18, Vendor 23, Item 27, Sales Header 36, Sales Line 37, Purchase Header 38, Purchase Line 39, Project 167, Project Task 1001, Project Budget Line (Job Planning Line) 1003, Contact 5050; Customer Subscription Contract 8052 and Customer Subscription Contract Line 8062 only where the app 'AutoFlow for Subscription Billing' is installed (BC26+). Extensions can register more tables. Known supported values: 18, 23, 27, 36, 37, 38, 39, 167, 1001, 1003, 5050, 8052, 8062; with the on-premises app AutoFlow for SITE also 5002080, 5002081, 5002280, 5002281, 5002152, 5002153, 5002009, 5002030, 5002031, 5002172 (Service Document Status; SITE writes a status set as a modify, never as an insert). Extensions can register more, so other values are not rejected by this reference."
     },
     {
       "key": "guiOnly",
