@@ -78,7 +78,7 @@ An empty resolved input gives an empty `result`. Invalid input in decode directi
   "action": 5564431,
   "description": "Decode Base64",
   "slug": "DecodeMime",
-  "iconUrl": "https://statics.autoflow.mse365.de/icons/transform.svg",
+  "iconUrl": "https://statics.autoflow.mse365.de/icons/binary.svg",
   "terminating": false,
   "configuration": {
     "direction": "decode",
