@@ -123,7 +123,7 @@
     "Synchronous and atomic: runs inline in the user's transaction, without commits. An error prevents the reopen. A Set document field values step adjusts the header; with 'Skip standard processing' the header is saved with the flow's values and Business Central's own reopen (Status := Open) is skipped.",
     "timeoutSec is checked between steps. When it has passed, the remaining steps are skipped and the reopen continues without a Set document field values answer.",
     "Pending Approval: Business Central normally refuses to reopen such a document. When a reopen flow ran for it, that block is lifted - unless Business Central's own approval workflow still has open approval entries for the document.",
-    "Business Central version dependency: for Purchase documents on BC24-BC27 the flow runs one event later (after Business Central's Pending Approval check), so on those versions a Pending Approval purchase document cannot be reopened through the flow. Sales documents are not affected.",
+    "Business Central version dependency: for Purchase documents on BC24-BC28 the flow runs one event later (after Business Central's Pending Approval check), so on those versions a Pending Approval purchase document cannot be reopened through the flow. Sales documents are not affected.",
     "A Confirm dialog step can ask the user; the reopen waits for the answer.",
     "Re-entrancy guard: a reopen that the running flow itself performs does not start the flow again.",
     "No recurring Job Queue entry; the registration is keyed by tableNo.",

@@ -12,7 +12,7 @@ Runs synchronously in the user's session when a Sales or Purchase document is re
 | Category | Interactive |
 | Terminating | n/a (trigger) |
 | Group / edges | no |
-| Availability | GA. Sales Header and Purchase Header. For Purchase documents on BC24–BC27, see Gotchas. |
+| Availability | GA. Sales Header and Purchase Header. For Purchase documents on BC24–BC28, see Gotchas. |
 
 ## What it does
 
@@ -83,6 +83,6 @@ Reference it as `{{trigger_Rec}}`.
 
 ## Gotchas
 
-- **BC24–BC27, Purchase documents:** the flow runs one step later, after Business Central's Pending Approval check. On those versions a Pending Approval purchase document cannot be reopened through the flow. The flow still prevents, adjusts or handles every other reopen.
+- **BC24–BC28, Purchase documents:** the flow runs one step later, after Business Central's Pending Approval check. On those versions a Pending Approval purchase document cannot be reopened through the flow. The flow still prevents, adjusts or handles every other reopen.
 - A typical use is a custom approval: on reopen of a Pending Approval document, notify or reject the approval request, then let the reopen proceed.
 - **Set document field values** is offered here.
