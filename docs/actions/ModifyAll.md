@@ -97,7 +97,7 @@ Identical to Modify Record: `lineNo` (unique, application order), `fieldNo` (non
   "type": "action",
   "action": 5564433,
   "description": "Modify Customer Records",
-  "slug": "ModifyCustomerRecords",
+  "slug": "ModifyCustomers",
   "iconUrl": "https://statics.autoflow.mse365.de/icons/database-edit.svg",
   "terminating": false,
   "configuration": {
