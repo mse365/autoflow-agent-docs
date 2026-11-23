@@ -437,7 +437,7 @@ Examples:
 
 ### 4.6 SmartFilter (conditions)
 
-A SmartFilter is a **boolean condition string**. It is used by Decision, While Loop, the `{#if#}` tag, and Find Records' `smartFilter`. It is **not** converted into a BC table filter. After `{{…}}`/`[[…]]` substitution it is evaluated in memory. (Find Records also has a separate `filters` array, which uses native BC filter syntax per field.)
+A SmartFilter is a **boolean condition string**. It is used by Decision, While Loop, the `{#if#}` tag and the `rules` conditions of Option/Enum values. It is **not** converted into a BC table filter. After `{{…}}`/`[[…]]` substitution it is evaluated in memory. (Find Records filters with its `filters` array instead, which uses native BC filter syntax per field.)
 
 ```
 filter      := comparison | "!(" filter ")" | "(" filter ")" comb "(" filter ")" | "true" | "false"

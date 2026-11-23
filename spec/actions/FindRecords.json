@@ -71,16 +71,6 @@
       ]
     },
     {
-      "key": "smartFilter",
-      "type": "string",
-      "required": false,
-      "default": "",
-      "enum": null,
-      "maxLength": null,
-      "smart": "filter",
-      "description": "Optional SmartFilter expression (a plain string, NOT JSON) evaluated per found record; only records for which it is true are kept. Inside it, {{FieldName}} refers to the current record's field by its AL field NAME (e.g. {{Balance}}, {{Country/Region Code}}); other {{slug_output}} SmartFields come from the flow context. Grammar: 'left op right' with op one of = != > < >= <= ~ (contains) ^= (starts with) $= (ends with); combine with & / |, wrap EVERY operand of & / | in parentheses, e.g. ({{Blocked}} = ' ') & ({{Balance}} > 1000); negate with !( ... ); '' denotes empty. Comparisons are numeric when both sides parse as numbers, otherwise case-sensitive text."
-    },
-    {
       "key": "limit",
       "type": "integer",
       "required": false,
@@ -175,7 +165,7 @@
       "id": "FindRecords.error-on-empty",
       "severity": "error",
       "stage": "runtime",
-      "check": "With errorOnEmpty = true, the step fails when no record passes the field filters and the SmartFilter.",
+      "check": "With errorOnEmpty = true, the step fails when no record passes the field filters.",
       "message": "No records found in table %1 matching the specified filters."
     },
     {
@@ -262,15 +252,11 @@
   ],
   "notes": [
     "Sorting is stored as two keys: keyFields (string) + ascending (boolean). The editor's 'sortKey' / 'sortOrder' values are canvas-only and are NOT stored in the configuration.",
-    "filters (BC filter syntax, applied by the database) and smartFilter (AutoFlow expression, evaluated per record in AL) are different languages. Prefer filters for performance; the SmartFilter runs after reading and the limit counts only records that pass it.",
-    "In smartFilter, record fields are exposed under their AL field Name, formatted with the session's regional settings (decimals/dates). Blob, Media, MediaSet, Guid, RecordId and TableFilter fields and FlowFields (not calculated) are not available.",
-    "The SmartFilter evaluator is position-based: without parentheses, '=' is matched before '&' / '|', so 'A = 1 & B = 2' does not work - write '(A = 1) & (B = 2)'. Literal &, |, ( or ) inside operands break parsing.",
-    "In smartFilter a '.' inside {{...}} is a path separator and ';' starts a format suffix, so record fields whose AL name contains a dot (e.g. 'No.', 'External Document No.') cannot be referenced as {{FieldName}}; filter on them with filters[] instead.",
-    "Field filter SmartFields resolve against the flow context only; to filter by a value of the record being found, use smartFilter.",
+    "Field filter SmartFields resolve against the flow context only; they cannot refer to fields of the records being found.",
+    "Before 27.2.1: an optional smartFilter (SmartFilter expression evaluated per found record) kept only records where it was true. From 27.2.1 it is no longer supported: a smartFilter key in an existing configuration is ignored, and the editor removes it when the step is saved. Do not write it.",
     "Option/Enum fields: prefer filterMode 'fixed' with the value NAME ('Order', 'Pending Approval') - it is language-independent and filters on the ordinal. A free expression ('filter' without filterMode) is needed for ranges or alternatives ('Open|Released', '<>Open') and is parsed by Business Central, so captions there depend on the session language. A rules row where no rule matches and 'otherwise' is empty does not filter the field at all.",
     "Before 27.0.41: filterMode / filterRules did not exist; every row was a free filter expression (a hand-written filterMode was ignored) and the editor saved rows as {fieldNo, filter} only.",
     "'results' is a reference ARRAY: use it as the source of a For Each loop, or {{slug_results}} / {{slug_results[0]}} for the first record. When nothing matched, no 'results' value exists and 'count' is '0'.",
-    "The step reads only; it does not lock records.",
-    "Publish-time dangling-reference check: any {{...}} containing an underscore is treated as {{slug_output}}. A record field name with an underscore used in smartFilter (e.g. {{My_Field}}) therefore triggers a publish warning about an unknown slug."
+    "The step reads only; it does not lock records."
   ]
 }
