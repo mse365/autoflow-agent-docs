@@ -13,6 +13,7 @@
     "CreateCollection": "AutoFlow",
     "CreateZipArchive": "AutoFlow",
     "Decision": "AutoFlow",
+    "DeleteAll": "AutoFlow",
     "DeleteRecord": "AutoFlow",
     "ElementCreate": "AutoFlow",
     "ElementSet": "AutoFlow",
