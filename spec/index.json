@@ -118,6 +118,15 @@
       "availability": "ga"
     },
     {
+      "name": "DeleteAll",
+      "id": 5564432,
+      "caption": "Delete All",
+      "category": "Records",
+      "terminating": false,
+      "group": false,
+      "availability": "ga"
+    },
+    {
       "name": "DeleteRecord",
       "id": 5564407,
       "caption": "Delete Record",
