@@ -3,7 +3,7 @@
 
 [← All actions](README.md)
 
-Deletes every record of a table that matches field filters and an optional SmartFilter, in one step.
+Deletes every record of a table that matches field filters, in one step.
 
 | | |
 |---|---|
@@ -16,14 +16,15 @@ Deletes every record of a table that matches field filters and an optional Smart
 
 ## What it does
 
-The step opens table `tableNo` and sets one database filter per `filters` row, exactly as [Find Records](FindRecords.md) does. Without a `smartFilter` it then counts the matching records and deletes them with one set-based `DeleteAll(triggers)`. With a `smartFilter`, it reads the filtered records, evaluates the SmartFilter for each one, and deletes the records where it is true one by one with `Delete(triggers)`. The number of deleted records is emitted as `count`. With `errorOnEmpty`, deleting nothing fails the step. The delete runs in the flow's database transaction, like [Delete Record](DeleteRecord.md).
+The step opens table `tableNo` and sets one database filter per `filters` row, exactly as [Find Records](FindRecords.md) does. It then counts the matching records and deletes them with one set-based `DeleteAll(triggers)`. The number of deleted records is emitted as `count`. With `errorOnEmpty`, deleting nothing fails the step. The delete runs in the flow's database transaction, like [Delete Record](DeleteRecord.md).
 
 Use it instead of Find Records + For Each + [Delete Record](DeleteRecord.md) whenever the records can be described by filters: that combination runs one step per record, this is one step for all of them.
 
 Because a filter that silently filters nothing would delete far more than intended, the step is stricter than Find Records:
 
-- A step with **no filter at all** (no `filters` row with a `fieldNo`, no `smartFilter`) fails, unless `allowNoFilter` is `true`.
+- A step with **no filter at all** (no `filters` row with a `fieldNo`) fails, unless `allowNoFilter` is `true`.
 - **Every `filters` row must set a filter when the step runs.** A row whose filter is empty at that point fails the step: an empty `filter`, SmartFields that resolve to nothing, a `fixed` row without a value, a `rules` row where no rule matches and `otherwise` is empty. `allowNoFilter` does not change this. To match empty values, write `''`.
+- There is **no SmartFilter** (Find Records has none either). A non-blank `smartFilter` key fails the step instead of being ignored.
 
 ## Configuration
 
@@ -31,9 +32,8 @@ Because a filter that silently filters nothing would delete far more than intend
 |---|---|---|---|---|
 | `tableNo` | integer | yes | `0` | Table whose records are deleted, as a JSON number. |
 | `filters` | array | no | `[]` | Database filters: `[{ "fieldNo": <int>, "filter": "<BC filter>", "filterMode"?: "fixed" \| "rules", "filterRules"?: {…} }]`. See below. |
-| `smartFilter` | string | no | `""` | SmartFilter expression evaluated per record that passes `filters`. It is a **plain string, not JSON**. Same grammar as in [Find Records](FindRecords.md#smartfilter-grammar). A blank string counts as none. |
 | `triggers` | boolean | no | `true` | `true` = `DeleteAll(true)` (OnDelete runs for every record, related records are cleaned up by the table code). `false` = `DeleteAll(false)`. |
-| `allowNoFilter` | boolean | no | `false` | *Delete without filters.* `true` lets a step without any filter run, and it then deletes **every record of the table**. |
+| `allowNoFilter` | boolean | no | `false` | *Delete without filters.* `true` lets a step without any `filters` row run, and it then deletes **every record of the table**. |
 | `errorOnEmpty` | boolean | no | `false` | `true` = fail with an error when no record was deleted. |
 
 There is no `limit` and no sort key: every matching record is deleted.
@@ -60,8 +60,9 @@ The editor saves each row as `{fieldNo, filter, filterMode?, filterRules?}`, one
 | stage | severity | rule | message |
 |---|---|---|---|
 | editor | error | `tableNo` missing or `0` (the Table field is required) | `Please fill in the highlighted fields.` |
-| publish | warning | No `filters` row with a `fieldNo` and no `smartFilter`, `allowNoFilter` not `true` | `Delete All step '%1': No filter is set, so the step will fail. Add a field filter or a Smart Filter, or turn on Delete without filters.` |
-| publish | warning | No `filters` row with a `fieldNo` and no `smartFilter`, `allowNoFilter` = `true` | `Delete All step '%1': No filter is set and Delete without filters is on: the step deletes every record of the table.` |
+| publish | warning | No `filters` row with a `fieldNo`, `allowNoFilter` not `true` | `Delete All step '%1': No filter is set, so the step will fail. Add a field filter, or turn on Delete without filters.` |
+| publish | warning | No `filters` row with a `fieldNo`, `allowNoFilter` = `true` | `Delete All step '%1': No filter is set and Delete without filters is on: the step deletes every record of the table.` |
+| publish | warning | A non-blank `smartFilter` key | `Delete All step '%1': The step does not support a Smart Filter and will fail. Remove smartFilter and use field filters.` |
 
 `%1` is the step id. A Confirm dialog after this step gets a publish warning, because this step writes to the database.
 
@@ -70,7 +71,8 @@ The editor saves each row as `{fieldNo, filter, filterMode?, filterRules?}`, one
 | condition | message |
 |---|---|
 | `tableNo` is 0 | `No table is selected.` |
-| No filter at all and `allowNoFilter` not `true` (%1 = table caption) | `The step has no filter and would delete every record of table %1. Add a field filter or a Smart Filter, or turn on Delete without filters.` |
+| A non-blank `smartFilter` key | `The Delete All step does not support a Smart Filter. Remove smartFilter from the step configuration and use field filters.` |
+| No filter at all and `allowNoFilter` not `true` (%1 = table caption) | `The step has no filter and would delete every record of table %1. Add a field filter, or turn on Delete without filters.` |
 | A `filters` row sets no filter when the step runs (%1 = field caption) | `The filter on field "%1" is empty when the step runs, so it would not restrict the records. Check the SmartFields it uses; to match empty values, use ''.` |
 | `errorOnEmpty` = true and nothing was deleted (%1 = table number) | `No records found in table %1 matching the specified filters.` |
 | `filterMode` `fixed` / `rules` names a value the field does not have, or the field is not Option/Enum | `'%1' is not a value of %2. Allowed: %3.` |
@@ -96,7 +98,6 @@ The editor saves each row as `{fieldNo, filter, filterMode?, filterRules?}`, one
       { "fieldNo": 3, "filter": "{{trigger_Rec.no}}" },
       { "fieldNo": 15, "filter": "0" }
     ],
-    "smartFilter": "",
     "triggers": true,
     "allowNoFilter": false,
     "errorOnEmpty": false
@@ -111,10 +112,9 @@ The editor saves each row as `{fieldNo, filter, filterMode?, filterRules?}`, one
 
 ## Gotchas
 
-- There is no undo and no limit. Check the filters with a [Find Records](FindRecords.md) step first when in doubt: the same `tableNo`, `filters` and `smartFilter` select the same records (apart from Find Records' `limit`).
+- There is no undo and no limit. Check the filters with a [Find Records](FindRecords.md) step first when in doubt: the same `tableNo` and `filters` select the same records (apart from Find Records' `limit`).
 - A SmartField in a `filter` is inserted as filter text. A value that contains filter operators (`|`, `..`, `*`, `&`, `<`, `>`) widens or changes the filter; only use values you control.
-- Prefer `filters` over `smartFilter`: field filters are applied by the database and deleted in one statement, a SmartFilter reads and deletes record by record.
+- Field-filter SmartFields resolve against the flow context only. A condition on the records themselves that field filters cannot express (comparing two fields of a record, for example) needs Find Records, a For Each loop with a Decision, and [Delete Record](DeleteRecord.md).
 - `count` is the number of records this step deleted. Records that OnDelete triggers remove elsewhere (lines of a deleted header, for example) are not counted.
 - For an Option/Enum field, prefer `filterMode: "fixed"` with the value **name**: it is language-independent, whereas a free expression such as `"filter": "Offen"` depends on the caption language of the session that runs the flow.
-- The SmartFilter limitations of Find Records apply: field names containing a dot cannot be used as `{{FieldName}}`, FlowFields are not calculated, wrap every operand of `&` / `|` in parentheses.
 - Do not reference the deleted records in later steps.

@@ -75,16 +75,6 @@
       ]
     },
     {
-      "key": "smartFilter",
-      "type": "string",
-      "required": false,
-      "default": "",
-      "enum": null,
-      "maxLength": null,
-      "smart": "filter",
-      "description": "Optional SmartFilter expression (a plain string, NOT JSON) evaluated for each record that passes the field filters; only records for which it is true are deleted. Same grammar as in Find Records: {{FieldName}} refers to the current record's field by its AL field NAME (e.g. {{Balance}}, {{Country/Region Code}}); other {{slug_output}} SmartFields come from the flow context. 'left op right' with op one of = != > < >= <= ~ (contains) ^= (starts with) $= (ends with); combine with & / |, wrap EVERY operand of & / | in parentheses; negate with !( ... ); '' denotes empty. A blank string counts as no SmartFilter. With a SmartFilter the records are deleted one by one instead of with one set-based DeleteAll."
-    },
-    {
       "key": "triggers",
       "type": "boolean",
       "required": false,
@@ -102,7 +92,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "Delete without filters. A step with no filters row (with a fieldNo) and no smartFilter would delete every record of the table; it fails at run time unless this is true. It does not relax the rule that every filters row must set a filter. Non-boolean values fall back to false."
+      "description": "Delete without filters. A step with no filters row (with a fieldNo) would delete every record of the table; it fails at run time unless this is true. It does not relax the rule that every filters row must set a filter. Non-boolean values fall back to false."
     },
     {
       "key": "errorOnEmpty",
@@ -163,22 +153,36 @@
       "id": "DeleteAll.no-filter-fails",
       "severity": "warning",
       "stage": "publish",
-      "check": "The step has no filters row with a non-zero fieldNo and no (non-blank) smartFilter, and allowNoFilter is false or absent: it will fail at run time. %1 = step id.",
-      "message": "Delete All step '%1': No filter is set, so the step will fail. Add a field filter or a Smart Filter, or turn on Delete without filters."
+      "check": "The step has no filters row with a non-zero fieldNo, and allowNoFilter is false or absent: it will fail at run time. %1 = step id.",
+      "message": "Delete All step '%1': No filter is set, so the step will fail. Add a field filter, or turn on Delete without filters."
     },
     {
       "id": "DeleteAll.no-filter-deletes-all",
       "severity": "warning",
       "stage": "publish",
-      "check": "The step has no filters row with a non-zero fieldNo and no (non-blank) smartFilter, and allowNoFilter is true: it empties the table. %1 = step id.",
+      "check": "The step has no filters row with a non-zero fieldNo, and allowNoFilter is true: it empties the table. %1 = step id.",
       "message": "Delete All step '%1': No filter is set and Delete without filters is on: the step deletes every record of the table."
+    },
+    {
+      "id": "DeleteAll.smartFilter-publish",
+      "severity": "warning",
+      "stage": "publish",
+      "check": "configuration.smartFilter is present and not blank. The step has no Smart Filter and will fail at run time. %1 = step id.",
+      "message": "Delete All step '%1': The step does not support a Smart Filter and will fail. Remove smartFilter and use field filters."
     },
     {
       "id": "DeleteAll.no-filter",
       "severity": "error",
       "stage": "runtime",
-      "check": "Without any filters row (non-zero fieldNo) and without a smartFilter the step fails unless allowNoFilter is true. %1 = table caption.",
-      "message": "The step has no filter and would delete every record of table %1. Add a field filter or a Smart Filter, or turn on Delete without filters."
+      "check": "Without any filters row (non-zero fieldNo) the step fails unless allowNoFilter is true. %1 = table caption.",
+      "message": "The step has no filter and would delete every record of table %1. Add a field filter, or turn on Delete without filters."
+    },
+    {
+      "id": "DeleteAll.smartFilter-unsupported",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "configuration.smartFilter must be absent or blank. A non-blank value fails the step instead of being ignored, because ignoring it would delete more records than the condition was meant to keep.",
+      "message": "The Delete All step does not support a Smart Filter. Remove smartFilter from the step configuration and use field filters."
     },
     {
       "id": "DeleteAll.filter-effective",
@@ -265,7 +269,8 @@
     }
   ],
   "notes": [
-    "Use this step instead of Find Records + For Each + Delete Record whenever the records to delete can be described by filters: it is one step and, without a smartFilter, one set-based DeleteAll.",
+    "Use this step instead of Find Records + For Each + Delete Record whenever the records to delete can be described by field filters: it is one step and one set-based DeleteAll.",
+    "Field filters only, as in Find Records: there is no per-record SmartFilter. Do not write a smartFilter key - a non-blank one fails the step.",
     "No limit and no sort key: every record that matches is deleted. There is no undo.",
     "A SmartField inside a filter is inserted as filter text: a value containing BC filter operators (|, .., *, &, <, >) widens or changes the filter. Only use values you control.",
     "Writing step: a Confirm dialog placed after this step (in document order) produces a publish warning, because Business Central cannot open a dialog once the flow has written to the database."
