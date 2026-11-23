@@ -329,7 +329,7 @@ Rules are grouped by stage (see [validation.md](validation.md)): **publish** rul
 | [Error](actions/Error.md) | error | configuration must contain the key 'Error' | No error message configured. |  |
 | [Find Records](actions/FindRecords.md) | error | configuration.tableNo must be an existing table number; 0 or an unknown number fails with Business Central's error when the table is opened. |  | yes |
 | [Find Records](actions/FindRecords.md) | warning | Write tableNo as a JSON number. A value that cannot be read as an integer counts as 0, and opening table 0 fails. |  | yes |
-| [Find Records](actions/FindRecords.md) | error | With errorOnEmpty = true, the step fails when no record passes the field filters and the SmartFilter. | No records found in table %1 matching the specified filters. |  |
+| [Find Records](actions/FindRecords.md) | error | With errorOnEmpty = true, the step fails when no record passes the field filters. | No records found in table %1 matching the specified filters. |  |
 | [Find Records](actions/FindRecords.md) | error | Each resolved filters[].filter must be a valid BC filter expression for the field type, and filters[].fieldNo must exist in the table. |  |  |
 | [Find Records](actions/FindRecords.md) | error | A filters[] row with filterMode 'fixed' or 'rules' that yields a value: the value must be a name, caption (case-insensitive fallback) or ordinal number of the field's values, and the field must be an Option/Enum field (on any other field the same error is raised with an empty Allowed list). | '%1' is not a value of %2. Allowed: %3. |  |
 | [Find Records](actions/FindRecords.md) | warning | limit should be a JSON integer; other types fall back to 100. |  | yes |

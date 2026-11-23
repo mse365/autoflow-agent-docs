@@ -3,7 +3,7 @@
 
 [← All actions](README.md)
 
-Searches a table using field filters, an optional SmartFilter and a sort key, and returns the matching records as a reference array.
+Searches a table using field filters and a sort key, and returns the matching records as a reference array.
 
 | | |
 |---|---|
@@ -16,7 +16,7 @@ Searches a table using field filters, an optional SmartFilter and a sort key, an
 
 ## What it does
 
-The step opens table `tableNo`, applies the sort key (`keyFields` and `ascending`) and sets one database filter per `filters` row. It then reads the records in order. If `smartFilter` is set, it is evaluated for each record and only records where it is true are kept. Reading stops after `limit` kept records. Each kept record is emitted as `results[0]`, `results[1]`, … plus the alias `results` (= first record), and the number of kept records is emitted as `count`. With `errorOnEmpty`, an empty result fails the step. The step only reads and does not lock anything.
+The step opens table `tableNo`, applies the sort key (`keyFields` and `ascending`) and sets one database filter per `filters` row. It then reads the matching records in order and stops after `limit` records. Each record is emitted as `results[0]`, `results[1]`, … plus the alias `results` (= first record), and the number of records is emitted as `count`. With `errorOnEmpty`, an empty result fails the step. The step only reads and does not lock anything.
 
 ## Configuration
 
@@ -24,7 +24,6 @@ The step opens table `tableNo`, applies the sort key (`keyFields` and `ascending
 |---|---|---|---|---|
 | `tableNo` | integer | yes | `0` | Table to search, as a JSON number. |
 | `filters` | array | no | `[]` | Database filters: `[{ "fieldNo": <int>, "filter": "<BC filter>", "filterMode"?: "fixed" \| "rules", "filterRules"?: {…} }]`. See below. |
-| `smartFilter` | string | no | `""` | SmartFilter expression evaluated per record. It is a **plain string, not JSON**. See below. |
 | `limit` | integer | no | `100` | Maximum number of records returned. Missing, `0` or negative means 100. |
 | `errorOnEmpty` | boolean | no | `false` | `true` = fail with an error when nothing matches. |
 | `keyFields` | string | no | `""` | Sort key, given as the comma-joined **field names** of an active table key, exactly as declared and without spaces after commas, e.g. `"Document Type,Sell-to Customer No."`. Empty = primary key. Unknown values silently fall back to the primary key. |
@@ -47,14 +46,6 @@ In `fixed` and `rules` mode the field is filtered on **exactly one value** (`Set
 
 Ranges, alternatives and wildcards (`Open|Released`, `<>Open`) need the free expression: omit `filterMode` and write the captions or ordinals Business Central's filter syntax expects, e.g. `"filter": "Open|Released"`.
 
-### `smartFilter` grammar
-
-- Comparison: `left op right`, where `op` is one of `=`, `!=`, `>`, `<`, `>=`, `<=`, `~` (contains), `^=` (starts with), `$=` (ends with). Both sides are compared as numbers when both parse as numbers, otherwise as case-sensitive text. `''` stands for an empty string.
-- Combination: `(A) & (B)`, `(A) | (B)`. **Wrap each side in parentheses.** For three or more conditions, nest them pairwise: `((A) & (B)) & (C)`.
-- Negation: `!(A)`.
-- `{{FieldName}}` is the current record's field, by its **AL field name** (e.g. `{{Balance}}`, `{{Country/Region Code}}`), formatted with regional settings. Other `{{slug_output}}` SmartFields come from the flow context.
-- Not available: Blob, Media, MediaSet, Guid, RecordId and TableFilter fields, and FlowFields. FlowFields are not calculated, so filter on them with `filters` instead.
-
 ## Outputs
 
 | name | type | tableNo | notes |
@@ -69,7 +60,7 @@ Ranges, alternatives and wildcards (`Open|Released`, `<>Open`) need the free exp
 | editor | error | `tableNo` missing or `0` (the Table field is required) | `Please fill in the highlighted fields.` |
 | editor (status line) | warning | A `filters` row in Rules mode has a rule with a blank condition or an empty value. Advisory, does not block saving; at runtime such a rule never matches. | `Filters, row 2: Rule 1 needs a condition and a value.` |
 
-There are no publish-time checks specific to this step. As for every step, `{{x_y}}` placeholders whose part before the first underscore is not a known slug produce a publish warning, and that includes SmartFilter field names that contain `_`.
+There are no publish-time checks specific to this step. As for every step, `{{x_y}}` placeholders whose part before the first underscore is not a known slug produce a publish warning.
 
 ## Runtime errors
 
@@ -98,7 +89,6 @@ There are no publish-time checks specific to this step. As for every step, `{{x_
       { "fieldNo": 2, "filter": "{{trigger_Rec.no}}" },
       { "fieldNo": 120, "filter": "Open", "filterMode": "fixed" }
     ],
-    "smartFilter": "({{Your Reference}} != '') & ({{Location Code}} ^= WH)",
     "limit": 10,
     "errorOnEmpty": false,
     "keyFields": "Document Type,Sell-to Customer No.",
@@ -116,11 +106,8 @@ There are no publish-time checks specific to this step. As for every step, `{{x_
 ## Gotchas
 
 - Sorting is stored as `keyFields` + `ascending`. The editor uses internal `sortKey` / `sortOrder` values, but they are **not** stored in the configuration.
-- `filters` (BC filter syntax, applied by the database) and `smartFilter` (AutoFlow expression, evaluated per record) are different languages. Use `filters` wherever possible: they are faster, and `limit` counts only records that pass the SmartFilter, so a selective SmartFilter can read the whole table.
-- Without parentheses, the SmartFilter evaluator matches `=` before `&` / `|`, so `A = 1 & B = 2` is **wrong**. Write `(A = 1) & (B = 2)`. Literal `&`, `|`, `(` or `)` inside values break the expression.
-- In `smartFilter`, a `.` inside `{{…}}` is read as a path separator and `;` starts a format suffix. Record fields whose name contains a dot (`No.`, `External Document No.`) therefore cannot be used as `{{FieldName}}`. Filter on them with `filters` instead.
-- In SmartFilter comparisons, decimals and dates are formatted with the regional settings of the session that runs the flow.
-- Field-filter SmartFields cannot refer to fields of the records being searched. Use `smartFilter` for that.
+- Field-filter SmartFields resolve against the flow context only. They cannot refer to fields of the records being searched.
 - For an Option/Enum field, prefer `filterMode: "fixed"` with the value **name**: it is language-independent, whereas a free expression such as `"filter": "Offen"` depends on the caption language of the session that runs the flow. Use the free expression only for ranges or alternatives.
 - Before 27.0.41: `filterMode` / `filterRules` did not exist; every row was a free filter expression (a hand-written `filterMode` was ignored), and the editor saved rows as `{fieldNo, filter}` only.
+- Before 27.2.1: an optional `smartFilter` (SmartFilter expression evaluated per found record) kept only records where it was true. From 27.2.1 it is no longer supported: a `smartFilter` key in an existing configuration is ignored, and the editor removes it when the step is saved. Do not write it.
 - Keep `outputs` in this order and keep `results.tableNo` equal to `configuration.tableNo`.
