@@ -26,7 +26,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "Field filters set on the table before modifying: a BC filter expression per row, or (Option/Enum fields) a single value chosen in filterMode 'fixed' / 'rules'. Same row format as Find Records and Delete All. Rows with fieldNo 0 are skipped; if two rows target the same fieldNo the later one wins (in the earlier one's place). Unlike Find Records, every remaining row MUST set a filter when the step runs: a row whose filter is empty (empty text, SmartFields that resolve to nothing, a Rules row without a matching rule and without 'otherwise') fails the step instead of being left out. The editor saves each row as {fieldNo, filter, filterMode?, filterRules?}, one row per field; lineNo and fieldCaption keys are dropped.",
+      "description": "Field filters set on the table before modifying: a BC filter expression per row, or (Option/Enum fields) a single value chosen in filterMode 'fixed' / 'rules'. Same row format as Find Records and Delete Multiple Records. Rows with fieldNo 0 are skipped; if two rows target the same fieldNo the later one wins (in the earlier one's place). Unlike Find Records, every remaining row MUST set a filter when the step runs: a row whose filter is empty (empty text, SmartFields that resolve to nothing, a Rules row without a matching rule and without 'otherwise') fails the step instead of being left out. The editor saves each row as {fieldNo, filter, filterMode?, filterRules?}, one row per field; lineNo and fieldCaption keys are dropped.",
       "items": [
         {
           "key": "fieldNo",

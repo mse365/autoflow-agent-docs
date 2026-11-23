@@ -66,5 +66,5 @@ There are no publish-time checks specific to this step. A Confirm dialog after t
 
 ## Gotchas
 
-- With an array reference such as `{{FindX_results}}`, only the **first** record is deleted. To delete all records that match filters, use [Delete All](DeleteAll.md): one step instead of one per record. A For Each loop over the results with this step inside is only needed when further steps must run per record.
+- With an array reference such as `{{FindX_results}}`, only the **first** record is deleted. To delete all records that match filters, use [Delete Multiple Records](DeleteAll.md): one step instead of one per record. A For Each loop over the results with this step inside is only needed when further steps must run per record.
 - Do not reference the deleted record in later steps.
