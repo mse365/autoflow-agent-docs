@@ -32,7 +32,7 @@ The matches are collected before the first write, so a value that changes a filt
 | key | type | required | default | description |
 |---|---|---|---|---|
 | `tableNo` | integer | yes | `0` | Table whose records are modified, as a JSON number. |
-| `filters` | array | no | `[]` | Database filters: `[{ "fieldNo": <int>, "filter": "<BC filter>", "filterMode"?: "fixed" \| "rules", "filterRules"?: {…} }]`. Same row format and semantics as [Delete All](DeleteAll.md#filters) and [Find Records](FindRecords.md). |
+| `filters` | array | no | `[]` | Database filters: `[{ "fieldNo": <int>, "filter": "<BC filter>", "filterMode"?: "fixed" \| "rules", "filterRules"?: {…} }]`. Same row format and semantics as [Delete Multiple Records](DeleteAll.md#filters) and [Find Records](FindRecords.md). |
 | `values` | array | no | `[]` | Rows `{lineNo, fieldNo, value, validate?, inputFormat?, valueMode?, valueRules?, optional?}`, the same shape as in [Insert Record](InsertRecord.md#values-row-shared-by-insert--modify--rename--set-document-field-values) and Modify Record. **Non-key fields only.** An empty array re-saves every match unchanged (`Modify(triggers)` still runs). |
 | `triggers` | boolean | no | `true` | `true` = `Modify(true)` (OnModify runs for every record), `false` = `Modify(false)`. |
 | `allowNoFilter` | boolean | no | `false` | *Modify without filters.* `true` lets a step without any filter run, and it then writes to **every record of the table**. |

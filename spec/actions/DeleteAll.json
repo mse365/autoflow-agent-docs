@@ -2,7 +2,7 @@
   "kind": "action",
   "name": "DeleteAll",
   "id": 5564432,
-  "caption": "Delete All",
+  "caption": "Delete Multiple Records",
   "category": "Records",
   "availability": "ga",
   "terminating": false,
@@ -154,21 +154,21 @@
       "severity": "warning",
       "stage": "publish",
       "check": "The step has no filters row with a non-zero fieldNo, and allowNoFilter is false or absent: it will fail at run time. %1 = step id.",
-      "message": "Delete All step '%1': No filter is set, so the step will fail. Add a field filter, or turn on Delete without filters."
+      "message": "Delete Multiple Records step '%1': No filter is set, so the step will fail. Add a field filter, or turn on Delete without filters."
     },
     {
       "id": "DeleteAll.no-filter-deletes-all",
       "severity": "warning",
       "stage": "publish",
       "check": "The step has no filters row with a non-zero fieldNo, and allowNoFilter is true: it empties the table. %1 = step id.",
-      "message": "Delete All step '%1': No filter is set and Delete without filters is on: the step deletes every record of the table."
+      "message": "Delete Multiple Records step '%1': No filter is set and Delete without filters is on: the step deletes every record of the table."
     },
     {
       "id": "DeleteAll.smartFilter-publish",
       "severity": "warning",
       "stage": "publish",
       "check": "configuration.smartFilter is present and not blank. The step has no Smart Filter and will fail at run time. %1 = step id.",
-      "message": "Delete All step '%1': The step does not support a Smart Filter and will fail. Remove smartFilter and use field filters."
+      "message": "Delete Multiple Records step '%1': The step does not support a Smart Filter and will fail. Remove smartFilter and use field filters."
     },
     {
       "id": "DeleteAll.no-filter",
@@ -182,7 +182,7 @@
       "severity": "error",
       "stage": "runtime",
       "check": "configuration.smartFilter must be absent or blank. A non-blank value fails the step instead of being ignored, because ignoring it would delete more records than the condition was meant to keep.",
-      "message": "The Delete All step does not support a Smart Filter. Remove smartFilter from the step configuration and use field filters."
+      "message": "The Delete Multiple Records step does not support a Smart Filter. Remove smartFilter from the step configuration and use field filters."
     },
     {
       "id": "DeleteAll.filter-effective",

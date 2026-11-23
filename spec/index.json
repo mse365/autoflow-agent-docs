@@ -120,7 +120,7 @@
     {
       "name": "DeleteAll",
       "id": 5564432,
-      "caption": "Delete All",
+      "caption": "Delete Multiple Records",
       "category": "Records",
       "terminating": false,
       "group": false,
