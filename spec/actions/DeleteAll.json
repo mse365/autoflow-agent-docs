@@ -1,0 +1,273 @@
+{
+  "kind": "action",
+  "name": "DeleteAll",
+  "id": 5564432,
+  "caption": "Delete All",
+  "category": "Records",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "tableNo",
+      "type": "integer",
+      "required": true,
+      "default": 0,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Number of the table whose records are deleted (e.g. 18 = Customer)."
+    },
+    {
+      "key": "filters",
+      "type": "array",
+      "required": false,
+      "default": [],
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Field filters set on the table before deleting: a BC filter expression per row, or (Option/Enum fields) a single value chosen in filterMode 'fixed' / 'rules'. Same row format as Find Records. Rows with fieldNo 0 are skipped; if two rows target the same fieldNo the later one wins (in the earlier one's place). Unlike Find Records, every remaining row MUST set a filter when the step runs: a row whose filter is empty (empty text, SmartFields that resolve to nothing, a Rules row without a matching rule and without 'otherwise') fails the step instead of being left out. The editor saves each row as {fieldNo, filter, filterMode?, filterRules?}, one row per field; lineNo and fieldCaption keys are dropped.",
+      "items": [
+        {
+          "key": "fieldNo",
+          "type": "integer",
+          "required": true,
+          "default": 0,
+          "enum": null,
+          "maxLength": null,
+          "smart": "none",
+          "description": "Field NUMBER to filter on (any field, including FlowFields that support filtering)."
+        },
+        {
+          "key": "filter",
+          "type": "string",
+          "required": false,
+          "default": "",
+          "enum": null,
+          "maxLength": 250,
+          "smart": "text",
+          "description": "Without filterMode (or with any value other than 'fixed' / 'rules'): a Business Central filter expression as used in SETFILTER / the filter pane, e.g. '10000..20000', '<>0', 'A*|B*', '@*gmbh*', '' (two apostrophes = empty value). {{SmartFields}} are resolved against the flow context (never against the records of the table) before the filter is set. The text is cut to 250 characters. If the resolved text is empty or blank the step fails (it would not filter). For a RecordId field, a value that is exactly one reference SmartField filters on that record directly. With filterMode 'fixed': the Option/Enum value NAME to filter on (SetRange on its ordinal; empty -> the step fails). With filterMode 'rules': ignored."
+        },
+        {
+          "key": "filterMode",
+          "type": "string",
+          "required": false,
+          "default": "smarttext",
+          "enum": [
+            "fixed",
+            "smarttext",
+            "rules"
+          ],
+          "maxLength": null,
+          "smart": "none",
+          "description": "'fixed' = filter the field on the one value named in 'filter'; 'rules' = on the value of the first filterRules rule whose condition is true, else 'otherwise' (nothing -> the step fails); 'smarttext' or absent = 'filter' is a free BC filter expression. Compared case-insensitively. Fixed and rules match the name like a field value (exact name, exact caption, case-insensitive name/caption, then an ordinal number) and only work on Option/Enum fields. The editor offers the modes only for those fields and omits the key in SmartText mode."
+        },
+        {
+          "key": "filterRules",
+          "type": "object",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "maxLength": null,
+          "smart": "filter",
+          "description": "Only with filterMode 'rules': { \"rules\": [ { \"condition\": \"<SmartFilter condition>\", \"value\": \"<value name>\" }, ... ], \"otherwise\": \"<value name>\" }. Conditions use the SmartFilter grammar of the Decision step and are evaluated against the flow context ({{...}} substituted before the step runs), not per record. A rule with a blank condition or an empty value never matches; 'otherwise' may be omitted or empty. Also accepted as a JSON string holding that object."
+        }
+      ]
+    },
+    {
+      "key": "smartFilter",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "enum": null,
+      "maxLength": null,
+      "smart": "filter",
+      "description": "Optional SmartFilter expression (a plain string, NOT JSON) evaluated for each record that passes the field filters; only records for which it is true are deleted. Same grammar as in Find Records: {{FieldName}} refers to the current record's field by its AL field NAME (e.g. {{Balance}}, {{Country/Region Code}}); other {{slug_output}} SmartFields come from the flow context. 'left op right' with op one of = != > < >= <= ~ (contains) ^= (starts with) $= (ends with); combine with & / |, wrap EVERY operand of & / | in parentheses; negate with !( ... ); '' denotes empty. A blank string counts as no SmartFilter. With a SmartFilter the records are deleted one by one instead of with one set-based DeleteAll."
+    },
+    {
+      "key": "triggers",
+      "type": "boolean",
+      "required": false,
+      "default": true,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Run Triggers. true (default when absent) = DeleteAll(true): the table's OnDelete trigger and its subscribers run for every record; false = DeleteAll(false). Non-boolean values fall back to the default."
+    },
+    {
+      "key": "allowNoFilter",
+      "type": "boolean",
+      "required": false,
+      "default": false,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Delete without filters. A step with no filters row (with a fieldNo) and no smartFilter would delete every record of the table; it fails at run time unless this is true. It does not relax the rule that every filters row must set a filter. Non-boolean values fall back to false."
+    },
+    {
+      "key": "errorOnEmpty",
+      "type": "boolean",
+      "required": false,
+      "default": false,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "true = fail the step when no record was deleted."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "count",
+      "type": "value",
+      "tableNo": null,
+      "when": "always - number of deleted records as a plain integer in text form, without a thousands separator (\"0\" when nothing matched)"
+    }
+  ],
+  "rules": [
+    {
+      "id": "DeleteAll.tableNo-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.tableNo must be present and non-zero. The editor's Table field is required.",
+      "message": "Please fill in the highlighted fields.",
+      "machine": {
+        "type": "required",
+        "key": "tableNo"
+      }
+    },
+    {
+      "id": "DeleteAll.tableNo-nonzero",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "configuration.tableNo must not be 0 (or unreadable as an integer); an unknown table number fails with Business Central's error when the table is opened.",
+      "message": "No table is selected.",
+      "machine": {
+        "type": "range",
+        "key": "tableNo",
+        "min": 1
+      }
+    },
+    {
+      "id": "DeleteAll.tableNo-type",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "Write tableNo as a JSON number. A value that cannot be read as an integer counts as 0.",
+      "message": "",
+      "machine": {
+        "type": "type",
+        "key": "tableNo",
+        "valueType": "integer"
+      }
+    },
+    {
+      "id": "DeleteAll.no-filter-fails",
+      "severity": "warning",
+      "stage": "publish",
+      "check": "The step has no filters row with a non-zero fieldNo and no (non-blank) smartFilter, and allowNoFilter is false or absent: it will fail at run time. %1 = step id.",
+      "message": "Delete All step '%1': No filter is set, so the step will fail. Add a field filter or a Smart Filter, or turn on Delete without filters."
+    },
+    {
+      "id": "DeleteAll.no-filter-deletes-all",
+      "severity": "warning",
+      "stage": "publish",
+      "check": "The step has no filters row with a non-zero fieldNo and no (non-blank) smartFilter, and allowNoFilter is true: it empties the table. %1 = step id.",
+      "message": "Delete All step '%1': No filter is set and Delete without filters is on: the step deletes every record of the table."
+    },
+    {
+      "id": "DeleteAll.no-filter",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "Without any filters row (non-zero fieldNo) and without a smartFilter the step fails unless allowNoFilter is true. %1 = table caption.",
+      "message": "The step has no filter and would delete every record of table %1. Add a field filter or a Smart Filter, or turn on Delete without filters."
+    },
+    {
+      "id": "DeleteAll.filter-effective",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "Every filters[] row must set a filter when the step runs: the resolved filter text must not be empty or blank, a 'fixed' row needs a value, a 'rules' row needs a matching rule or 'otherwise'. Applies with allowNoFilter true as well. %1 = field caption.",
+      "message": "The filter on field \"%1\" is empty when the step runs, so it would not restrict the records. Check the SmartFields it uses; to match empty values, use ''."
+    },
+    {
+      "id": "DeleteAll.filter-syntax",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "Each resolved filters[].filter must be a valid BC filter expression for the field type, and filters[].fieldNo must exist in the table.",
+      "message": ""
+    },
+    {
+      "id": "DeleteAll.filter-enum-value",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "A filters[] row with filterMode 'fixed' or 'rules': the value must be a name, caption (case-insensitive fallback) or ordinal number of the field's values, and the field must be an Option/Enum field (on any other field the same error is raised with an empty Allowed list). %1 = value, %2 = field caption, %3 = allowed value names.",
+      "message": "'%1' is not a value of %2. Allowed: %3."
+    },
+    {
+      "id": "DeleteAll.error-on-empty",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "With errorOnEmpty = true, the step fails when no record was deleted. %1 = table number.",
+      "message": "No records found in table %1 matching the specified filters."
+    },
+    {
+      "id": "DeleteAll.on-delete",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "With triggers = true, an OnDelete trigger (or a subscriber) that raises an error fails the step with Business Central's own error.",
+      "message": ""
+    },
+    {
+      "id": "DeleteAll.filters-type",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "filters should be a JSON array; other types are ignored (no field filters).",
+      "message": "",
+      "machine": {
+        "type": "type",
+        "key": "filters",
+        "valueType": "array"
+      }
+    },
+    {
+      "id": "DeleteAll.triggers-type",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "triggers should be a JSON boolean; other types fall back to true.",
+      "message": "",
+      "machine": {
+        "type": "type",
+        "key": "triggers",
+        "valueType": "boolean"
+      }
+    },
+    {
+      "id": "DeleteAll.allowNoFilter-type",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "allowNoFilter should be a JSON boolean; other types fall back to false.",
+      "message": "",
+      "machine": {
+        "type": "type",
+        "key": "allowNoFilter",
+        "valueType": "boolean"
+      }
+    },
+    {
+      "id": "DeleteAll.errorOnEmpty-type",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "errorOnEmpty should be a JSON boolean; other types fall back to false.",
+      "message": "",
+      "machine": {
+        "type": "type",
+        "key": "errorOnEmpty",
+        "valueType": "boolean"
+      }
+    }
+  ],
+  "notes": [
+    "Use this step instead of Find Records + For Each + Delete Record whenever the records to delete can be described by filters: it is one step and, without a smartFilter, one set-based DeleteAll.",
+    "No limit and no sort key: every record that matches is deleted. There is no undo.",
+    "A SmartField inside a filter is inserted as filter text: a value containing BC filter operators (|, .., *, &, <, >) widens or changes the filter. Only use values you control.",
+    "Writing step: a Confirm dialog placed after this step (in document order) produces a publish warning, because Business Central cannot open a dialog once the flow has written to the database."
+  ]
+}
