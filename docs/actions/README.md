@@ -58,7 +58,7 @@ Machine-readable list: [`spec/index.json`](../../spec/index.json). The step page
 | Find Records | `5564409` |  |  | [FindRecords](FindRecords.md) |
 | Get Dimensions | `5564559` |  |  | [GetDimensions](GetDimensions.md) |
 | Insert Record | `5564405` |  |  | [InsertRecord](InsertRecord.md) |
-| Modify All | `5564433` |  |  | [ModifyAll](ModifyAll.md) |
+| Modify Multiple Records | `5564433` |  |  | [ModifyAll](ModifyAll.md) |
 | Modify Record | `5564406` |  |  | [ModifyRecord](ModifyRecord.md) |
 | Rename Record | `5564408` |  |  | [RenameRecord](RenameRecord.md) |
 | Set Dimension Values | `5564558` |  |  | [SetDimensionValues](SetDimensionValues.md) |

@@ -246,7 +246,7 @@
     {
       "name": "ModifyAll",
       "id": 5564433,
-      "caption": "Modify All",
+      "caption": "Modify Multiple Records",
       "category": "Records",
       "terminating": false,
       "group": false,
