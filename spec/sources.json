@@ -27,6 +27,7 @@
     "InsertRecord": "AutoFlow",
     "Intelligence": "AutoFlow",
     "Log": "AutoFlow",
+    "ModifyAll": "AutoFlow",
     "ModifyRecord": "AutoFlow",
     "NoSeriesDraw": "AutoFlow",
     "Parser": "AutoFlow",

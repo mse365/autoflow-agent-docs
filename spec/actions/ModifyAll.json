@@ -1,0 +1,428 @@
+{
+  "kind": "action",
+  "name": "ModifyAll",
+  "id": 5564433,
+  "caption": "Modify All",
+  "category": "Records",
+  "availability": "ga",
+  "terminating": false,
+  "group": false,
+  "configuration": [
+    {
+      "key": "tableNo",
+      "type": "integer",
+      "required": true,
+      "default": 0,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Number of the table whose records are modified (e.g. 18 = Customer)."
+    },
+    {
+      "key": "filters",
+      "type": "array",
+      "required": false,
+      "default": [],
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Field filters set on the table before modifying: a BC filter expression per row, or (Option/Enum fields) a single value chosen in filterMode 'fixed' / 'rules'. Same row format as Find Records and Delete All. Rows with fieldNo 0 are skipped; if two rows target the same fieldNo the later one wins (in the earlier one's place). Unlike Find Records, every remaining row MUST set a filter when the step runs: a row whose filter is empty (empty text, SmartFields that resolve to nothing, a Rules row without a matching rule and without 'otherwise') fails the step instead of being left out. The editor saves each row as {fieldNo, filter, filterMode?, filterRules?}, one row per field; lineNo and fieldCaption keys are dropped.",
+      "items": [
+        {
+          "key": "fieldNo",
+          "type": "integer",
+          "required": true,
+          "default": 0,
+          "enum": null,
+          "maxLength": null,
+          "smart": "none",
+          "description": "Field NUMBER to filter on (any field, including FlowFields that support filtering)."
+        },
+        {
+          "key": "filter",
+          "type": "string",
+          "required": false,
+          "default": "",
+          "enum": null,
+          "maxLength": 250,
+          "smart": "text",
+          "description": "Without filterMode (or with any value other than 'fixed' / 'rules'): a Business Central filter expression as used in SETFILTER / the filter pane, e.g. '10000..20000', '<>0', 'A*|B*', '@*gmbh*', '' (two apostrophes = empty value). {{SmartFields}} are resolved against the flow context (never against the records of the table) before the filter is set. The text is cut to 250 characters. If the resolved text is empty or blank the step fails (it would not filter). For a RecordId field, a value that is exactly one reference SmartField filters on that record directly. With filterMode 'fixed': the Option/Enum value NAME to filter on (SetRange on its ordinal; empty -> the step fails). With filterMode 'rules': ignored."
+        },
+        {
+          "key": "filterMode",
+          "type": "string",
+          "required": false,
+          "default": "smarttext",
+          "enum": [
+            "fixed",
+            "smarttext",
+            "rules"
+          ],
+          "maxLength": null,
+          "smart": "none",
+          "description": "'fixed' = filter the field on the one value named in 'filter'; 'rules' = on the value of the first filterRules rule whose condition is true, else 'otherwise' (nothing -> the step fails); 'smarttext' or absent = 'filter' is a free BC filter expression. Compared case-insensitively. Fixed and rules match the name like a field value (exact name, exact caption, case-insensitive name/caption, then an ordinal number) and only work on Option/Enum fields. The editor offers the modes only for those fields and omits the key in SmartText mode."
+        },
+        {
+          "key": "filterRules",
+          "type": "object",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "maxLength": null,
+          "smart": "filter",
+          "description": "Only with filterMode 'rules': { \"rules\": [ { \"condition\": \"<SmartFilter condition>\", \"value\": \"<value name>\" }, ... ], \"otherwise\": \"<value name>\" }. Conditions use the SmartFilter grammar of the Decision step and are evaluated against the flow context ({{...}} substituted before the step runs), not per record. A rule with a blank condition or an empty value never matches; 'otherwise' may be omitted or empty. Also accepted as a JSON string holding that object."
+        }
+      ]
+    },
+    {
+      "key": "values",
+      "type": "array",
+      "required": false,
+      "default": [],
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Field assignments applied (in ascending lineNo) to every matching record before Modify, exactly as in Modify Record. Only non-primary-key fields are allowed - a row on a key field fails the step. An empty array re-saves every match unchanged (Modify(triggers) still runs). SmartFields in 'value' are resolved against the flow context, not against the record being modified.",
+      "items": [
+        {
+          "key": "lineNo",
+          "type": "integer",
+          "required": true,
+          "default": 0,
+          "enum": null,
+          "maxLength": null,
+          "smart": "none",
+          "description": "Row key and application order. Rows are applied in ascending lineNo. Must be unique within the array: rows are loaded into a keyed buffer, so two rows with the same lineNo (including two rows that omit it -> both 0) fail at runtime with a duplicate-record error. The editor writes 10000, 20000, ... in display order."
+        },
+        {
+          "key": "fieldNo",
+          "type": "integer",
+          "required": true,
+          "default": 0,
+          "enum": null,
+          "maxLength": null,
+          "smart": "none",
+          "description": "Field NUMBER (not name) of the target field in the configured table. Rows with fieldNo 0 are skipped. A number that does not exist in the table fails at runtime."
+        },
+        {
+          "key": "value",
+          "type": "string",
+          "required": false,
+          "default": "",
+          "enum": null,
+          "maxLength": null,
+          "smart": "text",
+          "description": "Value text. SmartFields ({{slug_output}}), SmartFormulas ([[...]]) and SmartControls are resolved first, then the text is converted to the field type (see inputFormat). Values longer than 2048 characters are supported (e.g. base64 for Blob/Media fields). With valueMode 'fixed' it holds an Option/Enum value NAME (e.g. 'Order'); an empty fixed value skips the row. With valueMode 'rules' it is ignored. For Option/Enum fields in SmartText mode the name, the caption in the session language or an ordinal number are accepted (exact name, exact caption, case-insensitive name/caption, then a number that is one of the field's ordinals; a number that is no ordinal is assigned as given)."
+        },
+        {
+          "key": "validate",
+          "type": "boolean",
+          "required": false,
+          "default": true,
+          "enum": null,
+          "maxLength": null,
+          "smart": "none",
+          "description": "true (default when the key is absent) = assign via Validate so the field's OnValidate trigger runs (as if typed on the page); false = assign directly without validation."
+        },
+        {
+          "key": "inputFormat",
+          "type": "string",
+          "required": false,
+          "default": "",
+          "enum": null,
+          "maxLength": 30,
+          "smart": "none",
+          "description": "How the value text is parsed into the field type. Empty/absent = the session's regional format (locale-sensitive). \"9\" or \"xml\" (case-insensitive) = invariant XML notation (1000.00, 2026-07-16, true). Otherwise a date/time pattern built from the fixed-width tokens yyyy, yy, MM, dd, HH, mm, ss (each at most once) plus non-alphanumeric separators, e.g. yyyyMMdd, dd.MM.yyyy, yyyy-MM-dd HH:mm:ss. Patterns need a complete date (yyyy|yy + MM + dd) or at least HH+mm; ss needs mm, mm needs HH. Patterns are only allowed for Date, Time and DateTime fields. Omitted by the editor when empty."
+        },
+        {
+          "key": "valueMode",
+          "type": "string",
+          "required": false,
+          "default": "smarttext",
+          "enum": [
+            "fixed",
+            "smarttext",
+            "rules"
+          ],
+          "maxLength": null,
+          "smart": "none",
+          "description": "How 'value' is read. 'fixed' = value is an Option/Enum value name picked from the field's list (empty -> the row is skipped). 'rules' = the value comes from valueRules (first rule whose condition is true, else otherwise; nothing -> the row is skipped and the field keeps its current value). 'smarttext' or absent = the SmartText in 'value'. Compared case-insensitively; any other text counts as smarttext. The editor offers the modes only for Option and Enum fields and omits the key in SmartText mode; the runtime reads it on any row."
+        },
+        {
+          "key": "valueRules",
+          "type": "object",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "maxLength": null,
+          "smart": "filter",
+          "description": "Only with valueMode 'rules': { \"rules\": [ { \"condition\": \"<SmartFilter condition>\", \"value\": \"<value name>\" }, ... ], \"otherwise\": \"<value name>\" }. Conditions use the SmartFilter grammar of the Decision step; {{...}} tokens in them are substituted before the step runs. Rules are tried in order; a rule with a blank condition or an empty value never matches. 'otherwise' may be omitted or empty (then a non-matching row is skipped). Also accepted as a JSON string holding that object. The editor writes it only in rules mode and drops blank rules."
+        },
+        {
+          "key": "optional",
+          "type": "boolean",
+          "required": false,
+          "default": false,
+          "enum": null,
+          "maxLength": null,
+          "smart": "none",
+          "description": "true = skip the row (and write a Debug log line) when its value is empty, so the field keeps its current value instead of failing the conversion or being cleared. Empty means: the resolved text is '' (any field type); Date/Time/DateTime also 0D/0T/0DT and Guid the null GUID; Blob/Media a bare binary SmartField with an empty payload; RecordId no resolvable reference and empty text. An explicit 0 / false in a numeric, Boolean, Duration or Option field is a real value and is applied; a non-empty value that cannot be converted still fails. Absent, null or non-boolean -> false (the row is applied as before)."
+        }
+      ]
+    },
+    {
+      "key": "triggers",
+      "type": "boolean",
+      "required": false,
+      "default": true,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Run Triggers. true (default when absent) = Modify(true) for every record: the table's OnModify trigger and its subscribers run; false = Modify(false). Non-boolean values fall back to the default."
+    },
+    {
+      "key": "allowNoFilter",
+      "type": "boolean",
+      "required": false,
+      "default": false,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "Modify without filters. A step with no filters row (with a fieldNo) would write to every record of the table; it fails at run time unless this is true. It does not relax the rule that every filters row must set a filter. Non-boolean values fall back to false."
+    },
+    {
+      "key": "errorOnEmpty",
+      "type": "boolean",
+      "required": false,
+      "default": false,
+      "enum": null,
+      "maxLength": null,
+      "smart": "none",
+      "description": "true = fail the step when no record was modified."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "count",
+      "type": "value",
+      "tableNo": null,
+      "when": "always - number of modified records as a plain integer in text form, without a thousands separator (\"0\" when nothing matched)"
+    }
+  ],
+  "rules": [
+    {
+      "id": "ModifyAll.tableNo-required",
+      "severity": "error",
+      "stage": "editor",
+      "check": "configuration.tableNo must be present and non-zero. The editor's Table field is required.",
+      "message": "Please fill in the highlighted fields.",
+      "machine": {
+        "type": "required",
+        "key": "tableNo"
+      }
+    },
+    {
+      "id": "ModifyAll.tableNo-nonzero",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "configuration.tableNo must not be 0 (or unreadable as an integer); an unknown table number fails with Business Central's error when the table is opened.",
+      "message": "No table is selected.",
+      "machine": {
+        "type": "range",
+        "key": "tableNo",
+        "min": 1
+      }
+    },
+    {
+      "id": "ModifyAll.tableNo-type",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "Write tableNo as a JSON number. A value that cannot be read as an integer counts as 0.",
+      "message": "",
+      "machine": {
+        "type": "type",
+        "key": "tableNo",
+        "valueType": "integer"
+      }
+    },
+    {
+      "id": "ModifyAll.no-filter-fails",
+      "severity": "warning",
+      "stage": "publish",
+      "check": "The step has no filters row with a non-zero fieldNo, and allowNoFilter is false or absent: it will fail at run time. %1 = step id.",
+      "message": "Modify All step '%1': No filter is set, so the step will fail. Add a field filter, or turn on Modify without filters."
+    },
+    {
+      "id": "ModifyAll.no-filter-modifies-all",
+      "severity": "warning",
+      "stage": "publish",
+      "check": "The step has no filters row with a non-zero fieldNo, and allowNoFilter is true: it writes to every record of the table. %1 = step id.",
+      "message": "Modify All step '%1': No filter is set and Modify without filters is on: the step writes to every record of the table."
+    },
+    {
+      "id": "ModifyAll.no-filter",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "Without any filters row (non-zero fieldNo) the step fails unless allowNoFilter is true. %1 = table caption.",
+      "message": "The step has no filter and would modify every record of table %1. Add a field filter, or turn on Modify without filters."
+    },
+    {
+      "id": "ModifyAll.filter-effective",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "Every filters[] row must set a filter when the step runs: the resolved filter text must not be empty or blank, a 'fixed' row needs a value, a 'rules' row needs a matching rule or 'otherwise'. Applies with allowNoFilter true as well. %1 = field caption.",
+      "message": "The filter on field \"%1\" is empty when the step runs, so it would not restrict the records. Check the SmartFields it uses; to match empty values, use ''."
+    },
+    {
+      "id": "ModifyAll.filter-syntax",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "Each resolved filters[].filter must be a valid BC filter expression for the field type, and filters[].fieldNo must exist in the table.",
+      "message": ""
+    },
+    {
+      "id": "ModifyAll.filter-enum-value",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "A filters[] row with filterMode 'fixed' or 'rules': the value must be a name, caption (case-insensitive fallback) or ordinal number of the field's values, and the field must be an Option/Enum field. %1 = value, %2 = field caption, %3 = allowed value names.",
+      "message": "'%1' is not a value of %2. Allowed: %3."
+    },
+    {
+      "id": "ModifyAll.error-on-empty",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "With errorOnEmpty = true, the step fails when no record was modified. %1 = table number.",
+      "message": "No records found in table %1 matching the specified filters."
+    },
+    {
+      "id": "ModifyAll.values-no-pk",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "values[] must not contain primary-key fields (the editor only offers non-key fields). Checked on the first matching record.",
+      "message": "Field \"%1\" is part of the primary key and cannot be modified. Use a Rename Record step instead."
+    },
+    {
+      "id": "ModifyAll.values-field-exists",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "Every non-zero values[].fieldNo must exist in the target table.",
+      "message": "Field %1 does not exist in table %2."
+    },
+    {
+      "id": "ModifyAll.values-lineNo-unique",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "values[].lineNo must be unique; duplicates (or several rows without lineNo) raise the platform's 'record already exists' error when the rows are loaded.",
+      "message": ""
+    },
+    {
+      "id": "ModifyAll.values-conversion",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "The resolved value text cannot be converted to the field type, or the inputFormat is invalid - the same checks as Modify Record (see its rules). The step fails on the first record.",
+      "message": "Cannot convert value \"%1\" to %2 for field \"%3\". | Cannot convert value \"%1\" to %2 for field \"%3\" using input format \"%4\"."
+    },
+    {
+      "id": "ModifyAll.values-option-value",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "An Option/Enum field's resolved value must be one of the field's value names or captions (case-insensitive fallback) or a number.",
+      "message": "Cannot convert value \"%1\" to %2 for field \"%3\". Allowed: %4."
+    },
+    {
+      "id": "ModifyAll.values-optional-skipped",
+      "severity": "info",
+      "stage": "runtime",
+      "check": "A values[] row with optional = true whose value is empty is skipped on every record; ONE Debug log line per field (not per record). Modify(triggers) still runs.",
+      "message": "Field \"%1\" skipped: it is optional and its value is empty."
+    },
+    {
+      "id": "ModifyAll.values-text-cropped",
+      "severity": "info",
+      "stage": "runtime",
+      "check": "A Text or Code value longer than the target field's length is cropped to that length; ONE Info log line per field (not per record).",
+      "message": "Field \"%1\" was cropped from %2 to %3 characters."
+    },
+    {
+      "id": "ModifyAll.values-rule-incomplete",
+      "severity": "warning",
+      "stage": "editor",
+      "check": "Status line of the config canvas: every rule in a values[] row with valueMode 'rules' needs a non-blank condition and a non-empty value. Advisory only; at runtime such a rule never matches.",
+      "message": "%1, row %2: %3 (e.g. Field Values, row 2: Rule 1 needs a condition and a value.)"
+    },
+    {
+      "id": "ModifyAll.on-modify",
+      "severity": "error",
+      "stage": "runtime",
+      "check": "With triggers = true, an OnModify trigger (or a subscriber) that raises an error fails the step with Business Central's own error; so does a validate row whose OnValidate fails.",
+      "message": ""
+    },
+    {
+      "id": "ModifyAll.filters-type",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "filters should be a JSON array; other types are ignored (no field filters).",
+      "message": "",
+      "machine": {
+        "type": "type",
+        "key": "filters",
+        "valueType": "array"
+      }
+    },
+    {
+      "id": "ModifyAll.values-type",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "values should be a JSON array; other types are ignored, so every match is re-saved unchanged.",
+      "message": "",
+      "machine": {
+        "type": "type",
+        "key": "values",
+        "valueType": "array"
+      }
+    },
+    {
+      "id": "ModifyAll.triggers-type",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "triggers should be a JSON boolean; other types fall back to true.",
+      "message": "",
+      "machine": {
+        "type": "type",
+        "key": "triggers",
+        "valueType": "boolean"
+      }
+    },
+    {
+      "id": "ModifyAll.allowNoFilter-type",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "allowNoFilter should be a JSON boolean; other types fall back to false.",
+      "message": "",
+      "machine": {
+        "type": "type",
+        "key": "allowNoFilter",
+        "valueType": "boolean"
+      }
+    },
+    {
+      "id": "ModifyAll.errorOnEmpty-type",
+      "severity": "warning",
+      "stage": "runtime",
+      "check": "errorOnEmpty should be a JSON boolean; other types fall back to false.",
+      "message": "",
+      "machine": {
+        "type": "type",
+        "key": "errorOnEmpty",
+        "valueType": "boolean"
+      }
+    }
+  ],
+  "notes": [
+    "Use this step instead of Find Records + For Each + Modify Record whenever the records to modify can be described by field filters and the values do not depend on each record's own fields: it is one step for all matches.",
+    "Not a set-based SQL update: the matches are collected first, then every record is re-read, the values applied and Modify(triggers) called - Modify Record semantics per record (Validate, Optional, Input Format, cropping, Blob/Media, RecordId).",
+    "No limit and no sort key: every record that matches is modified. There is no undo.",
+    "A SmartField inside a filter is inserted as filter text: a value containing BC filter operators (|, .., *, &, <, >) widens or changes the filter. Only use values you control.",
+    "Writing step: a Confirm dialog placed after this step (in document order) produces a publish warning, because Business Central cannot open a dialog once the flow has written to the database."
+  ]
+}

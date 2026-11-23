@@ -87,6 +87,7 @@ There are no publish-time checks specific to this step. A Confirm dialog after t
 
 ## Gotchas
 
+- To update many records that a filter can describe, use [Modify All](ModifyAll.md) instead of Find Records + For Each + Modify Record.
 - `reference` must include the braces: `"{{FindCustomer_results}}"`, not `"FindCustomer_results"`.
 - `tableNo` must match the referenced record's table. A copy-pasted step pointed at another table fails at runtime.
 - The record is re-read before the change, so values written by earlier steps are not lost.
