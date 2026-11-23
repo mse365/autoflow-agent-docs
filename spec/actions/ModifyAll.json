@@ -2,7 +2,7 @@
   "kind": "action",
   "name": "ModifyAll",
   "id": 5564433,
-  "caption": "Modify All",
+  "caption": "Modify Multiple Records",
   "category": "Records",
   "availability": "ga",
   "terminating": false,
@@ -250,14 +250,14 @@
       "severity": "warning",
       "stage": "publish",
       "check": "The step has no filters row with a non-zero fieldNo, and allowNoFilter is false or absent: it will fail at run time. %1 = step id.",
-      "message": "Modify All step '%1': No filter is set, so the step will fail. Add a field filter, or turn on Modify without filters."
+      "message": "Modify Multiple Records step '%1': No filter is set, so the step will fail. Add a field filter, or turn on Modify without filters."
     },
     {
       "id": "ModifyAll.no-filter-modifies-all",
       "severity": "warning",
       "stage": "publish",
       "check": "The step has no filters row with a non-zero fieldNo, and allowNoFilter is true: it writes to every record of the table. %1 = step id.",
-      "message": "Modify All step '%1': No filter is set and Modify without filters is on: the step writes to every record of the table."
+      "message": "Modify Multiple Records step '%1': No filter is set and Modify without filters is on: the step writes to every record of the table."
     },
     {
       "id": "ModifyAll.no-filter",
