@@ -235,6 +235,15 @@
       "availability": "ga"
     },
     {
+      "name": "ModifyAll",
+      "id": 5564433,
+      "caption": "Modify All",
+      "category": "Records",
+      "terminating": false,
+      "group": false,
+      "availability": "ga"
+    },
+    {
       "name": "ModifyRecord",
       "id": 5564406,
       "caption": "Modify Record",
