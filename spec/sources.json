@@ -15,6 +15,7 @@
     "Decision": "AutoFlow",
     "DeleteAll": "AutoFlow",
     "DeleteRecord": "AutoFlow",
+    "EditDocument": "AutoFlow",
     "ElementCreate": "AutoFlow",
     "ElementSet": "AutoFlow",
     "EncodeDecode": "AutoFlow",
