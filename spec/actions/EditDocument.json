@@ -39,7 +39,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "text",
-      "description": "At least one row. Rows: { \"op\": \"set\"|\"insert\"|\"delete\", \"path\": \"<XPath or JSONPath>\", \"position\": \"last\"|\"first\"|\"before\"|\"after\", \"value\": \"<text or fragment>\" }. value is SmartText and required for set and insert; position is read for insert only (default last). Every element the path matches is changed; a path without a match is logged and skipped. SmartFields work inside path too."
+      "description": "At least one row. Rows: { \"op\": \"set\"|\"insert\"|\"delete\", \"path\": \"<XPath or JSONPath>\", \"position\": \"last\"|\"first\"|\"before\"|\"after\", \"value\": \"<text or fragment>\" }. value is SmartText and required for set and insert; position is read for insert only (default last). Every element the path matches is changed. A set whose path matches nothing CREATES the element/attribute (absolute plain path, missing parents included, as last child; XML: a new element needs a declared prefix unless its parent has no namespace; JSON: object members only, as text); insert/delete without a match are logged and skipped. SmartFields work inside path too."
     },
     {
       "key": "resultElement",
@@ -118,13 +118,21 @@
       "id": "EditDocument.no-match",
       "severity": "info",
       "stage": "runtime",
-      "check": "an operation whose path matches nothing is skipped and logged, the document is unchanged",
+      "check": "an insert or delete whose path matches nothing is skipped and logged, the document is unchanged",
       "message": "No element matches the path %1 - change %2 (%3) skipped."
+    },
+    {
+      "id": "EditDocument.set-creates",
+      "severity": "info",
+      "stage": "runtime",
+      "check": "a set whose path matches nothing creates the element (XML: absolute path of plain steps, prefix required under a namespaced parent; JSON: dotted object path) and logs it; when it cannot be created the row is skipped with the reason",
+      "message": "Change %1: nothing matched %2 - the element was created. / Change %1: nothing matches %2 and it cannot be created: %3"
     }
   ],
   "notes": [
     "No edges, no modes: the step is the list of changes. Repeating elements are handled by a path that matches all of them (//cac:InvoiceLine/cbc:Note), or by looping over Business Central records with the ordinary ForEachLoop step and keeping the document in a flow element (see the page).",
     "XML paths use the Parser's namespace handling: declared prefixes work as they are, an unprefixed step is rewritten to *[local-name()='…']. Predicates with SmartFields are the way to address one line: //cac:InvoiceLine[cbc:ID='{{Line_currentItem.Line No.}}'].",
+    "Set creates: `/Invoice/cbc:BuyerReference` on a document without BuyerReference adds `<cbc:BuyerReference>` as the LAST child of Invoice. UBL/CII order matters under schema validation, so for a new header element prefer insert with position before/after a known sibling; use set-create for elements whose position is free or inside a freshly created parent. `//x`, predicates, wildcards and unprefixed names under a namespaced parent are not created (reason logged).",
     "A set on an XML element replaces its whole content, child elements included.",
     "In the e-invoice XML of XRechnung and PEPPOL the line's cbc:ID is the posted line's Line No.",
     "Typical use: inside a \"When an e-invoice is created\" flow of AutoFlow E-Document for Germany, between the trigger's Xml output and the Return e-invoice XML step."

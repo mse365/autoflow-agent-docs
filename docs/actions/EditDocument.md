@@ -16,7 +16,7 @@ Changes an XML or JSON document: sets values, inserts or deletes elements by XPa
 
 ## What it does
 
-The step takes the SmartText `document`, parses it once as XML or JSON (the `format` decides, there is no auto-detection), runs the `operations` list top to bottom and outputs the result as `document`. Each operation names a path; every element the path matches is changed. A path without a match is logged at Info level and skipped, it is never an error. Malformed input or a malformed fragment to insert fails the step; the error message shows the beginning of what the step received, which exposes the classic mistake of binding a record (`{{trigger_Document}}`) instead of the XML text (`{{trigger_Xml}}`).
+The step takes the SmartText `document`, parses it once as XML or JSON (the `format` decides, there is no auto-detection), runs the `operations` list top to bottom and outputs the result as `document`. Each operation names a path; every element the path matches is changed. A `set` whose path matches nothing creates the element (see Operations); an `insert` or `delete` without a match is logged at Info level and skipped, it is never an error. Malformed input or a malformed fragment to insert fails the step; the error message shows the beginning of what the step received, which exposes the classic mistake of binding a record (`{{trigger_Document}}`) instead of the XML text (`{{trigger_Xml}}`).
 
 When `resultElement` names a flow element, the edited document is also written into that element. That is the loop idiom: a Create Element step holds the document, a ForEachLoop over Business Central records runs one Edit step per record whose `document` is the element and whose `resultElement` is the element again, so every iteration edits the previous iteration's result.
 
@@ -40,7 +40,7 @@ Stored shape is exactly the editor shape: `format` is an option field in the edi
 
 | op | XML | JSON |
 |---|---|---|
-| `set` | element: replaces its text content (child elements are removed); attribute (`…/@attr`): sets the value | replaces the value; a number stays a number and a boolean a boolean when `value` parses as such, everything else becomes a string |
+| `set` | element: replaces its text content (child elements are removed); attribute (`…/@attr`): sets the value. No match: creates the element or attribute when the path is absolute and plain (`/Invoice/cbc:BuyerReference`), missing parents included, as last child; a new element needs a declared prefix unless its parent has no namespace | replaces the value; a number stays a number and a boolean a boolean when `value` parses as such, everything else becomes a string. No match: creates the member as a string, missing objects on the way too; array elements are not created |
 | `insert` | parses `value` as one or more elements (the document's prefixes may be used without declaring them) and adds them at `position`: `last` / `first` child of the match, `before` / `after` the match | array target: adds the parsed value (each element of a given array) `first` or `last`; object target: `value` must be an object whose members are merged in (existing members overwritten); array element target with `before` / `after`: inserts beside it |
 | `delete` | removes the element or attribute | removes the member or array element |
 
@@ -89,5 +89,5 @@ After the loop, the Return e-invoice XML step hands back `{{xml}}`.
 - The format is a choice, not detected: a JSON text with `format` = `"XML"` fails the step.
 - `document` wants the text, not the record: in an e-invoice flow bind `{{trigger_Xml}}`, not `{{trigger_Document}}`.
 - A set operation on an XML element drops its child elements. To change one value inside, address the child.
-- UBL and CII are order-sensitive under schema validation; insert at `before` / `after` a known sibling rather than `last` when the position matters.
+- UBL and CII are order-sensitive under schema validation; insert at `before` / `after` a known sibling rather than `last` when the position matters. A `set` that creates a missing element always appends it as the last child.
 - Inside a ForEachLoop the step's own outputs are deleted between iterations; without `resultElement` every iteration would start from the original document again.
