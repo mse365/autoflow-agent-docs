@@ -116,6 +116,51 @@
       "description": "First Company Information record, e.g. {{currentCompany.name}}."
     },
     {
+      "name": "envIsProduction",
+      "kind": "value",
+      "description": "'true' or 'false' (literal, never locale-formatted): environment type is Production."
+    },
+    {
+      "name": "envIsSandbox",
+      "kind": "value",
+      "description": "'true' or 'false': environment type is Sandbox."
+    },
+    {
+      "name": "envName",
+      "kind": "value",
+      "description": "Environment name (Environment Information.GetEnvironmentName())."
+    },
+    {
+      "name": "envIsSaaS",
+      "kind": "value",
+      "description": "'true' or 'false': deployment is SaaS. Mutually exclusive with envIsOnPrem."
+    },
+    {
+      "name": "envIsOnPrem",
+      "kind": "value",
+      "description": "'true' or 'false': deployment is on-premises."
+    },
+    {
+      "name": "envApplicationFamily",
+      "kind": "value",
+      "description": "Application family (Environment Information.GetApplicationFamily()), usually BusinessCentral."
+    },
+    {
+      "name": "envTenantId",
+      "kind": "value",
+      "description": "AutoFlow licensing tenant id: Entra (AAD) tenant GUID on SaaS, BC license serial number on-premises; never 'common'."
+    },
+    {
+      "name": "envIsPreview",
+      "kind": "value",
+      "description": "'true' or 'false': environment is on the preview update ring. BC 28+; always 'false' on the BC24/BC26 builds."
+    },
+    {
+      "name": "envIsEarlyPreview",
+      "kind": "value",
+      "description": "'true' or 'false': environment is on the early-preview update ring. BC 28+; always 'false' on the BC24/BC26 builds."
+    },
+    {
       "name": "<indexVar>",
       "kind": "value",
       "description": "Only inside {#for {{sel}}[indexVar]#}; a 1-based counter."
