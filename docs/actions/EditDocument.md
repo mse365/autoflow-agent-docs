@@ -3,7 +3,7 @@
 
 [← All actions](README.md)
 
-Changes an XML or JSON document: sets values, inserts or deletes elements by XPath or JSONPath, or loops over repeating elements and lets the steps on its edge edit each one.
+Changes an XML or JSON document: sets values, inserts or deletes elements by XPath or JSONPath. A path that matches several elements changes all of them; the result can be saved into a flow element so a loop edits the same document step by step.
 
 | | |
 |---|---|
@@ -11,42 +11,30 @@ Changes an XML or JSON document: sets values, inserts or deletes elements by XPa
 | Ordinal | `"action": 5564561` |
 | Category | Data |
 | Terminating | `false` |
-| Group / edges | mode-dependent: one edge `for-each` in loop mode, none in changes mode (spec: `group: false`) |
+| Group / edges | none |
 | Availability | GA |
 
 ## What it does
 
-The step takes the SmartText `document`, parses it once as XML or JSON (the `format` decides, there is no auto-detection) and works in one of two modes:
+The step takes the SmartText `document`, parses it once as XML or JSON (the `format` decides, there is no auto-detection), runs the `operations` list top to bottom and outputs the result as `document`. Each operation names a path; every element the path matches is changed. A path without a match is logged at Info level and skipped, it is never an error. Malformed input or a malformed fragment to insert fails the step; the error message shows the beginning of what the step received, which exposes the classic mistake of binding a record (`{{trigger_Document}}`) instead of the XML text (`{{trigger_Xml}}`).
 
-- **Apply changes** (`mode` = `"changes"`): runs the `operations` list top to bottom on the document and outputs the result as `document`. Each operation names a path; every element the path matches is changed. A path without a match is logged at Info level and skipped, it is never an error. Malformed input or a malformed fragment to insert fails the step.
-- **For each match** (`mode` = `"foreach"`): selects the elements `path` matches and runs the steps on the `for-each` edge once per match, with the match as `item`. After the last match the step rebuilds the document with the replacements the body produced and outputs it as `document`. A body produces a replacement through the convention below; without one the match stays as it is.
-
-### The loop convention
-
-The engine removes the outputs of the steps inside an edge whenever control returns to the loop step, so a body step cannot simply hand its result up. Instead: **an Edit XML/JSON Document step inside the loop whose `document` is exactly `{{<loopslug>_item}}` writes its result back as the replacement for the current item.** Its own `document` output stays usable inside the body as well. Rules for the written-back result:
-
-- an empty result removes the match from the document;
-- several top-level elements (XML) or a JSON array become siblings in the place of the match, which is how a sibling is added after an item;
-- the inner step may be in either mode.
-
-Nothing else writes back: a Parser, HTTP or Expression step inside the loop does not change the document. When the loop step's `path` matches nothing, the edge is not entered and `document` equals the input.
+When `resultElement` names a flow element, the edited document is also written into that element. That is the loop idiom: a Create Element step holds the document, a ForEachLoop over Business Central records runs one Edit step per record whose `document` is the element and whose `resultElement` is the element again, so every iteration edits the previous iteration's result.
 
 ## Configuration
 
 | key | type | required | default | description |
 |---|---|---|---|---|
-| `format` | string | yes | `"XML"` | `"XML"` or `"JSON"`, exact. Decides the path language (XPath / JSONPath) and how values are typed. |
-| `document` | string | yes | `""` | The XML or JSON text to edit. SmartText, normally a placeholder such as `{{trigger_Xml}}` or `{{Loop_item}}`. |
-| `mode` | string | no | `"changes"` | `"changes"` or `"foreach"`. Anything else is treated as `"changes"`. |
-| `operations` | array | in changes mode | `[]` | `[{ "op": "set" \| "insert" \| "delete", "path": "<path>", "position": "last" \| "first" \| "before" \| "after", "value": "<text or fragment>" }]`. `position` is read for `insert` only. `value` is SmartText. |
-| `path` | string | in foreach mode | `""` | XPath (XML) or JSONPath (JSON) of the repeating elements. For JSON it must select an array. |
+| `format` | string | no | `"XML"` | `"XML"` or `"JSON"`, exact; anything else counts as XML. Decides the path language (XPath / JSONPath) and how values are typed. |
+| `document` | string | yes | `""` | The XML or JSON text to edit. SmartText, normally a placeholder such as `{{trigger_Xml}}`, `{{Http_body}}` or a flow element `{{xml}}`. |
+| `operations` | array | yes | `[]` | `[{ "op": "set" \| "insert" \| "delete", "path": "<path>", "position": "last" \| "first" \| "before" \| "after", "value": "<text or fragment>" }]`. `position` is read for `insert` only. `value` is SmartText; SmartFields also work inside `path`. |
+| `resultElement` | string | no | `""` | A single `{{name}}` placeholder of a value-type flow element (Create Element). The result is written into it as well. |
 
-Stored shape is exactly the editor shape: `format` and `mode` are option fields in the editor but stored as the texts above; `operations` is a repeater whose rows are stored as they are.
+Stored shape is exactly the editor shape: `format` is an option field in the editor but stored as the text; `operations` is a repeater whose rows are stored as they are; `resultElement` is a selector field stored as the raw placeholder.
 
 ### Paths
 
-- **XML**: XPath 1.0 as Business Central's `SelectNodes` supports it. Prefixes declared anywhere in the document can be used as they are (`/ns0:Invoice/cbc:Note`); a step in the path without a prefix is rewritten to `*[local-name()='name']`, so `/Invoice/Note` matches regardless of namespaces. Attributes are addressed with `@`. The same namespace handling as the Parser step.
-- **JSON**: JSONPath as `SelectToken` supports it (`$.customer.city`, `$.lines[2].no`). A path addresses one member or one array element; wildcards are not supported for set/insert/delete, use the loop for repeating elements.
+- **XML**: XPath 1.0 as Business Central's `SelectNodes` supports it. Prefixes declared anywhere in the document can be used as they are (`/ns0:Invoice/cbc:Note`); a step in the path without a prefix is rewritten to `*[local-name()='name']`, so `/Invoice/Note` matches regardless of namespaces. Attributes are addressed with `@`. Predicates pick one element: `//cac:InvoiceLine[cbc:ID='10000']/cac:Item/cbc:Name`. The same namespace handling as the Parser step.
+- **JSON**: JSONPath as `SelectToken` supports it (`$.customer.city`, `$.lines[2].no`). A path addresses one member or one array element.
 
 ### Operations
 
@@ -60,39 +48,46 @@ Stored shape is exactly the editor shape: `format` and `mode` are option fields 
 
 | name | type | when |
 |---|---|---|
-| `document` | value | always; the edited document (loop mode: after the last match) |
-| `item` | value | loop mode, inside the edge; the current match as outer XML (self-contained, prefixes declared) or JSON text |
-| `index` | value | loop mode; 1-based position of the current match |
-| `total` | value | loop mode; number of matches |
-| `isLast` | value | loop mode; `true` / `false` |
-
-Inside the edge the outputs are referenced with the loop step's slug, e.g. `{{EditLines_item}}`, `{{EditLines_index}}`.
+| `document` | value | always; the edited document |
 
 ## Example
 
-Add a note to every invoice line of an e-invoice XML and hand the result back to the trigger:
+Set the buyer reference of an e-invoice and hand the result back to the trigger:
 
 ```json
 {
-  "id": "e1", "type": "action", "action": 5564561, "slug": "EditLines",
+  "id": "e1", "type": "action", "action": 5564561, "slug": "EditXml",
   "description": "Edit XML Document",
-  "configuration": { "format": "XML", "document": "{{trigger_Xml}}", "mode": "foreach", "operations": [], "path": "//cac:InvoiceLine" },
-  "outputs": [],
-  "edges": [ { "id": "edge1", "value": "for-each", "description": "for each match", "steps": [
-    { "id": "e2", "type": "action", "action": 5564561, "slug": "EditLine",
-      "description": "Edit XML Document",
-      "configuration": { "format": "XML", "document": "{{EditLines_item}}", "mode": "changes",
-        "operations": [ { "op": "insert", "path": "/InvoiceLine", "position": "last", "value": "<cbc:Note>Line {{EditLines_index}} of {{EditLines_total}}</cbc:Note>" } ],
-        "path": "" },
-      "outputs": [] }
-  ] } ]
+  "configuration": {
+    "format": "XML", "document": "{{trigger_Xml}}",
+    "operations": [ { "op": "set", "path": "/Invoice/BuyerReference", "position": "", "value": "{{trigger_Document.Your Reference}}" } ],
+    "resultElement": ""
+  },
+  "outputs": []
 }
 ```
 
+Edit every invoice line with data from Business Central (whole-document trigger): `ElementCreate` `xml` with initial value `{{trigger_Xml}}` → `FindRecords` `Lines` (Sales Invoice Line, Document No. = `{{trigger_Document.No.}}`) → `ForEachLoop` `Line` over `{{Lines_results}}` with one body step:
+
+```json
+{
+  "id": "e2", "type": "action", "action": 5564561, "slug": "EditLine",
+  "description": "Edit XML Document",
+  "configuration": {
+    "format": "XML", "document": "{{xml}}",
+    "operations": [ { "op": "set", "path": "//cac:InvoiceLine[cbc:ID='{{Line_currentItem.Line No.}}']/cac:Item/cbc:Name", "position": "", "value": "{{Line_currentItem.Description}}" } ],
+    "resultElement": "{{xml}}"
+  },
+  "outputs": []
+}
+```
+
+After the loop, the Return e-invoice XML step hands back `{{xml}}`.
+
 ## Pitfalls
 
-- The format is a choice, not detected: a JSON text with `format` = `"XML"` fails the step with `The document is not well-formed XML.`
+- The format is a choice, not detected: a JSON text with `format` = `"XML"` fails the step.
+- `document` wants the text, not the record: in an e-invoice flow bind `{{trigger_Xml}}`, not `{{trigger_Document}}`.
 - A set operation on an XML element drops its child elements. To change one value inside, address the child.
 - UBL and CII are order-sensitive under schema validation; insert at `before` / `after` a known sibling rather than `last` when the position matters.
-- In loop mode the step runs `total + 1` times (the last run collects); the engine's `iteration` output counts those runs, `index` counts matches.
-- Only a nested Edit step bound to `{{<loopslug>_item}}` feeds a replacement back; a body that edits a copy under another name changes nothing.
+- Inside a ForEachLoop the step's own outputs are deleted between iterations; without `resultElement` every iteration would start from the original document again.

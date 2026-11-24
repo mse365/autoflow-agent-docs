@@ -11,7 +11,7 @@
     {
       "key": "format",
       "type": "string",
-      "required": true,
+      "required": false,
       "default": "XML",
       "enum": [
         "XML",
@@ -19,7 +19,7 @@
       ],
       "maxLength": null,
       "smart": "none",
-      "description": "The document format, exact and case-sensitive. Not detected from the content. Decides the path language: XPath for XML, JSONPath for JSON."
+      "description": "The document format, exact and case-sensitive; anything but \"JSON\" counts as \"XML\". Not detected from the content. Decides the path language: XPath for XML, JSONPath for JSON."
     },
     {
       "key": "document",
@@ -29,40 +29,27 @@
       "enum": null,
       "maxLength": null,
       "smart": "text",
-      "description": "The XML or JSON text to edit, normally a SmartField such as {{trigger_Xml}} or, inside a loop, {{<loopslug>_item}}. An Edit step inside a \"foreach\" edge whose document is exactly {{<loopslug>_item}} writes its result back as the replacement for that item."
-    },
-    {
-      "key": "mode",
-      "type": "string",
-      "required": false,
-      "default": "changes",
-      "enum": [
-        "changes",
-        "foreach"
-      ],
-      "maxLength": null,
-      "smart": "none",
-      "description": "\"changes\" runs the operations list on the document; \"foreach\" selects the elements of path and runs the for-each edge once per match, then splices the replacements back. Any other value counts as \"changes\"."
+      "description": "The XML or JSON TEXT to edit, normally a SmartField such as {{trigger_Xml}} (e-invoice trigger), {{Http_body}} or a flow element {{xml}}. Never a record reference: {{trigger_Document}} is the posted invoice as a record and fails the step with \"not well-formed XML\"."
     },
     {
       "key": "operations",
       "type": "array",
-      "required": false,
+      "required": true,
       "default": [],
       "enum": null,
       "maxLength": null,
       "smart": "text",
-      "description": "Mode \"changes\" only; at least one row. Rows: { \"op\": \"set\"|\"insert\"|\"delete\", \"path\": \"<XPath or JSONPath>\", \"position\": \"last\"|\"first\"|\"before\"|\"after\", \"value\": \"<text or fragment>\" }. value is SmartText and required for set and insert; position is read for insert only (default last). Every element the path matches is changed; a path without a match is logged and skipped."
+      "description": "At least one row. Rows: { \"op\": \"set\"|\"insert\"|\"delete\", \"path\": \"<XPath or JSONPath>\", \"position\": \"last\"|\"first\"|\"before\"|\"after\", \"value\": \"<text or fragment>\" }. value is SmartText and required for set and insert; position is read for insert only (default last). Every element the path matches is changed; a path without a match is logged and skipped. SmartFields work inside path too."
     },
     {
-      "key": "path",
+      "key": "resultElement",
       "type": "string",
       "required": false,
       "default": "",
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "Mode \"foreach\" only, required there: XPath (XML) or JSONPath (JSON) of the repeating elements, e.g. //cac:InvoiceLine or $.lines. For JSON the path must select an array; a single value fails the step."
+      "description": "Optional: exactly one flow element placeholder {{name}} (an element created by Create Element, value type). The edited document is written into that element in addition to the document output, so a later step - or the next iteration of a For each loop - reads the edited version through {{name}}. A dotted path or plain text is rejected at publish."
     }
   ],
   "outputs": [
@@ -70,55 +57,16 @@
       "name": "document",
       "type": "value",
       "tableNo": null,
-      "when": "always; the edited document (mode foreach: after the last match, equal to the input when nothing matched)"
-    },
-    {
-      "name": "item",
-      "type": "value",
-      "tableNo": null,
-      "when": "mode foreach, inside the edge; the current match as self-contained outer XML or as JSON text"
-    },
-    {
-      "name": "index",
-      "type": "value",
-      "tableNo": null,
-      "when": "mode foreach; 1-based number of the current match"
-    },
-    {
-      "name": "total",
-      "type": "value",
-      "tableNo": null,
-      "when": "mode foreach; number of matches"
-    },
-    {
-      "name": "isLast",
-      "type": "value",
-      "tableNo": null,
-      "when": "mode foreach; \"true\" on the last match, else \"false\""
+      "when": "always; the edited document"
     }
   ],
   "rules": [
-    {
-      "id": "EditDocument.format-required",
-      "severity": "error",
-      "stage": "publish",
-      "check": "configuration.format must be \"XML\" or \"JSON\"",
-      "message": "Pick the format of the document: XML or JSON.",
-      "machine": {
-        "type": "enum",
-        "key": "format",
-        "values": [
-          "XML",
-          "JSON"
-        ]
-      }
-    },
     {
       "id": "EditDocument.document-required",
       "severity": "error",
       "stage": "publish",
       "check": "configuration.document must be non-empty",
-      "message": "Enter the document to edit, normally a SmartField ({{...}}) carrying XML or JSON from an earlier step.",
+      "message": "Enter the document to edit, normally a SmartField ({{...}}) carrying XML or JSON from an earlier step, for example {{trigger_Xml}}.",
       "machine": {
         "type": "required",
         "key": "document"
@@ -128,50 +76,43 @@
       "id": "EditDocument.operation-required",
       "severity": "error",
       "stage": "publish",
-      "check": "mode \"changes\": configuration.operations must contain at least one row",
-      "message": "Add at least one change, or switch to \"For each match\"."
+      "check": "configuration.operations must contain at least one row",
+      "message": "Add at least one change."
     },
     {
       "id": "EditDocument.operation-op",
       "severity": "error",
       "stage": "publish",
-      "check": "mode \"changes\": every row's op must be set, insert or delete",
+      "check": "every row's op must be set, insert or delete",
       "message": "Change %1: pick Set value, Insert or Delete."
     },
     {
       "id": "EditDocument.operation-path",
       "severity": "error",
       "stage": "publish",
-      "check": "mode \"changes\": every row's path must be non-empty",
+      "check": "every row's path must be non-empty",
       "message": "Change %1: enter the path of the element to change."
     },
     {
       "id": "EditDocument.operation-value",
       "severity": "error",
       "stage": "publish",
-      "check": "mode \"changes\": rows with op set or insert must have a non-empty value",
+      "check": "rows with op set or insert must have a non-empty value",
       "message": "Change %1: enter the value to set or the content to insert."
     },
     {
-      "id": "EditDocument.loop-path-required",
+      "id": "EditDocument.result-element",
       "severity": "error",
       "stage": "publish",
-      "check": "mode \"foreach\": configuration.path must be non-empty",
-      "message": "Enter the path of the elements to loop over."
+      "check": "configuration.resultElement, when set, must be a single {{name}} placeholder without a dot",
+      "message": "Save result to: pick one flow element ({{name}}) or leave the field empty."
     },
     {
       "id": "EditDocument.not-well-formed",
       "severity": "error",
       "stage": "runtime",
-      "check": "the document must parse in the chosen format; a fragment to insert must parse too",
-      "message": "The document is not well-formed XML. / The document is not valid JSON. / The content to insert is not well-formed XML: %1 / The content to insert is not valid JSON: %1"
-    },
-    {
-      "id": "EditDocument.loop-json-array",
-      "severity": "error",
-      "stage": "runtime",
-      "check": "mode \"foreach\" with JSON: the path must select an array",
-      "message": "The path %1 must select an array to loop over; it selects a single value."
+      "check": "the document must parse in the chosen format; a fragment to insert must parse too. The message shows the first 120 characters of what the step received",
+      "message": "The document is not well-formed XML. It begins with: %1 / The document is not valid JSON. It begins with: %1 / The content to insert is not well-formed XML: %1 / The content to insert is not valid JSON: %1"
     },
     {
       "id": "EditDocument.no-match",
@@ -182,11 +123,10 @@
     }
   ],
   "notes": [
-    "Edges depend on the mode: in mode \"foreach\" the step carries exactly one edge { \"value\": \"for-each\", \"description\": \"for each match\" } whose steps run once per match; in mode \"changes\" it has none. The spec says group=false because that is the common shape; a foreach step with its edge is correct even though the validator lints action.edges-unexpected for it.",
-    "The loop keeps its state in the step's own outputs and runs total + 1 times: once per match (emitting the edge) and a final collecting run without the edge. The engine's iteration output counts runs, index counts matches.",
-    "Replacement convention: only an Edit XML/JSON Document step inside the for-each edge whose document is exactly {{<loopslug>_item}} writes its result back for the current item (the engine deletes the body's outputs between iterations, so nothing else survives). Empty result = match removed; several top-level elements or a JSON array = siblings in the place of the match.",
-    "XML paths use the Parser's namespace handling: declared prefixes work as they are, an unprefixed step is rewritten to *[local-name()='…'].",
+    "No edges, no modes: the step is the list of changes. Repeating elements are handled by a path that matches all of them (//cac:InvoiceLine/cbc:Note), or by looping over Business Central records with the ordinary ForEachLoop step and keeping the document in a flow element (see the page).",
+    "XML paths use the Parser's namespace handling: declared prefixes work as they are, an unprefixed step is rewritten to *[local-name()='…']. Predicates with SmartFields are the way to address one line: //cac:InvoiceLine[cbc:ID='{{Line_currentItem.Line No.}}'].",
     "A set on an XML element replaces its whole content, child elements included.",
+    "In the e-invoice XML of XRechnung and PEPPOL the line's cbc:ID is the posted line's Line No.",
     "Typical use: inside a \"When an e-invoice is created\" flow of AutoFlow E-Document for Germany, between the trigger's Xml output and the Return e-invoice XML step."
   ]
 }
