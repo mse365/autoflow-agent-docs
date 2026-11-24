@@ -12,7 +12,8 @@ A flow definition is a single UTF-8 JSON document. It is what **Export current v
   "iconUrl": "https://…/icon.svg",             // optional, flow icon
   "steps": [ /* trigger first, then action steps */ ],
   "notes": [ /* optional canvas sticky notes */ ],
-  "smartFieldDefs": { /* optional record-path definitions, see references-and-smart-fields.md §1.8 */ }
+  "smartFieldDefs": { /* optional record-path definitions, see references-and-smart-fields.md §1.8 */ },
+  "globalParameters": [ { "name": "apiBaseUrl" } ] // optional: global parameters the flow uses, see below
 }
 ```
 
@@ -25,8 +26,9 @@ A flow definition is a single UTF-8 JSON document. It is what **Export current v
 | `steps` | array | yes | `steps[0]` **must** be the trigger. The other entries are the top-level action sequence, run in array order. |
 | `notes` | array | no | Canvas notes; they have no effect at runtime. See [Notes](#notes). |
 | `smartFieldDefs` | object | no | Flow-level definitions of how `{{slug_output.Segment…}}` paths walk related records. See [references-and-smart-fields.md §1.8](references-and-smart-fields.md#18-smartfielddefs-the-flow-level-path-definitions). |
+| `globalParameters` | array | no | The company-wide [global parameters](references-and-smart-fields.md#19-global-parameters) the flow references, as `{ "name": "<name>" }` objects. Written by export; on import each missing one is created empty. Never stored in the definition. See [Global parameters](#global-parameters). |
 
-Only `name`, `code`, `iconUrl` and `version` are read from the root on import (`version` is then removed). The rest of the document is stored verbatim as the flow's draft version. **Import performs no validation**: a malformed definition imports fine and fails later, at publish or at runtime. That's why the checks in [validation.md](validation.md) exist.
+Only `name`, `code`, `iconUrl`, `version` and `globalParameters` are read from the root on import (`version` and `globalParameters` are then removed). The rest of the document is stored verbatim as the flow's draft version. **Import performs no validation**: a malformed definition imports fine and fails later, at publish or at runtime. That's why the checks in [validation.md](validation.md) exist.
 
 ## Trigger step (`steps[0]`)
 
@@ -172,11 +174,29 @@ Canvas sticky notes, display only:
 
 `color` is one of `yellow`, `pink`, `blue`, `green`, `lavender`, `grey`. In `html`, only `b`, `i`, `u`, `br` and text survive: the editor strips every other tag (keeping its text) when it shows or saves the note. `width` and `height` are optional; leave them out to auto-size.
 
+## Global parameters
+
+A flow can use texts that belong to the company instead of the flow – [global parameters](references-and-smart-fields.md#19-global-parameters), referenced as `{{<name>}}`. Their **values** are never part of a definition. The root key `globalParameters` only declares which ones the flow uses:
+
+```json
+"globalParameters": [ { "name": "apiBaseUrl" }, { "name": "defaultRecipient" } ]
+```
+
+- **Export** (*Export current version*, the Flow API, *Save as template*) writes one entry for every global parameter of the company that some `{{…}}` token in the definition has as its root (case-insensitive). A flow that uses none gets no `globalParameters` key.
+- **Import** (*Create from file*, the Flow API, creating or updating a flow from a template) creates every declared parameter the company does not have yet, **without a value**, for any user. An existing parameter – compared case-insensitively – is left untouched, including its value. A declared name that is not a valid parameter name (grammar `[A-Za-z][A-Za-z0-9-]*`, at most 30 characters) or is a protected name (a built-in such as `today`, or `now`) is skipped; the Flow API returns the issue *"The flow declares the global parameter "%1", which is not a valid parameter name in this version of AutoFlow. It was not created."*
+- The key is **removed** before the definition is stored, like `version`. It is import information, not part of a flow version.
+- Entries are objects so that further keys can be added later. Write only `name`.
+
+When you author a definition that references a global parameter, declare it. Without the declaration the import creates nothing: if the company happens to have the parameter, the token resolves; if not, `{{<name>}}` stays an unknown bare root and is kept as literal text at runtime, with no warning at publish.
+
+After the import, a flow that uses a parameter without a value gets a publish warning (see [validation.md](validation.md#publish)), and *Create from file* tells the user which parameters to fill.
+
 ## What is *not* in the definition
 
 These are environment-local, so an agent can't set them through JSON:
 
 - Flow **No.**, status (draft or published), the version number of the stored version (export adds it as `version`, import ignores it), folder, category.
+- The **values** of global parameters. A definition can only declare their names (`globalParameters`); an AutoFlow Admin enters the values in each company.
 - Credentials and secrets. Steps reference them by key. Each environment must have matching credential records; see the HTTP Request and Azure Blob pages.
 - Webhook URLs and registrations, which are created on publish.
 - Licensing.
