@@ -43,10 +43,16 @@ index      := digits                               // 0-based
 | `currentDateTime` | value | `{{currentDateTime;9}}` | Current date-time. |
 | `currentUser` | reference → table 2000000120 (User) | `{{currentUser.username}}` | The User record of the session that runs the step. Flows normally run in the background, so this is usually the job queue user, not the user who caused the trigger. |
 | `currentCompany` | reference → table 79 (Company Information) | `{{currentCompany.name}}` | The first Company Information record. |
+| `envIsProduction`, `envIsSandbox` | value | `{{envIsProduction}}` | `true` / `false`: environment type is Production / Sandbox. Always the literal `true` or `false` (never locale-formatted), so SmartFilters can compare them: `{{envIsProduction}} = true`. Added in CHN-623. |
+| `envIsSaaS`, `envIsOnPrem` | value | `{{envIsSaaS}}` | `true` / `false`: deployment is SaaS / on-premises. Mutually exclusive. |
+| `envName` | value | `{{envName}}` | `Environment Information.GetEnvironmentName()` – the environment name (e.g. `Production`). |
+| `envApplicationFamily` | value | `{{envApplicationFamily}}` | `Environment Information.GetApplicationFamily()`, usually `BusinessCentral`. |
+| `envTenantId` | value | `{{envTenantId}}` | The AutoFlow licensing tenant id: the Entra (AAD) tenant GUID on SaaS, the BC license serial number on-premises. Never the AAD placeholder `common`. |
+| `envIsPreview`, `envIsEarlyPreview` | value | `{{envIsPreview}}` | `true` / `false`: the environment is on Microsoft's preview / early-preview update ring. Read from BC 28 on; the BC24/BC26 builds always return `false`. |
 | loop index variable | value | `{{i}}` | Only inside a `{#for {{…}}[i]#}` block. It counts from 1. |
 | `credential.username`, `credential.password` | special | `{{credential.username}}` | Only in an HTTP Request `body` when a credential is selected. They are replaced at send time (XML-escaped) and stay unresolved everywhere else. |
 
-The editor's field picker lists the outputs of every step on the path from the trigger to the current step: earlier siblings, enclosing group steps (for example the loop item of a For Each), and those steps' predecessors. It adds the five built-ins at the end.
+The editor's field picker lists the outputs of every step on the path from the trigger to the current step: earlier siblings, enclosing group steps (for example the loop item of a For Each), and those steps' predecessors. It adds the built-ins at the end: the five context values (`today`, `workdate`, `currentDateTime`, `currentUser`, `currentCompany`), then the nine `env…` values in the order of the table above.
 
 At runtime the context holds the outputs of the steps that have already run. When the flow leaves a group step's branch or loop body, the outputs of every step inside that group are removed. Only the trigger, earlier steps on the path and the enclosing group steps can therefore be referenced reliably, which is exactly what the picker offers.
 
