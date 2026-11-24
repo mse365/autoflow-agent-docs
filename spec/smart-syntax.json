@@ -161,6 +161,11 @@
       "description": "'true' or 'false': environment is on the early-preview update ring. BC 28+; always 'false' on the BC24/BC26 builds."
     },
     {
+      "name": "<globalParameterName>",
+      "kind": "value",
+      "description": "A global parameter of the company the flow runs in (references-and-smart-fields.md §1.9): a text of any length an AutoFlow Admin maintains outside the flow. Bare name, grammar [A-Za-z][A-Za-z0-9-]*, at most 30 characters; never a built-in name or 'now'. Inserted literally (tokens inside the value are not resolved); empty text while the parameter has no value. Declare the names a flow uses in the root key globalParameters."
+    },
+    {
       "name": "<indexVar>",
       "kind": "value",
       "description": "Only inside {#for {{sel}}[indexVar]#}; a 1-based counter."

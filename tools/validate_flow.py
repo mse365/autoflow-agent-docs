@@ -210,6 +210,7 @@ def check_root(doc, r):
     if not isinstance(steps, list) or not steps:
         r.add("error", "root.steps", "$.steps", "'steps' must be a non-empty array whose first entry is the trigger.")
         return False
+    check_global_parameters(doc, r)
     notes = doc.get("notes")
     if notes is not None:
         if not isinstance(notes, list):
@@ -226,6 +227,65 @@ def check_root(doc, r):
                 if n.get("color") not in NOTE_COLORS:
                     r.add("lint", "notes.color", w, f"Note color must be one of {sorted(NOTE_COLORS)}.")
     return True
+
+
+# Global parameters: company-wide texts a flow reads as {{<name>}}. The root key 'globalParameters'
+# declares the names the flow uses; import creates the missing ones (empty) and skips a name that
+# is not a valid parameter name. Same grammar as an element / collection name.
+GLOBAL_PARAM_RE = re.compile(r"^[A-Za-z][A-Za-z0-9-]{0,29}$")
+GLOBAL_PARAM_RESERVED = frozenset(n.lower() for n in (
+    "today", "workdate", "currentDateTime", "currentUser", "currentCompany",
+    "envIsProduction", "envIsSandbox", "envName", "envIsSaaS", "envIsOnPrem",
+    "envApplicationFamily", "envTenantId", "envIsPreview", "envIsEarlyPreview", "now"))
+
+
+def declared_global_parameters(doc):
+    """Lower-cased names the root 'globalParameters' declares (objects with 'name', or plain strings)."""
+    names = []
+    params = doc.get("globalParameters") if isinstance(doc, dict) else None
+    if isinstance(params, list):
+        for p in params:
+            n = p.get("name") if isinstance(p, dict) else p
+            if isinstance(n, str) and n:
+                names.append(n)
+    return names
+
+
+def check_global_parameters(doc, r):
+    params = doc.get("globalParameters")
+    if params is None:
+        return
+    if not isinstance(params, list):
+        r.add("warning", "root.globalParameters", "$.globalParameters",
+              "'globalParameters' must be an array of { \"name\": \"<name>\" } objects; import ignores anything else.")
+        return
+    seen = set()
+    for i, p in enumerate(params):
+        w = f"$.globalParameters[{i}]"
+        name = p.get("name") if isinstance(p, dict) else p
+        if not isinstance(name, str) or not name:
+            r.add("warning", "root.globalParameters-entry", w,
+                  "Entry must be an object with a non-empty 'name'; import ignores it.")
+            continue
+        if not isinstance(p, dict):
+            r.add("lint", "root.globalParameters-entry", w, "Write the entry as { \"name\": \"%s\" }." % name)
+        if not GLOBAL_PARAM_RE.match(name):
+            r.add("warning", "root.globalParameters-name", w,
+                  f"'{name}' is not a valid global parameter name (start with a letter, then letters, digits or "
+                  "hyphens, at most 30 characters). Import skips it and reports: The flow declares the global "
+                  f"parameter \"{name}\", which is not a valid parameter name in this version of AutoFlow. It was not created.")
+        elif name.lower() in GLOBAL_PARAM_RESERVED:
+            r.add("warning", "root.globalParameters-reserved", w,
+                  f"'{name}' is a built-in SmartField (or 'now') and can't be a global parameter. Import skips it.")
+        if name.lower() in seen:
+            r.add("lint", "root.globalParameters-duplicate", w, f"'{name}' is declared more than once (names are case-insensitive).")
+        seen.add(name.lower())
+    blob = json.dumps(doc.get("steps", []))
+    roots = {root.lower() for root, _ in placeholder_roots(blob)}
+    for name in sorted(seen):
+        if GLOBAL_PARAM_RE.match(name) and name not in GLOBAL_PARAM_RESERVED and name not in roots:
+            r.add("lint", "root.globalParameters-unused", "$.globalParameters",
+                  f"'{name}' is declared but no {{{{{name}}}}} token references it. Import still creates the parameter.")
 
 
 def check_steps(doc, specs, r, strict_outputs, features=()):

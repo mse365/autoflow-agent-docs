@@ -49,6 +49,7 @@ index      := digits                               // 0-based
 | `envApplicationFamily` | value | `{{envApplicationFamily}}` | `Environment Information.GetApplicationFamily()`, usually `BusinessCentral`. |
 | `envTenantId` | value | `{{envTenantId}}` | The AutoFlow licensing tenant id: the Entra (AAD) tenant GUID on SaaS, the BC license serial number on-premises. Never the AAD placeholder `common`. |
 | `envIsPreview`, `envIsEarlyPreview` | value | `{{envIsPreview}}` | `true` / `false`: the environment is on Microsoft's preview / early-preview update ring. Read from BC 28 on; the BC24/BC26 builds always return `false`. |
+| `<globalParameterName>` | value | `{{apiBaseUrl}}` | A [global parameter](#19-global-parameters) of the company the flow runs in: a text an AutoFlow Admin maintains outside the flow. The bare name, no slug. Empty text while the parameter has no value. |
 | loop index variable | value | `{{i}}` | Only inside a `{#for {{…}}[i]#}` block. It counts from 1. |
 | `credential.username`, `credential.password` | special | `{{credential.username}}` | Only in an HTTP Request `body` when a credential is selected. They are replaced at send time (XML-escaped) and stay unresolved everywhere else. |
 
@@ -216,6 +217,19 @@ How names and definitions behave:
 - **Name derivation in the editor.** When a definition is created from the picker, its name is derived from the field caption, or the table caption for references. The caption is PascalCased, umlauts are transliterated (`ü` becomes `ue`), the result is cut to 30 characters, and on a collision the suffixes `2`, `3`, … are added. `Sell-to Customer No.` becomes `SelltoCustomerNo`. Captions follow the user's language, so names derived in a German session are German.
 - **Renaming a definition.** The editor rewrites every placeholder segment that resolves to the renamed definition **at that position in the path**. Literal text and segments that resolve to BC field names are not touched.
 - **Missing fields.** A value definition whose field no longer exists resolves to an empty string, with a warning that is not shown to users. A relation entry whose target field doesn't exist is skipped.
+
+### 1.9 Global parameters
+
+A global parameter is a named text that belongs to the **company**, not to a flow. An AutoFlow Admin maintains it on the *Global Parameters* page (opened from the Flow Workspace). Every flow of that company can read it as `{{<name>}}`, exactly like a built-in such as `{{today}}`. Typical uses are a web service base URL, a default recipient, or a JSON / XML template.
+
+- **Name.** Grammar `[A-Za-z][A-Za-z0-9-]*`, 1–30 characters – the same grammar as an element or collection name, so a parameter never contains an underscore and can't be mistaken for a `{{<slug>_<output>}}` reference. Names are unique per company, compared case-insensitively. Write the token with the exact case of the name.
+- **Protected names.** A parameter can't be called like a built-in root (`today`, `workdate`, `currentDateTime`, `currentUser`, `currentCompany`, the nine `env…` names) or `now` (compared case-insensitively). It can't take a name that a flow of the company already uses as an element or collection name either.
+- **Value.** A text of any length, single- or multi-line. It is always a **value**, never a reference, and it is inserted **literally**: tokens inside a parameter value (`{{today}}`, `[[…]]`, `{#…#}`) are not resolved. The format suffix works as for any value (`{{<name>;<format>}}`).
+- **Resolution.** Read from the company at the moment a step resolves its configuration, so a changed value applies from the next step on, also in an execution that is already running. A parameter without a value resolves to an empty text; the step does not fail. If the flow itself registered an output under the same bare name, the flow's output wins.
+- **Field picker.** The picker lists the company's global parameters after the built-ins.
+- **Not in the flow.** The value is company data and is never part of a flow definition. A definition only *declares* the names it uses, in the root key `globalParameters` (see [flow-definition.md](flow-definition.md#global-parameters)). An agent can't set a value through JSON or the Flow API.
+
+When you write a flow that needs a company-specific constant, use a global parameter instead of hard-coding the value: reference it as `{{<name>}}` and declare it in `globalParameters`. The import then creates the parameter (empty) if the company doesn't have it, and AutoFlow tells the user to fill it.
 
 ---
 
