@@ -49,7 +49,7 @@
       "enum": null,
       "maxLength": null,
       "smart": "none",
-      "description": "Optional: exactly one flow element placeholder {{name}} (an element created by Create Element, value type). The edited document is written into that element in addition to the document output, so a later step - or the next iteration of a For each loop - reads the edited version through {{name}}. A dotted path or plain text is rejected at publish."
+      "description": "Optional: exactly one flow element placeholder {{name}} (an element created by Create Element, value type). The edited document is written into that element in addition to the document output, so a later step - or the next iteration of a ForEachLoop step - reads the edited version through {{name}}. A dotted path or plain text is rejected at publish."
     }
   ],
   "outputs": [
