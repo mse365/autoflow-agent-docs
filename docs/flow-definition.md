@@ -28,6 +28,8 @@ A flow definition is a single UTF-8 JSON document. It is what **Export current v
 
 Only `name`, `code`, `iconUrl` and `version` are read from the root on import (`version` is then removed). The rest of the document is stored verbatim as the flow's draft version. **Import performs no validation**: a malformed definition imports fine and fails later, at publish or at runtime. That's why the checks in [validation.md](validation.md) exist.
 
+The same document can also be edited in place with **Edit flow definition (JSON)** on the flow card (AutoFlow administrators, when JSON editing is turned on in AutoFlow Setup). It shows the stored draft definition – or the published one when there is no draft – and saves the text as a draft: the open draft is overwritten or a new draft version is added, a published version is never written. There, `name`, `code` and `iconUrl` are **not** applied to the flow (they are changed on the flow card), and `version` is removed as on import. Text that is not a JSON object is refused; publish-level issues are listed as a warning but do not block the save.
+
 ## Trigger step (`steps[0]`)
 
 ```json
