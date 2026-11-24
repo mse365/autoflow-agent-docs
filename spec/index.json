@@ -136,6 +136,15 @@
       "availability": "ga"
     },
     {
+      "name": "EditDocument",
+      "id": 5564561,
+      "caption": "Edit XML/JSON Document",
+      "category": "Data",
+      "terminating": false,
+      "group": false,
+      "availability": "ga"
+    },
+    {
       "name": "ElementCreate",
       "id": 202,
       "caption": "Create Element",
