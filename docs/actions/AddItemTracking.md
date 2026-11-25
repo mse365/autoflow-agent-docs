@@ -81,6 +81,7 @@ There are no publish-time checks specific to this step. A Confirm dialog after t
 
 - **Older releases read only `value`.** Before the CHN-628 fix the runtime ignored `trackingValue`, so a step configured only in the editor failed with "Enter the … number to assign." If a flow has to run on such an installation, write `value` and `trackingValue` with the same content.
 - **One call per number.** For several lots or serial numbers on one line, call the step once per number (e.g. in a For Each loop). Each call adds its own entry; earlier ones are left untouched.
+- **Do not track more than a drop-shipment line holds.** On a drop-shipment purchase line the quantity beyond the untracked order-to-order binding becomes a purchase-side surplus entry and is not mirrored to the sales line.
 - `quantity` is text in invariant format. Use `"2.5"`, not `"2,5"`. A JSON number (`2`) is read as text too.
 - If the line's `No.` is not an existing item (e.g. a G/L account line), the step does nothing and still succeeds.
 - `trackingType` is the integer ordinal, not `"Lot"`. Any other number is not rejected, but no tracking number is set.
