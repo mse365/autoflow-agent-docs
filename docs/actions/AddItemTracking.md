@@ -21,7 +21,7 @@ The step resolves `reference` to a **Sales Line (37)** or **Purchase Line (39)**
 - Inbound (positive): purchase documents, and sales return orders and sales credit memos.
 - Outbound (negative): purchase return orders and purchase credit memos, and all other sales documents.
 
-If the line already has a reservation entry without a serial number, the tracking is attached to that reservation. Otherwise a surplus item-tracking entry is created; for a drop-shipment **purchase** line linked to a sales order, the new tracking is then mirrored to the linked sales order line. The step has no outputs.
+If the line already has reservation entries that carry no serial, lot or package number yet (for example the order-to-order binding of a drop shipment, or a reservation against a sales order), the tracking is attached to them. Entries that already carry tracking – for example from an earlier call of this step – are never changed, so calling the step once per lot or serial number builds up the line's tracking. Whatever quantity the untracked entries cannot take becomes a surplus item-tracking entry with the same number. If the line has no untracked entry at all, one surplus entry is created; for a drop-shipment **purchase** line linked to a sales order, the new tracking is then mirrored to the linked sales order line. The step has no outputs.
 
 ## Configuration
 
@@ -29,8 +29,8 @@ If the line already has a reservation entry without a serial number, the trackin
 |---|---|---|---|---|
 | `reference` | string | yes | `""` | One SmartField placeholder resolving to the sales or purchase line, e.g. `"{{FindSalesLine_results}}"`. A collection resolves to its first record. Bare names without braces fail at runtime. |
 | `trackingType` | integer | yes | `0` | `0` = Serial No., `1` = Lot No., `2` = Package No. |
-| `value` | string | yes | `""` | The serial, lot or package number. **This is the key the step reads at runtime.** SmartText: SmartFields, `[[formulas]]` and SmartControls are resolved before the step runs. Stored in a Code field, so it is upper-cased and cut to the field length (50 characters in standard BC). |
-| `trackingValue` | string | no | `""` | The same number as written by the visual editor. It is **not read at runtime**. Set it to the same text as `value` so the editor shows it and its required-field check passes. |
+| `trackingValue` | string | yes | `""` | The serial, lot or package number – the key the visual editor writes. SmartText: SmartFields, `[[formulas]]` and SmartControls are resolved before the step runs. Stored in a Code field, so it is upper-cased and cut to the field length (50 characters in standard BC). |
+| `value` | string | no | `""` | Legacy key for the same number. Read only when `trackingValue` is missing or empty; a non-empty `trackingValue` always wins. Releases before the CHN-628 fix read only this key, so write both with the same content when a flow must also run on an older installation. |
 | `quantity` | string | lot/package: yes | – | Quantity in the line's unit of measure, as text parsed in invariant format (`"2"`, `"2.5"`). SmartText. Ignored for serial numbers (always 1). For lot and package numbers it must be > 0; a missing or unparseable value counts as 0 and fails. The editor writes `"1"` when left empty. |
 
 ## Outputs
@@ -51,7 +51,7 @@ There are no publish-time checks specific to this step. A Confirm dialog after t
 |---|---|
 | `reference` is not a `{{…}}` placeholder or does not resolve | `Reference "%1" cannot be resolved to a record.` |
 | Reference is not a Sales Line / Purchase Line | `The Add Item Tracking step must reference a Sales Line or a Purchase Line, but the reference points to "%1".` |
-| `value` empty after resolution | `Enter the %1 to assign.` (`%1` = `serial number` / `lot number` / `package number`) |
+| `trackingValue` and `value` both empty after resolution | `Enter the %1 to assign.` (`%1` = `serial number` / `lot number` / `package number`) |
 | Lot/package with quantity ≤ 0, missing or not parseable | `Enter a quantity greater than zero.` |
 | Item has no Item Tracking Code | `Item %1 is not set up for item tracking, so no serial, lot or package number can be assigned.` |
 | Sales line is a drop shipment | `This sales line is a drop shipment. For drop shipments, add the item tracking on the linked purchase order line instead – it is mirrored to the sales side automatically.` |
@@ -70,7 +70,6 @@ There are no publish-time checks specific to this step. A Confirm dialog after t
   "configuration": {
     "reference": "{{FindPurchaseLine_results}}",
     "trackingType": 1,
-    "value": "{{Parser_lotNo}}",
     "trackingValue": "{{Parser_lotNo}}",
     "quantity": "{{Parser_qty}}"
   },
@@ -80,7 +79,9 @@ There are no publish-time checks specific to this step. A Confirm dialog after t
 
 ## Gotchas
 
-- **Key mismatch (still in 27.0.40):** the visual editor saves the number as `trackingValue`, but the runtime reads `value`. A step configured only in the editor fails at runtime with "Enter the … number to assign." In JSON, always write `value`, and write `trackingValue` with the same content.
+- **Older releases read only `value`.** Before the CHN-628 fix the runtime ignored `trackingValue`, so a step configured only in the editor failed with "Enter the … number to assign." If a flow has to run on such an installation, write `value` and `trackingValue` with the same content.
+- **One call per number.** For several lots or serial numbers on one line, call the step once per number (e.g. in a For Each loop). Each call adds its own entry; earlier ones are left untouched.
+- **Do not track more than a drop-shipment line holds.** On a drop-shipment purchase line the quantity beyond the untracked order-to-order binding becomes a purchase-side surplus entry and is not mirrored to the sales line.
 - `quantity` is text in invariant format. Use `"2.5"`, not `"2,5"`. A JSON number (`2`) is read as text too.
 - If the line's `No.` is not an existing item (e.g. a G/L account line), the step does nothing and still succeeds.
 - `trackingType` is the integer ordinal, not `"Lot"`. Any other number is not rejected, but no tracking number is set.
