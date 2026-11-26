@@ -538,8 +538,16 @@ def check_action(step, where, siblings, idx, specs, r, features=(), flow_trigger
               f"'terminating' must be {str(spec['terminating']).lower()} for {spec.get('caption', spec.get('name'))}.")
     if spec.get("group") and not has_edges:
         r.add("error", "action.edges-required", where, f"{spec.get('caption')} is a group step and needs 'edges'.")
-    if not spec.get("group") and has_edges:
+    # a step that may branch (edges.dynamic without group, e.g. Intelligence) needs no edges but runs them
+    optional_edges = not spec.get("group") and bool((spec.get("edges") or {}).get("dynamic"))
+    if not spec.get("group") and has_edges and not optional_edges:
         r.add("lint", "action.edges-unexpected", where, f"{spec.get('caption')} is not a group step; its 'edges' are never executed.")
+    if spec.get("name") == "Intelligence" and has_edges:
+        allowed = intelligence_branches(step.get("configuration"))
+        for e in edges:
+            if isinstance(e, dict) and isinstance(e.get("value"), str) and e["value"] not in allowed:
+                r.add("error", "Intelligence.edge-unknown", where,
+                      f"The branch '{e['value']}' matches no answer of question 1. Add the answer, or remove the branch.")
     fixed = ((spec.get("edges") or {}).get("fixed") or []) if spec.get("group") else []
     if has_edges and fixed:
         values = {e.get("value") for e in edges if isinstance(e, dict)}
@@ -548,6 +556,26 @@ def check_action(step, where, siblings, idx, specs, r, features=(), flow_trigger
                 r.add("lint", "action.edge-missing", where,
                       f"Expected an edge with value '{fe.get('value')}' ({fe.get('description', '')}).")
     check_config_rules(spec, step.get("configuration"), where, r, flow_trigger)
+
+
+def intelligence_branches(config):
+    """The edge values of an Intelligence step: the answers its first question can give (see docs/actions/Intelligence.md#edges)."""
+    if not isinstance(config, dict) or config.get("mode") != "classify":
+        return set()
+    qs = [q for q in (config.get("questions") or []) if isinstance(q, dict)]
+    if not qs:
+        return set()
+    q = qs[0]
+    t = q.get("type")
+    if t == "yesno":
+        return {"true", "false"}
+    if t not in ("choice", "rating") or (t == "choice" and q.get("answersFrom") == "list"):
+        return set()
+    values = {str(a.get("value", "")).strip() for a in (q.get("answers") or []) if isinstance(a, dict)} - {""}
+    allow_none = q.get("allowNone", True)
+    if t == "choice" and str(allow_none).lower() not in ("false", "0", "no"):
+        values.add("none")
+    return values
 
 
 def check_availability(spec, where, r, features=()):

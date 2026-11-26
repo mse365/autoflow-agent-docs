@@ -22,7 +22,7 @@ Step files are maintained in the app that owns the step and handed to AutoFlow t
   "feature": null,                  // dark-launched steps: the portal feature flag that enables them, else omitted
   "terminating": false,             // value written to step.terminating
   "group": false,                   // true if the step carries edges[] (branches/loop bodies)
-  "edges": {                        // only when group = true
+  "edges": {                        // when group = true; or group = false + dynamic = true: optional edges (Intelligence)
     "fixed": [ { "value": "true", "description": "True" } ],   // edges always present, by value
     "dynamic": false,               // true if edges are generated from configuration (e.g. Case)
     "rules": "free text describing how edges relate to configuration"

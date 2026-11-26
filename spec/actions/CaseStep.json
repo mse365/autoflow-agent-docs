@@ -54,7 +54,6 @@
     "Matching is exact text equality and case-sensitive. There is no trimming or numeric comparison: '1' does not match '1.0'.",
     "An empty resolved value goes to the default branch. An explicit empty-string entry in 'branches' (possible only in hand-written JSON) makes the step emit '' instead, and the engine never routes on an empty value: the flow continues after the Case step and no branch runs.",
     "Nothing checks for duplicate branch values or for a user branch that uses '__default__'. Avoid both: only the first edge with a given value is ever taken.",
-    "Edge values are matched with a quoted path expression. Avoid single quotes (') in branch values.",
     "The engine stores the routed value in a 100-character field. Keep branch values to 100 characters or fewer.",
     "Outputs of steps inside a branch are deleted when control leaves the branch."
   ]

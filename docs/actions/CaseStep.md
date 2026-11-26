@@ -84,6 +84,6 @@ None from the step itself.
 
 - Whenever you add, rename or remove a branch edge, update `branches` too. The step routes only on `branches` and never looks at the edges itself.
 - Matching is plain text: `"1"` ≠ `"1.0"` ≠ `" 1"`, and `de` ≠ `DE`. Normalise the value with a SmartFormula if needed.
-- Avoid duplicate branch values and single quotes (`'`) in branch values. Keep branch values to 100 characters or fewer.
+- Avoid duplicate branch values. Keep branch values to 100 characters or fewer.
 - Don't put an empty string in `branches`: the step then emits an empty `result`, which never routes, so no branch runs.
 - Outputs of steps inside a branch are deleted once the flow leaves the branch.
