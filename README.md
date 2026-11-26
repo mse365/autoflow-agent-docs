@@ -51,6 +51,18 @@ Without the API, the same round trip works by hand:
 2. Let the agent edit it, then run the validator.
 3. Choose **Create from file** to import it as a draft: a new flow, or a new draft version of the flow that already has the file's `code` (after a confirmation). Review it in the editor, then **Publish changes**.
 
+## From your AI client over MCP (Business Central online)
+
+Since AutoFlow 28.3, AutoFlow Intelligence adds its tools to the **Business Central MCP server**
+that Microsoft runs for every Business Central online environment. An AI client that speaks MCP
+(Claude, ChatGPT, GitHub Copilot, Copilot Studio) then reads the docs of the installed AutoFlow
+version, looks up the environment's steps, tables and flows, validates a definition with
+AutoFlow's own checks and saves it as a draft – signed in as the user, with nothing to install.
+Users with the AutoFlow Admin role can also have it publish, unpublish and run flows. Setup (one
+action in the AutoFlow Intelligence Setup, then **Set as Default** on the MCP configuration):
+[Build flows from your own AI client (MCP)](https://docs.autoflow365.app/docs/guides/intelligence-mcp).
+For agents, the rules are in [AGENTS.md](AGENTS.md#autoflow-intelligence-tools-business-central-mcp-server).
+
 ## In-app use (AutoFlow Intelligence Flow Builder)
 
 Since AutoFlow 27.0.41 the AI Flow Builder inside Business Central also uses these docs. Each
