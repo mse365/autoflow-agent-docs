@@ -43,6 +43,17 @@ You are working with **AutoFlow** flow definitions: the JSON documents that *Exp
 - When inserting a step, give it a new id and a unique slug. Positions (`x`/`y`) are optional.
 - Re-run the validator on the whole document, not just the changed step.
 
+## AutoFlow Intelligence tools (Business Central MCP server)
+
+If your client is connected to the Business Central MCP server of an environment with AutoFlow 28.3 or later, it can offer the AutoFlow Intelligence tools: every tool's description contains "AutoFlow Intelligence", so one search for that phrase finds all of them (with dynamic tool discovery the names look like `Create_<Entity>_PAG<id>`).
+
+- **Call `get_started` first.** It returns the working method and the exact names of the other tools.
+- The tools serve the docs and step pages **of the installed AutoFlow version** and only the steps available in that environment. Where they differ from this repository, they win.
+- `validate_definition` runs AutoFlow's own checks and replaces `tools/validate_flow.py`; `create_draft` replaces the import. Both work as the signed-in user.
+- `publish_flow`, `unpublish_flow` and `run_flow` change what happens in the user's business. Call them only when the user asks for exactly that – never publish on your own after building a flow. They need the AutoFlow Admin role (publish) or the user's run rights.
+- Without a named configuration, the server does not know the environment and company: ask the user for both and pass them on every call.
+- Business Central online only. On-premises, use the Flow API below.
+
 ## Flow API access
 
 `tools/af_api.py` calls the AutoFlow Flow API as the signed-in user. It needs `AF_ENVIRONMENT` and `AF_COMPANY` (and `python3 tools/af_api.py login` once, which the **user** completes in the browser). On a `Not signed in` or `HTTP 401` error, ask the user to run `login`; on `HTTP 403`, they lack the AutoFlow permission set `mse365 AF ALL` in that company. The API cannot publish, delete or change setup, so don't look for a way to. If the user has no API access, fall back to export and *Create from file* by hand.
