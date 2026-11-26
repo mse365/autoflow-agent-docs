@@ -11,7 +11,7 @@ Two modes. **prompt** sends a prompt (with values of the flow, and optional file
 | Ordinal | `"action": 5564430` |
 | Category | Intelligence |
 | Terminating | `false` |
-| Group / edges | no – branch with Case / Decision steps on the outputs |
+| Group / edges | optional, dynamic: in classify mode the **first question** branches the flow – one edge per answer it can give (see [Edges](#edges)); no edges needed |
 | Availability | GA. Offered while Intelligence is switched on and a profile exists for at least one mode: a language model profile (Anthropic, OpenAI, Azure OpenAI) for prompt, a TypeSafe profile for classify. |
 
 ## What it does
@@ -20,7 +20,9 @@ Two modes. **prompt** sends a prompt (with values of the flow, and optional file
 
 **classify:** sends the TypeSafe state `{"input": <input>}` and one question per `questions` row – a `choice` becomes a Jev choice over its `answers`, a `rating` a Jev score over its levels, a `yesno` a Jev yes/no – plus, for every `choice` with `allowNone`, a yes/no question "does any answer apply". All of it goes to TypeSafe Jev in one request. Jev does not write text: it returns the chosen answer, the level or yes/no, with calibrated probabilities. The input is sent once, so ten questions in one step cost little more than one; prefer one step with all questions about the same input over several steps.
 
-In the editor the questions are cards: the question, "Answer with" (One of a list / Yes or no / A rating), the answers or levels inside the card, the name in later steps (filled from the question) and a box that says what each output holds.
+In the editor classify opens simple: one question card, named `answer`, without the list around it; "Ask more questions" opens the list of cards. Each card holds the question, "Answer with" (One of a list / Yes or no / A rating), the answers or levels, the name in later steps (filled from the question) and a box that says what each output holds. The first card is marked "Branches the flow".
+
+**Branches:** the answers of the first question are the step's edges. The step writes question 1's answer to the internal output `result`, which the engine matches against the edge values; an answer whose edge has no steps (or has no edge) continues after the step. So one Intelligence step with one question works like a Decision / Case step, and every output is still there for later steps.
 
 With the debug log level, the execution log shows per list question the entries and the answers read, and the JSON request to TypeSafe Jev and its answers.
 
@@ -41,10 +43,10 @@ Question rows:
 
 | key | description |
 |---|---|
-| `id` | Name in later steps: letters/digits/`_`, starting with a letter, at most 19 characters, unique. Names the outputs. |
+| `id` | Name in later steps: letters/digits/`_`, starting with a letter, at most 19 characters, unique, not `result`. Names the outputs. |
 | `type` | `choice` (pick one of `answers`, 2–255), `yesno`, or `rating` (place the input on the levels in `answers`, lowest first, 2–10). |
 | `instructions` | SmartText. The question, e.g. `What kind of document is this?` |
-| `answers` | `choice` / `rating` only: rows `{ "value", "description" }`. `value` is what `<id>` returns; `description` (optional) says when to pick it / what the level means. |
+| `answers` | `choice` / `rating` only: rows `{ "value", "description", "key" }`. `value` is what `<id>` returns (question 1: also the edge value, at most 100 characters); `description` (optional) says when to pick it / what the level means; `key` is written by the editor (a stable random key, so renaming an answer keeps its edge) – leave it out in hand-written JSON, keep it when it is there. |
 | `allowNone` | `choice` only, default `true`: `<id>` is `none` when no answer fits. Switch off only when the answers surely cover every input. |
 | `answersFrom` | `choice` only: `fixed` (default, the `answers`) or `list` – the answers are read from a list of an earlier step every time the flow runs. |
 | `list` | `answersFrom` `list`: the list as a braced selector, records or values, e.g. `{{FindProjects_results}}`. |
@@ -66,6 +68,22 @@ A list question from a list reads the list like the Selection task does (referen
 
 Reference them as `{{<slug>_<output>}}`, for example `{{Classify_category}}`, `{{Classify_urgency_level}}`.
 
+The step also writes `result` (question 1's answer) when question 1 makes branches – that is what the engine routes on. It is not offered to later steps; use `{{<slug>_<id>}}`.
+
+## Edges
+
+Classify mode only, from the **first** question, in answer order:
+
+| question 1 | edge `value` | edge `description` |
+|---|---|---|
+| `choice`, fixed answers | each `answers[].value` | the answer |
+| … with `allowNone` | plus `none` | `Nothing fits` |
+| `yesno` | `true`, `false` | `Yes`, `No` |
+| `rating` | each level's `value` | the level |
+| `choice` with `answersFrom` `list`, or prompt mode | no edges | – |
+
+Matching is exact and case-sensitive. Edges are optional: an edge without steps, or no edge, continues after the step. The editor writes all edges on every save (renaming an answer keeps its edge and its steps; removing a branch that holds steps asks first). Publishing refuses an edge whose value question 1 can never answer. In hand-written JSON add the edges that get steps, each `{ "id", "value", "description", "steps" }`.
+
 ## Validation
 
 | stage | severity | rule | message |
@@ -79,16 +97,19 @@ Reference them as `{{<slug>_<output>}}`, for example `{{Classify_category}}`, `{
 | publish | error | bad name | `Question %1: the name '%2' may only use letters, digits and _, must start with a letter and have at most %3 characters.` |
 | publish | error | name twice | `Questions %1 and %2 have the same name '%3'. Give each question its own name.` |
 | publish | error | output name twice | `Question %1: the name '%2' is already used by a result of question %3. Choose another name.` |
+| publish | error | a question named `result` (any case) | `Question %1: the name '%2' is reserved for the branch of the flow. Choose another name.` |
 | publish | error | type | `Question %1: choose how Intelligence should answer – one of a list, yes or no, or a rating.` |
 | publish | error | no question text | `Question %1: enter the question.` |
 | publish | error | choice answers | `Question %1: enter at least two possible answers.` / `Question %1: a list takes at most %2 answers.` |
 | publish | error | rating levels | `Question %1: a rating needs 2 to %2 levels.` |
 | publish | error | answer twice | `Question %1: the answer '%2' is listed twice.` |
+| publish | error | an answer of question 1 over 100 characters (fixed answers / rating) | `Question 1: the answer '%1' is longer than %2 characters. The answers of the first question name the branches of the flow – shorten it.` |
 | publish | error | an answer called none with allowNone | `Question %1: 'none' is already the answer when nothing fits. Remove it from the list, or switch off "Answer none when no answer fits".` |
 | publish | error | list question without a list | `Question %1: pick the list the answers come from.` |
 | publish | error | list description without answer field | `Question %1: say which field of the list is the answer, or leave "When to pick it" empty too.` |
 | publish | error | profile of the other kind / unknown | `The profile %1 is a language model profile. Answering questions needs a TypeSafe profile.` (and vice versa) / `The profile %1 does not exist.` |
 | publish | error | attachments in classify | `Answering questions does not read files yet: images follow in a later release. Only a prompt reads files for now.` |
+| publish | error | an edge whose value question 1 can never answer (see [Edges](#edges)) | `The branch '%1' matches no answer of question 1. Add the answer, or remove the branch.` |
 | publish | error | no profile for the mode | `The Intelligence step '%1': the prompt mode needs Intelligence switched on and a language model profile.` (classify: `… a TypeSafe profile.`) |
 | publish | warning | trigger keeps the user waiting (record created/modified interactive, document released/posted/reopened, page opened/closed, PDF printed, report file name, SubFlow) | `The Intelligence step '%1' runs while the user works on the record: the user waits until the model has answered (up to the timeout of the AutoFlow Intelligence Setup).` |
 
@@ -141,9 +162,15 @@ Classify an incoming document, then branch on the answers:
     { "name": "category", "type": "value" }, { "name": "category_confidence", "type": "value" },
     { "name": "urgency", "type": "value" }, { "name": "urgency_level", "type": "value" }, { "name": "urgency_confidence", "type": "value" },
     { "name": "vendor_named", "type": "value" }, { "name": "vendor_named_confidence", "type": "value" }
+  ],
+  "edges": [
+    { "id": "7A2B3C4D-5E6F-4A7B-8C9D-0E1F2A3B4C01", "value": "invoice", "description": "invoice", "steps": [] },
+    { "id": "7A2B3C4D-5E6F-4A7B-8C9D-0E1F2A3B4C02", "value": "none", "description": "Nothing fits", "steps": [] }
   ]
 }
 ```
+
+The first question (`category`) branches the flow – put the steps for each case into its edge's `steps`: an invoice runs the `invoice` edge, an unclassifiable document the `none` edge, a credit memo or reminder (no edge here) continues after the step.
 
 Which of the customer's projects an e-mail is about – the answers come from a Find Records step (`FindProjects`) before:
 
@@ -153,7 +180,7 @@ Which of the customer's projects an e-mail is about – the answers come from a 
   "listAnswer": "{{FindProjects_results.No}}", "listDescription": "{{FindProjects_results.Description}}" }
 ```
 
-Then a Case step on `{{Classify_category}}` with edges `invoice`, `credit_memo`, `reminder`, `none`, and a Decision on `{{Classify_urgency_level}}` >= 3.
+Later questions branch through other steps, e.g. a Decision on `{{Classify_urgency_level}}` >= 3.
 
 A prompt step: `"configuration": { "mode": "prompt", "profile": "", "prompt": "Write a two-sentence summary of: {{trigger_Description}}", "attachments": [] }`, output `answer`.
 
@@ -161,7 +188,8 @@ A prompt step: `"configuration": { "mode": "prompt", "profile": "", "prompt": "W
 
 - One classify step per input, with all questions – not one step per question.
 - To choose among records of the flow, use `answersFrom` `list` – never copy record numbers into `answers`.
-- A choice returns one of its answers, or `none` with `allowNone`. Branch on it with a Case step that has a `none` edge.
+- A choice returns one of its answers, or `none` with `allowNone`. Put the question the flow branches on first – its answers are the step's edges. Branch on later questions with a Case step (with a `none` edge) or a Decision.
+- Never name a question `result`; keep question 1's answers to 100 characters.
 - A rating's `<id>` is a level name; compare levels with `<id>_level` (a number, 1 = lowest).
 - `<id>_confidence` is 0–100; check it before risky actions.
 - TypeSafe profiles never answer the prompt mode or build flows; language model profiles never classify.
