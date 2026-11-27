@@ -38,9 +38,9 @@ You are working with **AutoFlow** flow definitions: the JSON documents that *Exp
 
 - Get the current definition first. With API access: `python3 tools/af_api.py list` to find it, then `python3 tools/af_api.py export <code> -o flow.json` (the draft if there is one, else the published version; `--published` forces the published one). Without it, ask the user for the file from **Export current version**. If their AutoFlow administrator turned on JSON editing (AutoFlow Setup, Developer Settings), the user can instead copy the definition out of **Edit flow definition (JSON)** on the flow card and paste your result back there; it saves as a draft, like an import.
 - Keep the root `code`: that is what makes the import a new draft version of the same flow.
-- Change only what you need. Keep existing ids, slugs, `x`/`y` and `notes`.
+- Change only what you need. Keep existing ids, slugs, `x`/`y` and `notes`. Never invent `x`/`y`: positions belong to the flow editor.
 - After changing a step's configuration, regenerate that step's `outputs`, then re-check every reference to that step.
-- When inserting a step, give it a new id and a unique slug. Positions (`x`/`y`) are optional.
+- When inserting a step, give it a new id and a unique slug, and leave out `x`/`y`. The editor places the step and moves later blocks so that nothing overlaps.
 - Re-run the validator on the whole document, not just the changed step.
 
 ## AutoFlow Intelligence tools (Business Central MCP server)

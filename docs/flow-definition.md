@@ -89,7 +89,7 @@ The same document can also be edited in place with **Edit flow definition (JSON)
 | `outputs` | array | yes | Must match what the action generates from its configuration. See the action's page. |
 | `edges` | array | group steps only | Branches or loop bodies. See below. |
 | `customIconUrl` | string | no | Display-only icon override (Run SubFlow writes the called flow's icon here). |
-| `x`, `y` | integer | no | Canvas position relative to the parent: the canvas for top-level steps, the parent group for nested ones. Omit them to auto-layout. |
+| `x`, `y` | integer | no | Absolute canvas position in pixels (also for nested steps). Written by the editor; omit them in authored flows and keep the values of existing steps. The editor auto-layouts steps without a position and moves any block that would overlap another one. The AutoFlow Intelligence tools ignore coordinates you send. |
 | `status` | object | no | Written by the editor for run visualisation; ignored at runtime. Omit it. |
 | `level` | integer | no | Ignored on read. Omit it. |
 
@@ -110,7 +110,7 @@ Group steps (Decision, Case, For Each Loop, While Loop, …) carry `edges`. Each
 | `value` | string | yes | Matched **exactly** (string comparison) against the value the group step returns at runtime. Use the values from the step's page. For dynamic edges (Case), they're derived from the configuration. |
 | `description` | string | yes | Branch label. |
 | `steps` | array | yes | Nested steps. Use `[]` for an empty branch. |
-| `x`, `y` | integer | no | Anchor position of the empty-branch placeholder. |
+| `x`, `y` | integer | no | Absolute anchor position of the branch (the empty-branch placeholder, or the branch's first step). Written by the editor; omit it in authored flows. |
 
 ## Nesting, edges and execution order
 
